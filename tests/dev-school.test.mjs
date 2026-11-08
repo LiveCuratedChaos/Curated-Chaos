@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {workspaceHref} from '../src/dev-navigation-model.mjs';import {allowedPublicPath} from '../tools/local-server.mjs';import {schoolPayload,makeSchoolCourse,normalizeSchoolCourses,schoolSummary} from '../src/dev-school-model.mjs';
+const owner='123e4567-e89b-42d3-a456-426614174000',other='123e4567-e89b-42d3-a456-426614174001';
+test('school navigation and route',()=>{assert.equal(workspaceHref('school'),'/dev-school.html');assert(allowedPublicPath('/dev-school.html'));assert(allowedPublicPath('/src/dev-school.mjs'));assert(allowedPublicPath('/src/dev-school-model.mjs'));assert.match(readFileSync('dev-school.html','utf8'),/dev-school.mjs/);});
+test('practice course validation and independent ordering',()=>{const r=makeSchoolCourse(owner,{code:'D253',title:'Practice course',officialOrder:4,studyOrder:1,credits:3,status:'Completed',assessments:[{title:'Task 1',type:'Performance Assessment',status:'Completed'}]});assert.equal(r.payload.officialOrder,4);assert.equal(r.payload.studyOrder,1);assert.equal(r.visibility,'private');assert.equal(r.household_id,null);assert.equal(schoolSummary([{payload:r.payload}]).credits,3);assert.equal(schoolSummary([{payload:r.payload}]).assessmentCompleted,1);assert.throws(()=>schoolPayload({title:''}));});
+test('owner isolation and fixture isolation',()=>{const r={id:'123e4567-e89b-42d3-a456-426614174002',...makeSchoolCourse(owner,{title:'Test'})};assert.equal(normalizeSchoolCourses([r],owner).length,1);assert.equal(normalizeSchoolCourses([r],other).length,0);assert.equal(normalizeSchoolCourses([{...r,origin:'M1D_LIFE_QA'}],owner).length,0);});
+
+test("School route includes Supabase origin in CSP and configuration checks",()=>{const server=readFileSync("tools/local-server.mjs","utf8");assert.equal((server.match(/\|\|pathname==='\/dev-school.html'/g)||[]).length,2);assert.doesNotMatch(server,/\|\|pathname==='\/dev-calendar.html','\/dev-school.html'/);});
+
+import {renderConnectedShell} from '../src/dev-cloud-shell.mjs';
+test('School section renders in shared shell without throwing',()=>{assert.match(renderConnectedShell('<p>School ready</p>',{active:'school',workspace:'school'}),/School ready/);});

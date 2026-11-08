@@ -1,0 +1,17 @@
+{
+  "name": "curated-chaos-isolated-development",
+  "version": "3.5.0",
+  "private": true,
+  "type": "module",
+  "description": "M3D Phase 2: multi-subtask editing with one save",
+  "scripts": {
+    "start": "node tools/local-server.mjs",
+    "setup:reuse": "node tools/reuse-dev-config.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:rls": "node tools/verify-rls.mjs",
+    "check:setup": "node tools/preflight.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

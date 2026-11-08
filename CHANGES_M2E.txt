@@ -1,0 +1,1 @@
+Milestone 2E adds a School page with owner-private fictional course and assessment tracking. No new SQL. Existing Calendar, Tasks, widgets, settings, and privacy controls retained. This is a first School foundation, not the full School specification.

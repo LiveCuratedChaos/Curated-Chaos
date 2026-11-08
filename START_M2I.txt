@@ -1,0 +1,6 @@
+Milestone 2I Finances QA
+1. Extract ZIP and place `Curated_Chaos_Development_Starter_M2I_Finances` folder on Desktop.
+2. From a Terminal in that folder, copy your local `.env.local` from the working M2H folder (never share it).
+3. PORT=5205 npm start
+4. Visit http://localhost:5205/dev-finances.html
+5. Use fictional names only.

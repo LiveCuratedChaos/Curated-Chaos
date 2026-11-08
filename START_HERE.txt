@@ -1,0 +1,8 @@
+Curated Chaos — Milestone 2E (School foundation)
+1) Copy .env.local from your own local M2D folder into this folder. Never share .env.local.
+2) In Terminal: cd into this folder; run npm test
+3) Run: PORT=5198 npm start
+4) Visit: http://localhost:5198/dev-school.html
+5) Follow M2E_TEST_PLAN.md
+
+No official WGU course list was imported. Enter fictional practice courses only.

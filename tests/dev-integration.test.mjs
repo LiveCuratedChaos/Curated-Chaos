@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {CHECK_ROUTES,ACCEPTANCE_STEPS,safeRouteStatus} from '../src/dev-integration-model.mjs';
+import {allowedPublicPath} from '../tools/local-server.mjs';
+import {QA_PAGES} from '../src/dev-navigation-model.mjs';
+import {renderConnectedShell} from '../src/dev-cloud-shell.mjs';
+const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
+test('M2L all 11 routes are unique and allowlisted',()=>{assert.equal(CHECK_ROUTES.length,11);assert.equal(new Set(CHECK_ROUTES.map(x=>x.href)).size,11);for(const item of CHECK_ROUTES)assert.ok(allowedPublicPath(item.href.split('?')[0]));});
+test('M2L integration page and its modules are exposed but private credentials are not',()=>{for(const route of ['/dev-integration.html','/src/dev-integration.mjs','/src/dev-integration-model.mjs'])assert.equal(allowedPublicPath(route),true);for(const route of ['/.env.local','/tests/dev-integration.test.mjs','/M2L_TEST_PLAN.md'])assert.equal(allowedPublicPath(route),false);});
+test('M2L navigation and shell recognize integration view',()=>{assert.ok(QA_PAGES.some(x=>x.id==='integration'&&x.href==='/dev-integration.html'));assert.match(renderConnectedShell('test',{active:'integration'}),/Milestone 2 integration/);});
+test('M2L checklist has unique tests including isolation',()=>{assert.equal(ACCEPTANCE_STEPS.length,7);assert.equal(new Set(ACCEPTANCE_STEPS.map(x=>x.id)).size,7);assert.ok(ACCEPTANCE_STEPS.some(x=>x.id==='isolation'));});
+test('M2L HTTP status requires successful 200',()=>{assert.equal(safeRouteStatus({ok:true,status:200}),true);for(const status of [0,301,400,401,404,503])assert.equal(safeRouteStatus({ok:status<400,status}),false);});
+test('M2L script uses only read-only GET requests',()=>{const script=read('../src/dev-integration.mjs');assert.match(script,/method:'GET'/);assert.doesNotMatch(script,/api\.(?:insert|update|delete)\(/);});

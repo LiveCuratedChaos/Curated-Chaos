@@ -1,0 +1,10 @@
+M2D Calendar / private fictional QA features:
+- Added direct Calendar sidebar/mobile route and responsive month/week/day views.
+- Selecting a day shows schedule (events and due tasks) in side panel, slide-up day sheet on iPhone-sized screens.
+- Added event creation and version-guarded editing with calendar/category/end time/reminder metadata.
+- Reads existing M1B/M2C fictional events and tasks. No changes to their saved records.
+- Owner-scoped Supabase reads and version-guarded private display preferences stored as calendar_preferences records in existing cc_records table (no SQL migration).
+- Calendar/category quick filters, due tasks toggle, month details vs dot appearance, configurable default view and defaults for newly created fictional events.
+- Project status Active now displays In Progress; new writes use In Progress, legacy project status remains compatible.
+- No external providers, reminders actually fired, production sync or household sharing.
+- Prior M2C tests plus dedicated new calendar tests.

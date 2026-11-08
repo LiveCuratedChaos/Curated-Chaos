@@ -1,0 +1,8 @@
+Milestone 2C (fictional development build)
+- Quick Add accessible in common app header
+- New private Tasks & Projects management page (dev-organize.html)
+- New project records, task metadata and subtasks stored as fictional cc_records
+- Version guarded edits; no database migrations
+- Optional Projects dashboard widget
+- Existing 2B dashboard and Milestone 1 QA preserved
+- Separate new ZIP; do not delete prior working folder before testing

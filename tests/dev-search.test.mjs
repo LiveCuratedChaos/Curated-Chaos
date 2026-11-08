@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {safeSearchRows,searchRecords,searchRoute} from '../src/dev-search-model.mjs';
+import {workspaceHref} from '../src/dev-navigation-model.mjs';
+import {renderConnectedShell} from '../src/dev-cloud-shell.mjs';
+import {allowedPublicPath} from '../tools/local-server.mjs';
+const id='aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',other='bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
+const rec=(owner,title,section='Work')=>({id:crypto.randomUUID(),owner_id:owner,visibility:'private',household_id:null,section,item_type:'project',deleted_at:null,payload:{title,fictional:true}});
+test('M2J only returns private fictional records owned by current user',()=>{const rows=[rec(id,'Test one'),rec(other,'Test secret'),{...rec(id,'Test household'),household_id:'sample'},{...rec(id,'Test deleted'),deleted_at:'now'},{...rec(id,'Test real'),payload:{title:'Test real',fictional:false}}];assert.equal(safeSearchRows(rows,id).length,1);assert.equal(searchRecords(rows,id,'test').length,1);assert.equal(searchRecords(rows,id,'secret').length,0);});
+test('M2J case-insensitive search and section filters',()=>{const rows=[rec(id,'Grocery Budget','Finances'),rec(id,'Groceries','Home')];assert.equal(searchRecords(rows,id,'grocer').length,2);assert.equal(searchRecords(rows,id,'grocer','Finances').length,1);assert.equal(searchRecords(rows,id,'').length,0);});
+test('M2J routes and server include search safely',()=>{assert.equal(searchRoute('Work'),'/dev-work.html');assert.ok(allowedPublicPath('/dev-search.html'));assert.ok(allowedPublicPath('/src/dev-search.mjs'));assert.match(renderConnectedShell('x',{active:'search'}),/href="\/dev-search.html"/);assert.match(readFileSync('dev-search.html','utf8'),/dev-search.mjs/);assert.equal(allowedPublicPath('/.env.local'),false);});

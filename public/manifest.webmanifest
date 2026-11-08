@@ -1,0 +1,13 @@
+{
+  "name": "Curated Chaos — Development Preview",
+  "short_name": "Chaos Dev",
+  "description": "Fictional-data, separate local development preview",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#172920",
+  "theme_color": "#172920",
+  "icons": [
+    {"src":"/public/icons/icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"/public/icons/icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}

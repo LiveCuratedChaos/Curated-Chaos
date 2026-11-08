@@ -1,0 +1,1 @@
+Milestone 2C correction: subtask checklists and counts are visible on each task card even when not editing. Click a checkbox to complete a subtask. No database schema change; previous records preserved. Test on port 5196.
