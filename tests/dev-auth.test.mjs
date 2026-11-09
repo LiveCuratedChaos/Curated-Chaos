@@ -42,3 +42,6 @@ test('API authentication uses publishable key and sends access JWT for RLS',asyn
   assert.equal(calls[2].opts.headers.Authorization,'Bearer test-access');
   assert.ok(calls[2].url.includes('visibility=eq.private'));
 });
+test('atomic approval feature stays off unless the exact post-migration development switch is enabled',()=>{
+ assert.equal(sanitizedDevConfig(raw).atomicFictionalApprovals,undefined);assert.equal(sanitizedDevConfig({...raw,CC_DEV_ATOMIC_FICTIONAL_APPROVALS:'true'}).atomicFictionalApprovals,undefined);assert.equal(sanitizedDevConfig({...raw,CC_DEV_ATOMIC_FICTIONAL_APPROVALS:'enabled-after-approved-migration'}).atomicFictionalApprovals,true);
+});

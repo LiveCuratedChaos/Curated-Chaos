@@ -81,3 +81,9 @@ test('regression: restoring an earlier dismissal permits saving on cloud recheck
   assert.match(code,/if\(decisionPreventsApproval\(decisions,suggestion\.id\)\|\|isDuplicateTask\(remote\.tasks/);
   assert.doesNotMatch(code,/decisions\.latest\.has\(suggestion\.id\)/);
 });
+test('removed or household-associated decisions cannot suppress private suggestions',()=>{
+ const row=stamp(makeSuggestionDismissal(suggestion,owner),'2026-11-08T12:00:00Z','40d03492-09a1-4fdb-86b0-0bdbe9b5b88b');for(const modified of [{...row,deleted_at:'2026-11-08T13:00:00Z'},{...row,household_id:other}]){const state=getDecisionState([modified],owner,suggested);assert.equal(state.dismissed.size,0);assert.equal(state.history.length,0);}
+});
+test('a removed task cannot be treated as a newly confirmed approval',()=>{
+ assert.throws(()=>makeApprovalDecision(suggestion,owner,{...task,deleted_at:'2026-11-08T12:00:00Z'}),/confirmed/);
+});

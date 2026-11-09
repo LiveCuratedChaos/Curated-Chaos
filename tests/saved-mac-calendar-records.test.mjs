@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {savedMacCalendarRecords} from '../server/saved-mac-calendar-records.mjs';import {planMacCalendarImport} from '../server/mac-calendar-import-plan.mjs';import {macCalendarFixtureArgs} from '../server/mac-calendar-fixtures.mjs';import {savedSourceBrief} from '../server/saved-source-brief.mjs';
+const ownerId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',run='cccccccc-cccc-4ccc-8ccc-cccccccccccc';const rows=()=>planMacCalendarImport({ownerId,...macCalendarFixtureArgs(ownerId,run)}).actions.map(({record})=>({...record,version:1,deleted_at:null,created_at:'2026-11-08T12:00:00Z'}));
+test('saved Mac read model keeps dates and save time but excludes source identities, recurrence and arbitrary content',()=>{
+ const raw=rows();raw[0].payload.content.notes='PRIVATE EXTRA';const result=savedMacCalendarRecords(raw,ownerId);assert.equal(result[1].endDateExclusive,'2026-11-12');assert.equal(result[0].savedAt,'2026-11-08T12:00:00.000Z');assert.doesNotMatch(JSON.stringify(result),/fictional-calendar|fictional-event|fictional-series|occurrenceStart|PRIVATE EXTRA/);
+});
+test('saved Mac read model rejects mixed owners, tombstones, sharing, duplicate identity and malformed dates',()=>{
+ for(const patch of [{owner_id:run},{visibility:'household'},{deleted_at:'2026-11-08T00:00:00Z'},{origin:'manual'}]){const raw=rows();Object.assign(raw[0],patch);assert.throws(()=>savedMacCalendarRecords(raw,ownerId));}
+ const raw=rows();assert.throws(()=>savedMacCalendarRecords([raw[0],raw[0]],ownerId));raw[1].payload.content.endDateExclusive='2026-11-31';assert.throws(()=>savedMacCalendarRecords(raw,ownerId));
+});
+test('Daily Brief includes real saved Mac events and their save-time inventory while excluding QA fixtures',()=>{
+ const raw=rows();raw[0].origin='apple_readonly';raw[0].payload.fictional=false;delete raw[0].payload.fixtureRunId;const records=savedMacCalendarRecords(raw,ownerId),finance={accounts:[],transactions:[]},brief=savedSourceBrief({records,finance,day:'2026-11-09',timeZone:'America/New_York',now:Date.parse('2026-11-09T22:00:00Z')});assert.equal(brief.events.length,1);assert.equal(brief.events[0].provider,'mac_calendar');assert.equal(brief.events[0].calendarTitle,'QA FICTIONAL Calendar');assert.equal(brief.freshness.sources.find(row=>row.provider==='mac_calendar').count,1);assert.equal(savedSourceBrief({records,finance,day:'2026-11-10'}).events.length,0);
+});

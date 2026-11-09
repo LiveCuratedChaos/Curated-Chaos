@@ -1,3 +1,19 @@
+# Curated Chaos — M3D Phase 2
+
+This is a local, fictional-data development app. Current startup instructions and acceptance checks are in [M3D_PHASE2_START_HERE.md](M3D_PHASE2_START_HERE.md).
+
+- Requires Node 18 or newer; no external package dependencies are declared.
+- From this folder, use `PORT=5215 npm start`, then open `http://localhost:5215/dev-organize.html`.
+- `npm test` runs local tests using fixtures and mocked cloud responses.
+- `npm run check:setup` reads local credentials. `npm run setup:reuse` can copy configuration. `npm run test:rls` accesses the development cloud. These are separate from the offline tests.
+- Existing local configuration is required for connected pages. Never share its contents.
+- The static homepage is a separate fictional preview. Connected pages use the configured Supabase development project; no live provider integrations are implemented.
+- No database migration or Netlify deployment is required for these local fixes.
+
+## Historical milestone notes
+
+The following M2C/M2D instructions are retained as history. Folder names, ports, and feature limitations may be outdated; use the M3D instructions above.
+
 # Milestone 2D — Calendar (fictional development only)
 
 **New:** `/dev-calendar.html` is the Calendar page in both desktop sidebar and mobile navigation. It provides Month (default), Week and Day views; tap a date to inspect its day schedule, add/edit private fictional events, filter calendar/category visibility and display due tasks, and save account-private preferences. New events store a selected reminder preference **without actually delivering any reminder or push notification**. No Apple Calendar, Google Calendar, finance, email or school provider is connected.
@@ -76,3 +92,26 @@ npm test
 ```
 
 **Do not deploy this local development server to a public host.**
+# Local Google connection setup
+
+The optional local connection gateway requires Node.js 22 or newer and the pinned Google authentication library (`npm ci` installs the locked dependencies). Start it with `npm run start:connections`, then open `http://127.0.0.1:5301/auth/google/`.
+
+Register only this local callback in the separate development OAuth client:
+
+`http://127.0.0.1:5301/auth/google/callback`
+
+After explicit owner approval and client creation, keep the downloaded Web-client JSON only at `.local/google-oauth.json`, outside Git. Never paste its contents into a chat or copy it into public assets. Existing files must not be overwritten. The gateway starts in an honest unconfigured state when this file is absent.
+
+Encrypted local connection data and the encryption key live in `.local/provider-storage/` with private filesystem permissions. This loopback gateway is development-only, with in-memory app sessions and local files; do not deploy it as production authentication. Google authorization alone does not import records: owner-approved label/calendar selection and sync are separate work.
+
+The local Google connection area now uses its own server-held development session (up to 30 minutes). Sign in there with the existing development test account; the page does not retain app access/refresh tokens in browser storage. Server restarts require signing in again, while encrypted Google grants and source selections remain on this Mac. The original fictional workspace sign-in remains separate. **View saved source items** reads saved private snapshots without contacting Google. Real-content database imports remain disabled.
+
+
+## Open the private workspace on this Mac
+
+After the owner approves using the combined development preview, double-click `tools/Open-Private-Workspace.command`. It opens the private Daily Brief in the browser and keeps its local service in that Terminal window. Use the existing development account; never paste a password or key into chat. Keep the window open while using the preview; Control-C stops it and closes its server-held sign-ins.
+
+This separate preview can show saved task/event display fields and note titles. Open a note to read its text. Adding/editing/completing tasks and editing notes requires an explicit review and approval in the interface. Temporary drafts clear when hidden or signed out. It does not refresh connected accounts, access backups/keys, migrate other workspaces or change the live app. Settings and connected-source snapshots remain in their separate flows. The launcher validates the exact development project and stops if its port is occupied; it never replaces a running service. Node 22+ is preferred, with the existing app-bundled runtime as a local fallback. The launcher does not install software, alter configuration or sign in automatically.
+
+
+The optional local content check is `node tools/check-repository-privacy.mjs --scan-content`. It checks working candidates, staged copies and bounded ZIP contents without uploading or printing matches. It reports skipped binary copies explicitly and detects only recognized credential patterns; a clean result is not an exhaustive secret audit. The default filename-only check remains available without the flag.

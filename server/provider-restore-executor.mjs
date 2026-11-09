@@ -1,0 +1,30 @@
+// Server-only insert-only recovery. Not exposed by the read-only preview CLI or an HTTP route.
+import {randomUUID,createHash} from 'node:crypto';import {previewProviderRestore} from './provider-restore-preview.mjs';import {stableStringify} from './stable-json.mjs';
+const hash=plan=>createHash('sha256').update(stableStringify(plan)).digest('hex');
+function signature(row){return stableStringify([row?.id,row?.owner_id,row?.household_id,row?.visibility,row?.section,row?.item_type,row?.origin,row?.payload]);}
+function exactInserted(row,expected){return signature(row)===signature(expected)&&row.deleted_at===null&&row.version===expected.version&&typeof row.created_at==='string'&&Number.isFinite(Date.parse(row.created_at))&&Date.parse(row.created_at)===Date.parse(expected.created_at);}
+export function createProviderRestoreExecutor({repository,resolveActor,projectRef,key,fixtureRunId=null,maxRecords=250,authorizeWrite=async()=>false,now=()=>Date.now()}){
+ if(!Buffer.isBuffer(key)||key.length!==32||!Number.isInteger(maxRecords)||maxRecords<1||maxRecords>250)throw Error('Private bounded restore context required.');const secret=Buffer.from(key),reviews=new Map(),pending=new Set(),active=new Set();let disposed=false;
+ function forget(id){clearTimeout(reviews.get(id)?.timer);reviews.delete(id);}
+ async function session(actor){if(disposed)throw Error('Recovery context ended.');const s=await resolveActor(actor);if(disposed||!s?.ownerId||typeof s.sessionBinding!=='string'||s.sessionBinding.length<16)throw Error('Verified recovery session required.');return Object.freeze({ownerId:s.ownerId,binding:s.sessionBinding,expiresAt:s.expiresAt});}
+ function same(a,b){return a.ownerId===b.ownerId&&a.binding===b.binding;}
+ async function current(actor,s,bytes){const proposed=previewProviderRestore({bytes,key:secret,projectRef,ownerId:s.ownerId,fixtureRunId});if(proposed.recordCount>maxRecords)throw Error('Recovery exceeds approved record cap.');const rows=await repository.readByIds(actor,s.ownerId,proposed.actions.map(action=>action.id));return previewProviderRestore({bytes,key:secret,projectRef,ownerId:s.ownerId,existing:rows,fixtureRunId});}
+ return{
+  async prepare(actor,{bytes}){
+   if(!Buffer.isBuffer(bytes)||bytes.length>8*1024*1024)throw Error('Bounded encrypted archive required.');for(const[id,row]of reviews)if(row.expiresAt<=now())forget(id);
+   const owned=Buffer.from(bytes),s=await session(actor),preparation={binding:s.binding,revoked:false};pending.add(preparation);try{const plan=await current(actor,s,owned),again=await session(actor);if(preparation.revoked||disposed||!same(s,again))throw Error('Recovery session changed.');if(reviews.size>=20)throw Error('Too many pending recovery reviews.');
+   const expiresAt=Math.min(now()+300000,Number.isFinite(again.expiresAt)?again.expiresAt:Infinity);if(expiresAt<=now())throw Error('Recovery session expired.');const reviewId=randomUUID(),entry={ownerId:s.ownerId,binding:s.binding,bytes:owned,digest:hash(plan),expiresAt};entry.timer=setTimeout(()=>{if(reviews.get(reviewId)===entry)forget(reviewId);},Math.max(0,expiresAt-now()));entry.timer.unref?.();reviews.set(reviewId,entry);
+   return{reviewId,expiresAt,recordCount:plan.recordCount,insertCount:plan.insertCount,unchangedCount:plan.unchangedCount,conflictCount:plan.conflictCount,blockedCount:plan.blockedCount,executed:false};}finally{pending.delete(preparation);}
+  },
+  async execute(actor,{reviewId,approved}){
+   if(approved!==true)throw Error('Explicit recovery approval required.');const entry=reviews.get(reviewId);if(!entry||entry.expiresAt<=now()){forget(reviewId);throw Error('Recovery review expired or used.');}const s=await session(actor);if(s.ownerId!==entry.ownerId||s.binding!==entry.binding)throw Error('Recovery belongs to another session.');if(reviews.get(reviewId)!==entry)throw Error('Recovery review already claimed.');forget(reviewId);active.add(entry);try{
+   const plan=await current(actor,s,entry.bytes);if(hash(plan)!==entry.digest||plan.blockedCount||plan.conflictCount)throw Error('Current copies changed, conflict or are blocked. Prepare a new review.');const inserts=plan.actions.filter(action=>action.action==='insert').map(action=>action.record);
+   if(!await authorizeWrite(actor,{snapshotId:plan.snapshotId,fixtureRunId,recordCount:plan.recordCount,insertCount:inserts.length}))throw Error('Recovery database writes are not approved.');const ready=await session(actor);if(disposed||entry.revoked||!same(s,ready)||entry.expiresAt<=now())throw Error('Recovery session or review ended before insertion.');
+   if(inserts.length){let saved;try{saved=await repository.insertMany(actor,s.ownerId,inserts);}catch{throw Error('Recovery insert not confirmed. Inspect current copies before retrying.');}if(!Array.isArray(saved)||saved.length!==inserts.length||inserts.some(record=>saved.filter(row=>exactInserted(row,record)).length!==1))throw Error('Recovery acknowledgement not verified. Inspect current copies before retrying.');}
+   const rows=await repository.readByIds(actor,s.ownerId,plan.actions.map(action=>action.id)),after=previewProviderRestore({bytes:entry.bytes,key:secret,projectRef,ownerId:s.ownerId,existing:rows,fixtureRunId});if(after.insertCount||after.conflictCount||after.blockedCount||after.unchangedCount!==plan.recordCount||inserts.some(record=>rows.filter(row=>exactInserted(row,record)).length!==1))throw Error('Recovered copies not verified. Inspect current copies before retrying.');const final=await session(actor);if(disposed||entry.revoked||!same(s,final))throw Error('Recovery session ended; check saved copies after sign-in.');
+   return{executed:true,restored:inserts.length,alreadyPresent:plan.recordCount-inserts.length,recordCount:plan.recordCount,verifiedAt:new Date(now()).toISOString()};}finally{active.delete(entry);}
+  },
+  forgetSession(binding){for(const entry of [...pending,...active])if(entry.binding===binding)entry.revoked=true;for(const[id,row]of reviews)if(row.binding===binding)forget(id);},
+  dispose(){disposed=true;for(const id of reviews.keys())forget(id);secret.fill(0);}
+ };
+}

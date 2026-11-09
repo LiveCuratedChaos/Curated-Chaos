@@ -100,7 +100,12 @@ test('M2B: widget cloud API scopes reads to owner and updates to version match',
  assert.match(calls[1].url,/item_type=eq\.dashboard_layout/);
  assert.equal(calls[1].options.method,'PATCH');
  assert.match(calls[1].options.headers.Authorization,/Bearer test-token/);
+ for(const call of calls){const url=new URL(call.url);assert.equal(url.searchParams.get('deleted_at'),'is.null');assert.equal(url.searchParams.get('household_id'),'is.null');}
  assert.throws(()=>api.updateWidgetLayout('token',{id:'bad',version:1},ownerA,{}));
+});
+test('deleted layout copies are excluded and uncertain saves can visibly disable Save without disabling draft discard',()=>{
+ const deleted={...record(ownerA),deleted_at:'2026-11-08T12:00:00Z'};assert.equal(readOwnerWidgetLayout([deleted],ownerA).record,null);
+ const html=renderWidgetBoard(defaultWidgetLayouts(),'desktop',{}, {dirty:true,saveBlocked:true});assert.match(html,/id="widgets-save" disabled/);assert.match(html,/id="widgets-discard"/);
 });
 test('M2B: multiple stored layout revisions prefer latest without mixing account data',()=>{
  const old=record(ownerA),recent={...record(ownerA),id:'66666666-6666-4666-8666-666666666666',updated_at:'2026-10-31T16:05:00Z',version:4};

@@ -1,0 +1,8 @@
+// The source identifiers, calendar labels, event titles and timing are encrypted together.
+export function createSealedMacCalendarRepository(repository,sealer){
+ function scope(row,ownerId){if(row?.owner_id!==ownerId||row.visibility!=='private'||row.household_id!==null||row.section!=='Calendar'||row.item_type!=='provider_mac_event'||!['apple_readonly','apple_import_qa'].includes(row.origin))throw Error('Owner-private Mac snapshot required.');}
+ function associated(row,ownerId){return 'mac-calendar-record:'+ownerId+':'+row.id+':'+row.origin;}
+ function seal(row,ownerId){scope(row,ownerId);if(row.payload?.provider!=='mac_calendar'||row.payload.fictional!==(row.origin==='apple_import_qa'))throw Error('Verified Mac snapshot payload required.');return{...row,payload:{version:1,scheme:'mac-calendar-private-v1',encrypted:sealer.seal(row.payload,associated(row,ownerId))}};}
+ function open(row,ownerId){if(row?.owner_id!==ownerId)throw Error('Mac snapshot owner mismatch.');if(row.item_type!=='provider_mac_event')return row;scope(row,ownerId);const p=row.payload;if(p?.version!==1||p.scheme!=='mac-calendar-private-v1'||typeof p.encrypted!=='string'||Object.keys(p).some(key=>!['version','scheme','encrypted'].includes(key)))throw Error('Encrypted Mac snapshot required.');return{...row,payload:sealer.unseal(p.encrypted,associated(row,ownerId))};}
+ return{async readByIds(actor,ownerId,ids){return(await repository.readByIds(actor,ownerId,ids)).map(row=>open(row,ownerId));},async insertMany(actor,ownerId,rows){return(await repository.insertMany(actor,ownerId,rows.map(row=>seal(row,ownerId)))).map(row=>open(row,ownerId));},async listSavedMacCalendar(actor,ownerId){return(await repository.listSavedMacCalendar(actor,ownerId)).map(row=>open(row,ownerId));}};
+}

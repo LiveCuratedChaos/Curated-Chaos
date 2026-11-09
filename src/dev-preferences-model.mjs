@@ -34,7 +34,7 @@ export function makeBriefPreferencesRecord(data,ownerId){
   return {owner_id:ownerId,household_id:null,visibility:'private',section:'Personal Life',item_type:'brief_preferences',origin:'M1F_QA_SETTINGS',payload:{fictional:true,source:'M1F_QA_SETTINGS',...normalized}};
 }
 export function readOwnerBriefPreferences(rows,ownerId){
-  const matching=(Array.isArray(rows)?rows:[]).filter(r=>r?.owner_id===ownerId&&r?.household_id===null&&r.visibility==='private'
+  const matching=(Array.isArray(rows)?rows:[]).filter(r=>r?.deleted_at==null&&r?.owner_id===ownerId&&r?.household_id===null&&r.visibility==='private'
     &&r.item_type==='brief_preferences'&&r.section==='Personal Life'&&r.payload?.fictional===true&&r.payload.source==='M1F_QA_SETTINGS'
     &&UUID.test(r.id||'')&&Number.isInteger(r.version)&&r.version>=1);
   matching.sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||''))||String(b.created_at||'').localeCompare(String(a.created_at||''))||String(b.id||'').localeCompare(String(a.id||'')));
