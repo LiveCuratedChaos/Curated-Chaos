@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServerOnlyRpcClient} from '../server/server-only-rpc-client.mjs';
 const ref='syntheticproject1234';
-const config={supabaseOrigin:'https://'+ref+'.supabase.co',expectedProjectRef:ref,serviceRoleKey:'synthetic-server-key'};
+const config={supabaseOrigin:'https://'+ref+'.supabase.co',expectedProjectRef:ref,serviceRoleKey:'sb_secret_'+('synthetic_'.repeat(4))};
 const response=()=>new Response('{"accepted":true}',{headers:{'content-type':'application/json'}});
 const safe=error=>error.message==='Server operation unavailable.';
 test('explicit synthetic transport targets only named project RPC with server-only headers',async()=>{
- let calls=0;const client=createServerOnlyRpcClient({...config,fetchImpl:async(url,options)=>{calls++;assert.equal(url,config.supabaseOrigin+'/rest/v1/rpc/cc_durable_session');assert.equal(options.method,'POST');assert.deepEqual(options.headers,{'Content-Type':'application/json',Authorization:'Bearer '+config.serviceRoleKey,apikey:config.serviceRoleKey});assert.equal(options.redirect,'error');assert.equal(options.cache,'no-store');assert.equal(options.body,'{"action":"create"}');assert.ok(options.signal instanceof AbortSignal);return response();}});
- assert.deepEqual(await client.rpc('cc_durable_session',{action:'create'}),{accepted:true});assert.equal(calls,1);
+ let calls=0;const client=createServerOnlyRpcClient({...config,fetchImpl:async(url,options)=>{calls++;assert.equal(url,config.supabaseOrigin+'/rest/v1/rpc/cc_durable_session');assert.equal(options.method,'POST');assert.deepEqual(options.headers,{'Content-Type':'application/json',apikey:config.serviceRoleKey});assert.equal(options.redirect,'error');assert.equal(options.cache,'no-store');assert.equal(options.body,'{"action":"create"}');assert.ok(options.signal instanceof AbortSignal);return response();}});
+ assert.deepEqual(await client.rpc('cc_durable_session',{action:'create'}),{data:{accepted:true},error:null});assert.equal(calls,1);
 });
 test('rejects non-exact origins, wrong project and invalid explicit configuration before fetch',()=>{
  let calls=0;const fetchImpl=()=>{calls++;};
@@ -34,4 +34,21 @@ test('deadline includes response body and malformed UTF8 fails safely',async()=>
  let signal;const client=createServerOnlyRpcClient({...config,timeoutMs:5,fetchImpl:async(_url,options)=>{signal=options.signal;return new Response(new ReadableStream({start(){}}),{headers:{'content-type':'application/json'}});}});
  await assert.rejects(client.rpc('cc_durable_session',{}),safe);assert.equal(signal.aborted,true);
  const invalid=createServerOnlyRpcClient({...config,fetchImpl:async()=>new Response(new Uint8Array([255]),{headers:{'content-type':'application/json'}})});await assert.rejects(invalid.rpc('cc_durable_session',{}),safe);
+});
+
+const legacyKey=role=>[Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url'),Buffer.from(JSON.stringify({role})).toString('base64url'),'synthetic_signature'].join('.');
+test('legacy service_role JWT uses both headers; public and arbitrary secrets never reach fetch',async()=>{
+ const key=legacyKey('service_role');let calls=0;
+ const fetchImpl=async(_url,options)=>{calls++;assert.equal(options.headers.Authorization,'Bearer '+key);assert.equal(options.headers.apikey,key);return response();};
+ await createServerOnlyRpcClient({...config,serviceRoleKey:key,fetchImpl}).rpc('cc_durable_session',{});assert.equal(calls,1);
+ for(const serviceRoleKey of ['sb_publishable_'+('x'.repeat(40)),legacyKey('anon'),legacyKey('authenticated'),'arbitrary-secret','sb_secret_short',key.replace(key.split('.')[0],Buffer.from(JSON.stringify({alg:'none',typ:'JWT'})).toString('base64url'))])assert.throws(()=>createServerOnlyRpcClient({...config,serviceRoleKey,fetchImpl}),safe);
+ assert.equal(calls,1);
+});
+test('external cancellation aborts transport immediately without retries or abort reason leaks',async()=>{
+ const controller=new AbortController();let calls=0,transportSignal;
+ const client=createServerOnlyRpcClient({...config,fetchImpl:(_url,options)=>{calls++;transportSignal=options.signal;return new Promise(()=>{});}});
+ const pending=client.rpc('cc_durable_sync_job',{}, {signal:controller.signal});controller.abort(new Error('private-reason'));
+ await assert.rejects(pending,safe);assert.equal(transportSignal.aborted,true);assert.equal(calls,1);
+ await assert.rejects(client.rpc('cc_durable_sync_job',{}, {signal:controller.signal}),safe);assert.equal(calls,1);
+ await assert.rejects(client.rpc('cc_durable_sync_job',{}, {signal:{aborted:false}}),safe);assert.equal(calls,1);
 });

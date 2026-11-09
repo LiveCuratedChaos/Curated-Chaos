@@ -8,6 +8,18 @@ function targetOrigin(value,expectedProjectRef){
  if(url.protocol!=='https:'||url.hostname!==expectedProjectRef+'.supabase.co'||url.port||url.username||url.password||url.pathname!=='/'||url.search||url.hash||value!==url.origin&&value!==url.origin+'/')throw failure();
  return url.origin;
 }
+function serverHeaders(key){
+ // Shape checking is not signature verification: Supabase validates the actual credential.
+ if(/^sb_secret_[A-Za-z0-9_-]{16,}$/.test(key))return {'Content-Type':'application/json',apikey:key};
+ try{
+  const parts=key.split('.');
+  if(parts.length!==3||parts.some(part=>!part||!/^[A-Za-z0-9_-]+$/.test(part)))throw failure();
+  const parse=part=>{const bytes=Buffer.from(part,'base64url');if(bytes.toString('base64url')!==part)throw failure();return JSON.parse(bytes.toString('utf8'));};
+  const header=parse(parts[0]),payload=parse(parts[1]);
+  if(header.alg!=='HS256'||header.typ!=='JWT'||payload.role!=='service_role')throw failure();
+  return {'Content-Type':'application/json',Authorization:'Bearer '+key,apikey:key};
+ }catch{throw failure();}
+}
 function encode(value){
  if(!value||Object.getPrototypeOf(value)!==Object.prototype)throw failure();
  let text;try{text=JSON.stringify(value,(_key,item)=>{
@@ -32,15 +44,17 @@ async function readJson(response){
 export function createServerOnlyRpcClient({supabaseOrigin,serviceRoleKey,expectedProjectRef,fetchImpl,timeoutMs=5000}={}){
  const origin=targetOrigin(supabaseOrigin,expectedProjectRef);
  if(typeof serviceRoleKey!=='string'||!serviceRoleKey.trim()||serviceRoleKey!==serviceRoleKey.trim()||serviceRoleKey.length>8192||/[\x00-\x1f\x7f]/.test(serviceRoleKey)||typeof fetchImpl!=='function'||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>30000)throw failure();
- return Object.freeze({async rpc(name,parameters){
-  if(!rpcNames.has(name))throw failure();const body=encode(parameters);const controller=new AbortController();let timer;
+ const headers=serverHeaders(serviceRoleKey);
+ return Object.freeze({async rpc(name,parameters,{signal}={}){
+  if(!rpcNames.has(name)||signal!==undefined&&!(signal instanceof AbortSignal)||signal?.aborted)throw failure();const body=encode(parameters);const controller=new AbortController();let timer,onAbort;
   try{
    const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(failure());},timeoutMs);});
+   const cancelled=new Promise((_,reject)=>{onAbort=()=>{controller.abort();reject(failure());};signal?.addEventListener('abort',onAbort,{once:true});if(signal?.aborted)onAbort();});
    const operation=(async()=>{
-    const response=await fetchImpl(origin+'/rest/v1/rpc/'+name,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+serviceRoleKey,apikey:serviceRoleKey},body,signal:controller.signal,redirect:'error',cache:'no-store'});
-    return readJson(response);
+    const response=await fetchImpl(origin+'/rest/v1/rpc/'+name,{method:'POST',headers:{...headers},body,signal:controller.signal,redirect:'error',cache:'no-store'});
+    return {data:await readJson(response),error:null};
    })();
-   return await Promise.race([operation,timeout]);
-  }catch{throw failure();}finally{clearTimeout(timer);controller.abort();}
+   return await Promise.race([operation,timeout,cancelled]);
+  }catch{throw failure();}finally{clearTimeout(timer);signal?.removeEventListener('abort',onAbort);controller.abort();}
  }});
 }
