@@ -445,3 +445,33 @@ Stopped only owner runtime 78603, restarted combined private preview with review
 
 
 Upcoming workspace events (920 local tests): same owner-private Brief projection, only future title/day/time, first 20 sorted with full count; no provider snapshots, event descriptions, note bodies or source identities. Fictional browser and fake two-account acceptance passed; real read-only staging acceptance and private-preview activation remain pending approval. Current owner runtime 93764 stays unchanged.
+
+
+## Approved upcoming workspace events accepted and activated · November 9
+
+After explicit owner approval, read-only staging acceptance passed: two temporary development logins, two Brief minimal-field reads and two appearance reads; cookie/CSRF/origin/account/sign-out checks and future-event ordering/count/field validation passed. Both temporary logins/staging closed. App/settings writes, note-body/provider reads zero. No event values were logged.
+
+Stopped only owner runtime 93764 and restarted combined preview as runtime 75695 at http://127.0.0.1:5312/dev-dashboard.html. Privately signed configured A back in; verified signed-in, Brief-loaded, upcoming-section-visible and saved-appearance-applied booleans. No editors or note text opened, searches executed or record changes approved. Owner tab 55 retained. Header-only proof `/private/tmp/curated-owner-upcoming-header.png`. All 920 tests passed before activation. Existing records/settings, original/gateway/live app, providers/backups/keys/schema unchanged. This supersedes pending acceptance and activation entries above.
+
+
+Saved-title browsing checkpoint (923 tests): explicit task/note/event type may browse without query; all-type blank query denied. Same private owner projection, capped 50 display results, no automatic note text. Prepared `--verify-title-search` acceptance now performs eight minimal metadata lists across two temporary logins (one query and three browse types per account), closes both, and writes nothing. Hosted run and private-preview restart remain pending fresh approval; historical two-read scope is superseded for this tool. Owner runtime 75695 unchanged.
+
+
+## Approved saved-title browsing accepted and activated · November 9
+
+Owner approved bounded read-only acceptance and conditional restart. Acceptance passed: two temporary logins created/closed, eight minimal Brief record-list reads (one title search plus each of three explicit browse types per account), cookie/CSRF/origin/account/sign-out checks passed, title browsing verified. No app writes, note bodies or provider reads; private titles not logged. Staging closed.
+
+Stopped only owner runtime 75695, restarted combined preview as runtime 6576 at http://127.0.0.1:5312/dev-dashboard.html, and privately restored configured A sign-in. Boolean-only verification confirmed Brief loaded, all three browse controls visible and saved appearance applied. No owner browse/search executed, note text opened, editors opened or record changes approved. Owner tab 55 retained. Public-header proof `/private/tmp/curated-owner-browse-header.png`. All 923 tests passed before activation. Saved records/settings, original/gateway/live app, providers/backups/keys/schema unchanged. Supersedes pending acceptance/activation above.
+
+
+Completed-task display (926 local tests): same private Brief projection, completed title/day/section only, capped 20 with full count, no action handles. Local expansion preference clears on account/session clearing. Fictional browser accepted; real staging read-only validation (two Brief lists plus two appearance reads/two temporary logins) and owner-preview restart remain pending explicit approval. Current owner runtime 6576 stays untouched. No new record writes/schema/provider scope.
+
+
+## Approved Completed section accepted and activated · November 9
+
+Explicit approval received for bounded read-only development acceptance and conditional private-preview restart. Acceptance passed: two temporary logins created/closed, two minimal Brief lists plus two minimal appearance reads; completed-list field/count/date-order checks and cookie/CSRF/origin/account/sign-out checks passed. App/settings writes, note bodies and provider reads zero. Staging closed.
+
+Stopped only owner runtime 6576, restarted combined preview as runtime 24984 at http://127.0.0.1:5312/dev-dashboard.html, and privately restored configured A. Boolean-only verification confirmed signed-in, Brief loaded, Completed visible/collapsed and appearance applied. Completed was not opened; no existing task status changed, note text opened, search executed or editor used. Owner tab 55 retained; public-header proof `/private/tmp/curated-owner-completed-header.png`. All 926 tests passed before activation. Saved records/settings, original/gateway/live app, providers/backups/keys/schema unchanged. Supersedes pending acceptance/activation entries above.
+
+
+Task status filters / clear checkpoint (929 tests): explicit tasks may filter all/open/completed before counts/caps; non-task status filters fail. No additional payload fields or completed-task write handles. Clear search is local display clearing, not record deletion or a provider operation. Prepared title-search acceptance now uses 12 metadata lists (six per temporary account) and closes both logins. No appearance/preferences/note text/providers/backups/writes. Real run and owner-preview restart are pending fresh approval; runtime 24984 remains untouched.
