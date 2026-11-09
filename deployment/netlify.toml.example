@@ -1,0 +1,17 @@
+# INERT PREPARATION TEMPLATE. Not the repository's netlify.toml.
+# Do not copy to the root or change an existing site's settings before approved
+# staged acceptance. The readiness inventory intentionally stops this build.
+[build]
+  command = "node tools/check-deployment-readiness.mjs"
+  publish = "public-release"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  directory = "deployment/functions"
+  node_bundler = "esbuild"
+
+# No scheduled function, deploy hook, environment secret, provider callback or
+# branch promotion is enabled. Future public-release must contain only explicitly
+# reviewed browser assets; never change publish to '.' or the repository root.

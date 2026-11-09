@@ -168,6 +168,8 @@ An `owner`/`adult` membership table is not a child/guardian model. A project nam
 
 ## Lead-owned release evidence gate
 
+November 9 local foundation update: the lead reconciled newer main-source work at `b7de6fa` (926 tests before new work). Isolated workers and the lead then implemented durable session/RPC and leased job foundations, unapplied SQL drafts007/008, HTTPS request/runtime composition and deployment preparation. This advances F0/F1/F4 and CC-ID-01/CC-BASE-03 foundations; it does not close their production gates or claim provider synchronization is enabled. Details and acceptance limits are in `DELIVERY_BASELINE.md` and `DURABLE_BACKEND_PROPOSAL.md`. Original 901-test audit status above remains a dated baseline rather than the current integrated test count.
+
 Before any row is marked production-ready, attach: implementation commit/branch, relevant model/API/authorization tests, browser evidence, applicable hosted/provider acceptance and cleanup evidence, device/operational checks, and any owner approval required for external data or deployment/migration. Revalidate dependencies after integrating parallel branches. A passing author's branch is insufficient if combined behavior fails.
 
 No new provider support, legal/compliance assurance, physical-device guarantee or elapsed delivery estimate is certified by this ledger. The lead must maintain the estimate from closed acceptance rows and measured integrated throughput, with provider/owner/platform waits shown separately from implementation effort.

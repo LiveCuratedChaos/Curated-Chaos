@@ -46,7 +46,9 @@ With four available agent slots, run one lead plus three workers. Rotate reviewe
 - One local release gate with tests; no real-service access or owner-preview restart.
 - Lead reviews and integrates worker commits; all local checks pass on the integration branch.
 
-### Batch 1 — production execution and shared application spine
+### Batch 1 — production execution and shared application spine (local foundation implemented; hosted gates open)
+
+November 9 follow-through: latest main-source checkpoint `3212bea` reconciled at `b7de6fa` with 926 passing tests. See `DELIVERY_BASELINE.md`. Three isolated workers delivered durable encrypted sessions, leased consent-aware jobs, unapplied SQL, safe RPC transport and deployment preparation. The lead added HTTPS request handling/runtime composition and whole synthetic session/job workflows using embedded PostgreSQL. See `DURABLE_BACKEND_PROPOSAL.md` for the concrete Netlify Functions + Supabase design, $55 published-price/$60 conservative two-project infrastructure estimate and owner-only account checklist. Neither hosted persistence nor provider refresh has been activated; production adapters, durable approval/OAuth/limiter stores and acceptance remain dependencies.
 
 - Choose a production execution model that supports durable sessions, encrypted grants, jobs and scheduling. The current in-memory loopback gateway is explicitly not deployable as production.
 - Define identity/household/record revision/provenance/idempotency/error contracts, fixture-versus-production boundaries and storage interfaces.
@@ -103,7 +105,7 @@ The three audits estimated roughly 120–240 focused engineering person-days (ab
 
 ## Essential decisions and limits
 
-- **Next architectural decision:** production runtime/durable state and operating-cost boundary. Prepare a concrete hosting/deployment proposal before requesting account changes or purchases. Do not upload the development in-memory gateway.
+- **Proposed execution model:** Netlify Node Functions + Supabase durable state/jobs; no demonstrated need for a third runtime. The owner confirmed both accounts are Free. Account-specific quotes/project inventory and the operating-cost boundary remain to confirm before any purchase. See `DURABLE_BACKEND_PROPOSAL.md`; do not upload the development in-memory gateway.
 - AI can perform implementation, local reviews/tests and integration, but cannot supply provider approval, licensed market-data rights, account/OS consent, payment authorization or real-device acceptance on the owner's behalf.
 - Mac-based calendar updates still require the Mac to run; independent updates remain a separately authorized provider capability.
 - Current encrypted archives do not cover full identities/households/schema/attachments or prove whole-system disaster recovery. The external-drive/off-device gap remains.
