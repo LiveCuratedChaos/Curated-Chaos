@@ -20,7 +20,7 @@ print 'Task and note changes require review and approval in the app.'
   --allow-private-task-create-reviewed --allow-private-task-edit-reviewed \
   --allow-private-task-completion --allow-private-note-read \
   --allow-private-note-edit-reviewed --allow-private-note-create-reviewed \
-  --allow-private-title-search --allow-private-appearance-read --open-private-dashboard
+  --allow-private-title-search --allow-private-appearance-read --allow-private-appearance-save-reviewed --open-private-dashboard
 cc_result=$?
 if [[ "$cc_result" -ne 0 ]]; then
   print 'The private workspace did not open. Existing files and services were left in place.'

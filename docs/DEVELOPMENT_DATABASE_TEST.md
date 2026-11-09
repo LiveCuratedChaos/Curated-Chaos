@@ -432,3 +432,16 @@ If separately approved and the read-only check passes, restart only owner runtim
 ### Approved appearance test and activation completed · November 9
 
 Staging read-only check passed: two temporary A/B logins, four logical record reads (two minimal appearance/two Brief metadata), two supported saved appearances, signed-out/privacy/origin/CSRF checks. No values printed, note bodies/app/settings writes/provider reads zero. Both test logins/staging closed. Owner-approved preview restart/sign-in then completed and saved appearance applied without changing its values. Runtime 78603 remains open, replacing 4798. Original/gateway/live app, providers/backups/keys/schema untouched. Bounded authorization complete.
+
+
+Reviewed appearance editor checkpoint (911 local tests): browser-visible preferences are limited to palette/density; unrelated raw settings remain server-side and are preserved exactly. Review/cancel do not write, approval is expiring and single-use, and uncertain saves are not retried. Fictional browser review/save/sign-out passed. The prepared two-login development acceptance toggles and restores only existing account A density, advancing its version/save time; concurrent changes halt restoration. Hosted execution and current private preview restart remain pending explicit approval.
+
+
+## Approved reviewed appearance accepted and activated · November 9
+
+Explicit approval received for density-only development test/restoration and conditional private preview restart. Acceptance passed: two temporary logins created/closed; two minimal appearance reads and 15 bounded app-record reads; exactly two app writes to existing A preferences; density-only change and original display value restored; review replay blocked; B preferences unchanged; no note bodies or provider reads. Save version/time advanced as disclosed. Both staging logins/service closed.
+
+Stopped only owner runtime 78603, restarted combined private preview with reviewed appearance editing, and privately signed A back in. Verified signed-in, Brief loaded, saved appearance applied and Appearance settings control visible using boolean-only observation. No owner UI edits approved. Owner tab 55 retained, runtime 11842 remains running at http://127.0.0.1:5312/dev-dashboard.html. Public-header proof `/private/tmp/curated-owner-appearance-editor-header.png`. Original/gateway/live app, other records, providers, backups, keys and schema unchanged. Supersedes pending acceptance/activation entries above.
+
+
+Upcoming workspace events (920 local tests): same owner-private Brief projection, only future title/day/time, first 20 sorted with full count; no provider snapshots, event descriptions, note bodies or source identities. Fictional browser and fake two-account acceptance passed; real read-only staging acceptance and private-preview activation remain pending approval. Current owner runtime 93764 stays unchanged.

@@ -11,9 +11,9 @@
     "test:rls": "node tools/verify-rls.mjs",
     "backup:private": "node tools/private-recovery.mjs --create",
     "check:privacy": "node tools/check-repository-privacy.mjs",
-    "check:release": "node tools/verify-local-release.mjs",
     "check:setup": "node tools/preflight.mjs",
-    "start:connections": "node tools/connections-server.mjs"
+    "start:connections": "node tools/connections-server.mjs",
+    "check:release": "node tools/verify-local-release.mjs"
   },
   "engines": {
     "node": ">=22"
