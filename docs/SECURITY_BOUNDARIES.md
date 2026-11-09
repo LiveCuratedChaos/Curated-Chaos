@@ -304,3 +304,12 @@ Reviewed appearance editor checkpoint (911 local tests): browser-visible prefere
 
 
 Upcoming workspace events (920 local tests): same owner-private Brief projection, only future title/day/time, first 20 sorted with full count; no provider snapshots, event descriptions, note bodies or source identities. Fictional browser and fake two-account acceptance passed; real read-only staging acceptance and private-preview activation remain pending approval. Current owner runtime 93764 stays unchanged.
+
+
+Saved-title browsing checkpoint (923 tests): explicit task/note/event type may browse without query; all-type blank query denied. Same private owner projection, capped 50 display results, no automatic note text. Prepared `--verify-title-search` acceptance now performs eight minimal metadata lists across two temporary logins (one query and three browse types per account), closes both, and writes nothing. Hosted run and private-preview restart remain pending fresh approval; historical two-read scope is superseded for this tool. Owner runtime 75695 unchanged.
+
+
+Completed-task display (926 local tests): same private Brief projection, completed title/day/section only, capped 20 with full count, no action handles. Local expansion preference clears on account/session clearing. Fictional browser accepted; real staging read-only validation (two Brief lists plus two appearance reads/two temporary logins) and owner-preview restart remain pending explicit approval. Current owner runtime 6576 stays untouched. No new record writes/schema/provider scope.
+
+
+Task status filters / clear checkpoint (929 tests): explicit tasks may filter all/open/completed before counts/caps; non-task status filters fail. No additional payload fields or completed-task write handles. Clear search is local display clearing, not record deletion or a provider operation. Prepared title-search acceptance now uses 12 metadata lists (six per temporary account) and closes both logins. No appearance/preferences/note text/providers/backups/writes. Real run and owner-preview restart are pending fresh approval; runtime 24984 remains untouched.
