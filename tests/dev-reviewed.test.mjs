@@ -29,7 +29,7 @@ test('connected Daily Brief does not create a pending email-to-task from unsaved
  const code=read('src/dev-brief.mjs');
  assert.match(code,/lifeSuggestions\(life\)/);
  assert.match(code,/emailSuggestions\(emails\)/);
- assert.match(code,/emails=normalizeFictionalEmails\(emailRows,viewer\)/);
+ assert.match(code,/nextEmails=normalizeFictionalEmails\(emailRows,viewer\)/);
  assert.match(code,/renderActivityHistory\(\)/);
  assert.match(read('src/dev-api.mjs'),/payload,created_at&visibility=eq\.private&owner_id=/);
 });

@@ -1,0 +1,10 @@
+// Read model of supported saved development records. No provider reads, AI, writes or note bodies.
+import {normalizeCloudRecords} from '../src/dev-brief-model.mjs';import {briefDateInZone} from './saved-source-brief.mjs';
+export function privateWorkspaceBrief({rows,ownerId,now=Date.now(),timeZone='America/New_York',taskAction=null,noteAction=null}){
+ const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+ if(!uuid(ownerId)||!Array.isArray(rows)||rows.length>2000||new Set(rows.map(row=>row?.id)).size!==rows.length||rows.some(row=>!uuid(row?.id)||row.owner_id!==ownerId||row.visibility!=='private'||row.household_id!==null||row.deleted_at!==null||!['task','note','event'].includes(row.item_type)))throw Error('Exact owner-private brief scope required.');
+ const day=briefDateInZone(now,timeZone),normalized=normalizeCloudRecords(rows,ownerId),safeTitle=row=>typeof row.payload.title==='string'&&row.payload.title.trim().length>0&&row.payload.title.length<=200;
+ const tasks=normalized.tasks.filter(safeTitle),notes=normalized.notes.filter(safeTitle),events=normalized.events.filter(safeTitle),due=tasks.filter(row=>!row.payload.done&&row.payload.day<=day),upcoming=tasks.filter(row=>!row.payload.done&&row.payload.day>day),today=events.filter(row=>row.payload.day===day);
+ const task=row=>({title:row.payload.title,day:row.payload.day,section:row.section,...(taskAction?taskAction(row):{})}),event=row=>({title:row.payload.title,time:row.payload.time});
+ return{day,timeZone,checkedAt:new Date(now).toISOString(),readOnly:true,providerRead:false,counts:{sourceRecords:rows.length,supportedRecords:tasks.length+notes.length+events.length,omittedRecords:rows.length-tasks.length-notes.length-events.length,dueTasks:due.length,upcomingTasks:upcoming.length,eventsToday:today.length,notes:notes.length},dueTasks:due.slice(0,20).map(task),upcomingTasks:upcoming.slice(0,20).map(task),eventsToday:today.slice(0,20).map(event),notes:notes.slice(0,20).map(row=>({title:row.payload.title,...(noteAction?noteAction(row):{})}))};
+}

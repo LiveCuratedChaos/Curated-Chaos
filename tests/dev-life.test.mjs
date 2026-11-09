@@ -68,3 +68,9 @@ test('new routes and API are explicitly allowlisted without exposing .env or tes
  assert.equal(seen[0].options.headers.Authorization,'Bearer test-jwt');
  assert.equal(seen[1].options.method,'POST');
 });
+test('removed life source cannot generate suggestions or suppress its active replacement',()=>{
+ const removed={id:ids[0],...makeFictionalLife('course-assessment',owner,'2026-11-08'),deleted_at:'2026-11-08T12:00:00Z'},replacement={...removed,id:ids[1],deleted_at:null};assert.deepEqual(normalizeFictionalLife([removed,replacement],owner),[replacement]);assert.deepEqual(lifeSuggestions([removed]),[]);
+});
+test('sample source API reads explicitly exclude removed and household records and include source revisions',async()=>{
+ const queries=[],api=createDevApi({supabaseUrl:'https://devproject123.supabase.co',projectRef:'devproject123',publishableKey:'sb_publishable_fixture'},async url=>{queries.push(new URL(url).searchParams);return{ok:true,status:200,text:async()=>'[]'};});await api.listFictionalEmails('fixture');await api.listFictionalLife('fixture');for(const query of queries){assert.equal(query.get('deleted_at'),'is.null');assert.equal(query.get('household_id'),'is.null');assert.ok(query.get('select').split(',').includes('version'));assert.ok(query.get('select').split(',').includes('deleted_at'));}
+});

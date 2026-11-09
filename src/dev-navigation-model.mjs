@@ -25,7 +25,7 @@ export const MOBILE_TABS=Object.freeze([
   Object.freeze({id:'brief',title:'Daily Brief',symbol:'◈',href:'/dev-dashboard.html'}),
   Object.freeze({id:'curation',title:'The Curation',symbol:'▦',href:'/dev-workspace.html?page=curation'}),
   Object.freeze({id:'calendar',title:'Calendar',symbol:'▣',href:'/dev-calendar.html'}),
-  Object.freeze({id:'home',title:'Home',symbol:'⌂',href:'/dev-workspace.html?page=home'}),
+  Object.freeze({id:'home',title:'Home',symbol:'⌂',href:'/dev-home.html'}),
   Object.freeze({id:'more',title:'More',symbol:'☰',href:'/dev-workspace.html?page=more'})
 ]);
 export function safeWorkspacePage(raw){return WORKSPACE_PAGES.some(p=>p.id===raw)?raw:'curation';}

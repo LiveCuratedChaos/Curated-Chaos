@@ -15,7 +15,7 @@ const root=document.getElementById('connected-workspace');
 const page=safeWorkspacePage(new URLSearchParams(location.search).get('page'));
 let config,api,auth,user=null,loading=false,error='',snapshot=null,lastChecked=0,requestGeneration=0;
 let hideAmounts=true;
-let layouts=defaultWidgetLayouts(),layoutRecord=null,duplicateLayouts=0,layoutEdit=false,layoutDirty=false,layoutBusy=false,layoutMessage='',dragWidget='';
+let layouts=defaultWidgetLayouts(),layoutRecord=null,duplicateLayouts=0,layoutEdit=false,layoutDirty=false,layoutBusy=false,layoutNeedsReview=false,layoutMessage='',dragWidget='';
 const currentDevice=()=>typeof window==='undefined'?'desktop':window.innerWidth<680?'phone':window.innerWidth<1020?'tablet':'desktop';
 let device=currentDevice(),manualDevice=false;
 const bodyTitle=workspaceHeading(page);
@@ -26,23 +26,24 @@ function show(){
   if(!user){
     content+=`<section class="cc-work-card cc-work-auth"><h2>Connect your development test account</h2><p class="muted">Sign in with Test Account A or B to see your already saved private fictional records. Your credentials stay in the existing temporary in-tab QA session.</p><form id="workspace-login"><label class="field-label">Test account email<input type="email" name="email" autocomplete="username" required></label><label class="field-label">Test password<input type="password" name="password" autocomplete="current-password" required></label><button class="btn btn-primary" type="submit" ${loading?'disabled':''}>Sign in to test workspace</button></form><p class="tiny muted">No real banking, email or WGU integrations are connected. Do not enter sensitive or real records.</p></section>`;
   }else{
-    content+=`<div class="cc-work-status"><div><strong>${loading?'Checking cloud…':'Signed in to private test workspace'}</strong><small>${state}</small></div><div class="cc-work-actions"><button class="btn btn-small" id="workspace-refresh" ${loading?'disabled':''}>Fetch latest</button><button class="btn btn-small" id="workspace-signout" ${loading?'disabled':''}>Sign out</button></div></div>`;
-    if(snapshot){content+=(page==='curation'?`${layoutMessage?`<p role="status" class="notice">${e(layoutMessage)}</p>`:''}${renderWidgetBoard(layouts,device,snapshot,{editing:layoutEdit,dirty:layoutDirty,loading:layoutBusy,duplicateCount:duplicateLayouts,hideAmounts})}`:workspaceCards(page,snapshot));}
+    content+=`<div class="cc-work-status"><div><strong>${loading?'Checking cloud…':'Signed in to private test workspace'}</strong><small>${state}</small></div><div class="cc-work-actions"><button class="btn btn-small" id="workspace-refresh" ${loading||layoutBusy?'disabled':''}>Fetch latest</button><button class="btn btn-small" id="workspace-signout" ${loading?'disabled':''}>Sign out</button></div></div>`;
+    if(snapshot){content+=(page==='curation'?`${layoutMessage?`<p role="status" class="notice">${e(layoutMessage)}</p>`:''}${renderWidgetBoard(layouts,device,snapshot,{editing:layoutEdit,dirty:layoutDirty,loading:layoutBusy,saveBlocked:layoutNeedsReview,duplicateCount:duplicateLayouts,hideAmounts})}`:workspaceCards(page,snapshot));}
     else content+=`<p class="warning">${loading?'Retrieving saved fictional records…':'No verified cloud snapshot is available. Use Fetch latest to try again.'}</p>`;
   }
   if(page!=='more'&&page!=='curation')content+=`<section class="cc-work-next"><h2>Coming in ${e(bodyTitle.next)}</h2><p>This page is the navigation foundation for the ${e(bodyTitle.title)} workspace. The full management tools, widgets, and any integrations for this area are not yet built. Current links lead only to your tested Milestone 1 QA pages.</p></section>`;
   root.innerHTML=renderConnectedShell(`<div class="cc-workspace-page">${content}</div>`,{active:'workspace',workspace:page});
 }
 async function load(){
-  if(!user||!auth||!api)return;
+  if(!user||!auth||!api||layoutBusy)return;
   const seq=++requestGeneration,viewer=user.id; loading=true;error='';show();
   try{
     const token=await auth.getAccessToken();
+    if(seq!==requestGeneration||user?.id!==viewer)return;
     const [raw,lifeRows,emailRows,prefs,widgetRows,organization]=await Promise.all([api.listBriefRecords(token),api.listFictionalLife(token),api.listFictionalEmails(token),api.listBriefPreferences(token,viewer),page==='curation'?api.listWidgetLayouts(token,viewer):Promise.resolve([]),api.listOrganization(token,viewer)]);
     if(seq!==requestGeneration||user?.id!==viewer)return;
     const base=normalizeCloudRecords(raw,viewer);
     snapshot={...base,life:normalizeFictionalLife(lifeRows,viewer),emails:normalizeFictionalEmails(emailRows,viewer),projects:normalizeOrganizerRows(organization,viewer).projects};
-    if(page==='curation'){const saved=readOwnerWidgetLayout(widgetRows,viewer);if(!layoutDirty){layouts=saved.layouts;layoutRecord=saved.record;duplicateLayouts=saved.duplicateCount;}else if((saved.record?.id||null)!==(layoutRecord?.id||null)||(saved.record?.version||null)!==(layoutRecord?.version||null)){layoutMessage='A layout changed in another tab. Your draft is still visible, but please discard it and reload the latest layout before saving.';}}
+    if(page==='curation'){const saved=readOwnerWidgetLayout(widgetRows,viewer);if(!layoutDirty){layouts=saved.layouts;layoutRecord=saved.record;duplicateLayouts=saved.duplicateCount;layoutNeedsReview=false;}else if((saved.record?.id||null)!==(layoutRecord?.id||null)||(saved.record?.version||null)!==(layoutRecord?.version||null)){layoutNeedsReview=true;layoutMessage='A layout changed in another tab. Your draft is still visible, but please discard it and reload the latest layout before saving.';}}
     const p=readOwnerBriefPreferences(prefs,viewer).preferences;
     hideAmounts=p.hideAmounts;
     document.body.dataset.theme=p.palette;
@@ -62,7 +63,7 @@ root.addEventListener('submit',event=>{
   if(!email||!password)return;
   loading=true;error='';show();
   void (async()=>{
-    try{const signed=await auth.signIn(email,password);++requestGeneration;user=signed.user;layouts=defaultWidgetLayouts();layoutRecord=null;layoutDirty=false;layoutMessage='';await load();}
+    try{const signed=await auth.signIn(email,password);++requestGeneration;user=signed.user;layouts=defaultWidgetLayouts();layoutRecord=null;layoutDirty=false;layoutBusy=false;layoutNeedsReview=false;layoutMessage='';await load();}
     catch(err){user=null;snapshot=null;lastChecked=0;error=String(err?.message||'Sign-in failed').slice(0,220);}
     finally{loading=false;show();}
   })();
@@ -72,7 +73,7 @@ root.addEventListener('click',event=>{
   if(event.target.closest('#workspace-signout')){
     if(loading||!user)return;
     // Wipe the UI immediately so pending requests cannot paint the previous account's records.
-    ++requestGeneration;const old=auth;user=null;snapshot=null;lastChecked=0;error='';loading=false;layouts=defaultWidgetLayouts();layoutRecord=null;layoutDirty=false;layoutEdit=false;layoutMessage='';hideAmounts=true;show();
+    ++requestGeneration;const old=auth;user=null;snapshot=null;lastChecked=0;error='';loading=false;layouts=defaultWidgetLayouts();layoutRecord=null;layoutDirty=false;layoutEdit=false;layoutBusy=false;layoutNeedsReview=false;layoutMessage='';dragWidget='';hideAmounts=true;show();
     void old.signOut();
   }
 });
@@ -87,26 +88,32 @@ function changeLayout(action,id,arg){
   }catch(err){layoutMessage=String(err?.message||'Widget edit failed.');show();}
 }
 async function saveLayout(){
-  if(!user||!snapshot||!layoutDirty||loading||layoutBusy)return;
+  if(!user||!snapshot||!layoutDirty||loading||layoutBusy||layoutNeedsReview)return;
   const viewer=user.id,seq=requestGeneration,draft=makeWidgetLayoutRecord(layouts,viewer);
-  layoutBusy=true;layoutMessage='';show();
+  let writeAttempted=false;layoutBusy=true;layoutMessage='';show();
   try{
     const token=await auth.getAccessToken();
+    if(seq!==requestGeneration||user?.id!==viewer)return;
     const fresh=readOwnerWidgetLayout(await api.listWidgetLayouts(token,viewer),viewer);
     if(seq!==requestGeneration||user?.id!==viewer)return;
     if((fresh.record?.id||null)!==(layoutRecord?.id||null)||(fresh.record?.version||null)!==(layoutRecord?.version||null)){
-      throw Error('Layout was changed in another tab. Your draft was not overwritten. Use Discard draft / Fetch latest and try again.');
+      layoutNeedsReview=true;throw Error('Layout was changed in another tab. Your draft was not overwritten. Use Discard draft / Fetch latest and try again.');
     }
-    const result=layoutRecord
+    writeAttempted=true;const result=layoutRecord
       ?await api.updateWidgetLayout(token,layoutRecord,viewer,draft.payload)
       :await api.addWidgetLayout(token,draft);
     if(seq!==requestGeneration||user?.id!==viewer)return;
     if(!Array.isArray(result)||result.length!==1)throw Error('Save was not confirmed. Do not click Save again until you Fetch latest.');
+    const acknowledged=readOwnerWidgetLayout(result,viewer);
+    if(!acknowledged.record||(layoutRecord&&(acknowledged.record.id!==layoutRecord.id||acknowledged.record.version<=layoutRecord.version))||JSON.stringify(acknowledged.layouts)!==JSON.stringify(draft.payload.layouts))throw Error('Save acknowledgement did not match your layout. Your draft is retained; Fetch latest before saving again.');
     const saved=readOwnerWidgetLayout(await api.listWidgetLayouts(token,viewer),viewer);
     if(seq!==requestGeneration||user?.id!==viewer)return;
-    layouts=saved.layouts;layoutRecord=saved.record;duplicateLayouts=saved.duplicateCount;layoutDirty=false;
+    if(!saved.record||saved.record.id!==result[0].id||saved.record.version!==result[0].version||JSON.stringify(saved.layouts)!==JSON.stringify(draft.payload.layouts)){
+      throw Error('The save was acknowledged, but its latest layout could not be verified. Your draft is retained. Fetch latest and check before saving again.');
+    }
+    layouts=saved.layouts;layoutRecord=saved.record;duplicateLayouts=saved.duplicateCount;layoutDirty=false;layoutNeedsReview=false;
     layoutMessage='Your private dashboard layout was saved to your development cloud account.';
-  }catch(err){if(seq===requestGeneration&&user?.id===viewer)layoutMessage=String(err?.message||'Could not save layout.').slice(0,280);}
+  }catch(err){if(seq===requestGeneration&&user?.id===viewer){if(writeAttempted)layoutNeedsReview=true;layoutMessage=String(err?.message||'Could not save layout.').slice(0,200)+(layoutNeedsReview?' Your draft is kept. Use Discard draft to load the latest saved layout before saving again.':'');}}
   finally{if(seq===requestGeneration&&user?.id===viewer){layoutBusy=false;show();}}
 }
 root.addEventListener('click',event=>{

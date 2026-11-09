@@ -68,3 +68,6 @@ test('email test screen, sources and shell are allowlisted; credentials are not'
   assert.doesNotMatch(read('src/dev-email.mjs'),/accounts.google.com|gmail.google.com|api.gmail.com|localStorage/);
   assert.doesNotMatch(read('src/dev-email-model.mjs'),/accounts.google.com|gmail.google.com|api.gmail.com/);
 });
+test('removed sample email never returns to inbox or suggestions and cannot hide a replacement',()=>{
+ const removed={...sample(),deleted_at:'2026-11-08T12:00:00Z'},replacement={...sample(),id:'2f3ab922-5969-421d-9741-ad4fcab22359',created_at:'2026-11-08T13:00:00Z'};assert.deepEqual(normalizeFictionalEmails([null,removed,replacement],owner),[replacement]);assert.deepEqual(emailSuggestions([removed]),[]);
+});

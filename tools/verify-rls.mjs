@@ -11,7 +11,7 @@ async function run() {
     const headers={'apikey':publishableKey,'Accept':'application/json',...extra};
     if (body!==undefined) headers['Content-Type']='application/json';
     if (token) headers.Authorization=`Bearer ${token}`;
-    const response=await fetch(`${url}${path}`,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
+    const response=await fetch(`${url}${path}`,{method,headers,body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(15000)});
     let json; try{json=await response.json();}catch{json=null;}
     return {ok:response.ok,status:response.status,data:json};
   }
@@ -27,9 +27,13 @@ async function run() {
   function valid(resp,op) { if(!resp.ok||!Array.isArray(resp.data)||resp.data.length!==1) throw Error(`${op} failed: HTTP ${resp.status}. Only use the NEW development project and the supplied migration.`); return resp.data[0]; }
   const aProfile=await request('/rest/v1/cc_profiles','POST',{user_id:a.uid,display_name:`QA A ${stamp.slice(0,8)}`},a.token,headers);
   // Existing profile from a prior verification run is fine.
-  pass('Account A can create/read its own profile',aProfile.ok || aProfile.status===409);
+  pass('Account A can create its own profile (or already has one)',aProfile.ok || aProfile.status===409);
   const bProfile=await request('/rest/v1/cc_profiles','POST',{user_id:b.uid,display_name:`QA B ${stamp.slice(0,8)}`},b.token,headers);
-  pass('Account B can create/read its own profile',bProfile.ok || bProfile.status===409);
+  pass('Account B can create its own profile (or already has one)',bProfile.ok || bProfile.status===409);
+  for(const account of [a,b]){
+    const profile=await request(`/rest/v1/cc_profiles?user_id=eq.${account.uid}&select=user_id`,'GET',undefined,account.token);
+    pass('Authenticated account can read exactly its own profile',profile.ok&&Array.isArray(profile.data)&&profile.data.length===1&&profile.data[0].user_id===account.uid);
+  }
   const aPrivate=valid(await request('/rest/v1/cc_records','POST',{owner_id:a.uid,section:'Personal Life',item_type:'qa_test',visibility:'private',payload:{label:`QA-private-A-${stamp}`}},a.token,headers),'Account A private insert');
   pass('A can create a private record',aPrivate.owner_id===a.uid);
   const bPrivate=valid(await request('/rest/v1/cc_records','POST',{owner_id:b.uid,section:'Personal Life',item_type:'qa_test',visibility:'private',payload:{label:`QA-private-B-${stamp}`}},b.token,headers),'Account B private insert');
@@ -42,6 +46,10 @@ async function run() {
   pass('A cannot create a private record owned by B',!denySpoof.ok);
   const denyUpdate=await request(`/rest/v1/cc_records?id=eq.${bPrivate.id}`,'PATCH',{payload:{label:'unwanted-write'}},a.token,headers);
   pass('A cannot update B private record',denyUpdate.ok&&Array.isArray(denyUpdate.data)&&denyUpdate.data.length===0);
+  const revision=valid(await request(`/rest/v1/cc_records?id=eq.${aPrivate.id}&version=eq.${aPrivate.version}`,'PATCH',{payload:{label:`QA-private-A-updated-${stamp}`}},a.token,headers),'Own versioned update');
+  pass('Successful update increments record revision',revision.version===aPrivate.version+1);
+  const stale=await request(`/rest/v1/cc_records?id=eq.${aPrivate.id}&version=eq.${aPrivate.version}`,'PATCH',{payload:{label:'stale-update-must-not-save'}},a.token,headers);
+  pass('A stale revision cannot overwrite a newer saved record',stale.ok&&Array.isArray(stale.data)&&stale.data.length===0);
   const scopeMove=await request(`/rest/v1/cc_records?id=eq.${aPrivate.id}`,'PATCH',{owner_id:b.uid},a.token,headers);
   pass('A cannot change record ownership',!scopeMove.ok);
   const denyDelete=await request(`/rest/v1/cc_records?id=eq.${aPrivate.id}`,'DELETE',undefined,a.token,headers);
@@ -73,4 +81,12 @@ async function run() {
   console.log(`\n${checks} development RLS isolation checks passed. Fixture records remain in DEVELOPMENT for audit.`);
   console.log('Not yet tested: invitation flow, cross-member sharing grants, data migration, production auth, live provider sync, backup/restore.');
 }
-run().catch(err=>{console.error(`\nVerification STOPPED: ${err.message}`);process.exitCode=1;});
+if(process.argv.includes('--allow-dev-writes')){
+  run().catch(()=>{console.error('\nVerification STOPPED. A development check failed; no credentials or provider response data are printed. Review the test setup before retrying.');process.exitCode=1;});
+}else{
+  console.log('PLAN ONLY — no local credentials read, no network requests, no database writes.');
+  console.log('With explicit owner approval, --allow-dev-writes authenticates two existing fictional test accounts in the separately configured development project.');
+  console.log('It creates uniquely labeled QA records and households, creates a profile only if missing, and tests ownership, unauthorized access, version conflicts, and denied actions.');
+  console.log('Fixtures remain for audit. No schema migration, production deployment, real-provider connection, or real-user invitation is performed.');
+  console.log('An unexpectedly permitted deny-test can modify only the newly created QA fixtures; the run stops at the first failure.');
+}

@@ -23,7 +23,7 @@ export function normalizeFictionalLife(raw,ownerId){
   const approved=raw.filter(row=>{
     const p=row?.payload;
     const def=LIFE_EXAMPLES.find(x=>x.id===p?.template_id);
-    return UUID.test(row?.id||'') && row.owner_id===ownerId && row.household_id===null && row.visibility==='private' && def &&
+    return UUID.test(row?.id||'') && row.deleted_at==null && row.owner_id===ownerId && row.household_id===null && row.visibility==='private' && def &&
       row.item_type===def.type && row.section===def.section && row.origin==='M1D_LIFE_QA' && p?.fictional===true && p.source==='M1D_LIFE_QA' &&
       p.title===def.title && p.detail===def.detail && p.kind===def.kind && p.amount===def.amount && validDay(p.added_day) &&
       validDay(p.day) && p.day===addDays(p.added_day,def.offset);
@@ -48,9 +48,9 @@ export function lifeSuggestions(rows){
   return (Array.isArray(rows)?rows:[]).flatMap(row=>{
     const p=row?.payload;
     const t=LIFE_EXAMPLES.find(x=>x.id===p?.template_id);
-    if(!t||!UUID.test(row?.id||'')||!validDay(p?.day))return [];
-    if(t.id==='course-assessment')return [{id:`life-fixture-${row.id}`,recordId:row.id,source:'school',rule:'school_to_task',section:'School',day:p.day,title:'Review fictional assessment checklist',reason:`Your saved fictional school record “${t.title}” is approaching. This task requires approval.`}];
-    if(t.id==='maintenance')return [{id:`life-fixture-${row.id}`,recordId:row.id,source:'household',rule:'household_to_task',section:'Home',day:p.day,title:'Check fictional filter replacement',reason:`Your saved fictional household record “${t.title}” has a due date. This task requires approval.`}];
+    if(row?.deleted_at!=null||!t||!UUID.test(row?.id||'')||!validDay(p?.day))return [];
+    if(t.id==='course-assessment')return [{id:`life-fixture-${row.id}`,recordId:row.id,sourceVersion:row.version,source:'school',rule:'school_to_task',section:'School',day:p.day,title:'Review fictional assessment checklist',reason:`Your saved fictional school record “${t.title}” is approaching. This task requires approval.`}];
+    if(t.id==='maintenance')return [{id:`life-fixture-${row.id}`,recordId:row.id,sourceVersion:row.version,source:'household',rule:'household_to_task',section:'Home',day:p.day,title:'Check fictional filter replacement',reason:`Your saved fictional household record “${t.title}” has a due date. This task requires approval.`}];
     return [];
   });
 }

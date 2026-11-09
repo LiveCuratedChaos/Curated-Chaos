@@ -231,6 +231,9 @@ body[data-density="spacious"] .cc-dashboard-root .metric{padding:19px 23px}
 .cc-org-subtask{display:flex;align-items:center;padding:6px 0;border-top:1px solid var(--border)}
 .cc-org-subtask label{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:13px}
 .cc-org-subtask input{width:auto}
+.cc-org-existing-subtask>label:last-child{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px}
+.cc-org-existing-subtask input[type="checkbox"]{width:auto}
+#org-edit-subtasks>h3{grid-column:1/-1;margin-bottom:0}
 .cc-org-subtask input:checked+span{text-decoration:line-through;color:var(--muted)}
 .cc-org-subform{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-top:12px}
 .cc-org-subform .field-label{flex:1;min-width:180px}
@@ -289,7 +292,9 @@ body[data-density="spacious"] .cc-dashboard-root .metric{padding:19px 23px}
 .cc-cal-day-view h2{margin-bottom:15px}
 .cc-cal-form{margin-top:12px;padding:15px}
 .cc-cal-form h2{font-size:18px}
-.cc-cal-form .cc-org-fields{margin-top:12px}
+.cc-cal-form .cc-org-fields{margin-top:12px;grid-template-columns:minmax(0,1fr)}
+.cc-cal-form .cc-cal-times{grid-template-columns:minmax(0,1fr)}
+.cc-cal-event-fields{border:0;padding:0;min-width:0}
 .cc-cal-toolbar .btn,.cc-cal-side-panel .btn{min-height:32px}
 @media(max-width:1180px){.cc-cal-layout{grid-template-columns:minmax(0,1fr) 280px}.cc-cal-cell{min-height:100px}}
 @media(max-width:1000px){.cc-cal-layout{grid-template-columns:1fr}.cc-cal-side-panel{position:relative;top:auto;max-height:none}.cc-cal-toolbar{align-items:flex-start;flex-direction:column}}
@@ -310,3 +315,21 @@ body[data-density="spacious"] .cc-dashboard-root .metric{padding:19px 23px}
 
 /* M2H simple household outline */
 .cc-home-outline{margin:12px 0;border:1px solid var(--line,#dedbd5);border-radius:10px;padding:13px}.cc-home-outline>summary{cursor:pointer;line-height:1.7}.cc-home-inner{padding:12px 2px 4px 20px}.cc-home-inner .cc-work-row{margin:8px 0}
+
+/* Local Google connection review uses the existing app palette and form controls. */
+.cc-connections-page{max-width:840px;padding-top:32px;padding-bottom:48px}
+.cc-connections-page h1{font-family:Georgia,serif;font-size:32px;font-weight:500;margin:0 0 12px}
+.cc-connections-page #connection-controls>.btn{margin:0 8px 8px 0;white-space:normal}
+.cc-connections-page .source-selection{margin-top:20px}
+.cc-connections-page .source-selection>label:first-of-type{display:flex;align-items:flex-start;gap:8px;margin-top:12px}
+.cc-connections-page .source-selection input[type="date"]{max-width:100%;min-height:44px}
+.cc-connections-page .source-preview{overflow-wrap:anywhere;max-height:480px;overflow:auto}
+.cc-connections-page .source-preview li{padding:10px 0;border-top:1px solid var(--border)}
+.cc-connections-page .panel>.btn,.cc-provider-entry>.btn{display:inline-block;white-space:normal}
+
+/* Plain email previews stay inert text and wrap on narrow screens. */
+.cc-mail-text { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; }
+
+.cc-preferences-fields{border:0;padding:0;margin:0;min-width:0}
+
+.private-note-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-height: 50vh; overflow: auto; }

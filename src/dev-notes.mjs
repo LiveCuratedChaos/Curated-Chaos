@@ -7,8 +7,8 @@ import {escapeHtml as e} from './core.mjs';
 import {normalizeCloudRecords} from './dev-brief-model.mjs';
 
 const root=document.getElementById('connected-notes');
-let config=null,api=null,auth=null,session=null,user=null,notes=[],busy=false,notice='',error='',generation=0,query='';
-const clearLocal=()=>{generation++;session=null;user=null;notes=[];query='';};
+let config=null,api=null,auth=null,session=null,user=null,notes=[],busy=false,notice='',error='',generation=0,query='',noteDraft={title:'',body:''};
+const clearLocal=()=>{generation++;session=null;user=null;notes=[];query='';noteDraft={title:'',body:''};};
 const alerts=()=>`${error?`<p class="warning" role="alert">${e(error)}</p>`:''}${notice?`<p class="notice" role="status">${e(notice)}</p>`:''}`;
 const wrap=inner=>renderConnectedShell(`<section class="connected-card"><p class="eyebrow">CURATED CHAOS · MILESTONE 0H</p><h1>My Notes</h1><p class="muted">Private fictional cloud notes · Isolated development project</p><p class="tiny muted">Supabase project: ${e(config?.projectRef||'not connected')}</p>${alerts()}${inner}<p class="tiny muted"><a href="/dev-dashboard.html">Connected Daily Brief</a> · <a href="/dev-tasks.html">Connected Tasks</a>. Other pages remain local-only fictional demonstrations.</p></section>`,{active:'notes'});
 const viewNotes=()=>notes.filter(n=>`${n.payload.title} ${n.payload.body||''}`.toLowerCase().includes(query.trim().toLowerCase()));
@@ -19,8 +19,8 @@ function render(){
  if(!session){root.innerHTML=wrap(`<section class="panel"><h2>Sign in to your development account</h2><p class="muted">Only use your fictional test accounts.</p><form id="notes-login" autocomplete="off"><label class="field-label">Test email<input name="email" type="email" autocomplete="username" required></label><label class="field-label">Test password<input name="password" type="password" autocomplete="off" required></label><button class="btn btn-primary" type="submit" ${busy?'disabled':''}>${busy?'Signing in…':'Sign in'}</button></form></section>`);return;}
  const shown=viewNotes();
  root.innerHTML=wrap(`<div class="auth-user"><p class="tiny muted">Signed in as ${e(user.email||'Test account')}</p><button id="notes-logout" type="button" class="btn btn-small" ${busy?'disabled':''}>Sign out</button></div>
- <div class="metric-grid"><div class="metric"><span>Private notes</span><strong>${notes.length}</strong></div><div class="metric"><span>Matching search</span><strong>${shown.length}</strong></div><div class="metric"><span>Cloud source</span><strong>Dev</strong></div></div>
- <div class="two-columns"><section class="panel"><div class="panel-head"><h2>Create fictional note</h2><span class="pill gold">Cloud</span></div><form id="notes-add"><label class="field-label">Title<input name="title" maxlength="120" required placeholder="Example: QA fictional packing list"></label><label class="field-label">Description<textarea name="body" maxlength="1000" rows="4" placeholder="Fictional information only"></textarea></label><button class="btn btn-primary" type="submit" ${busy?'disabled':''}>Save private note</button></form></section>
+ <div class="metric-grid"><div class="metric"><span>Private notes</span><strong>${notes.length}</strong></div><div class="metric"><span>Matching search</span><strong id="notes-match-count">${shown.length}</strong></div><div class="metric"><span>Cloud source</span><strong>Dev</strong></div></div>
+ <div class="two-columns"><section class="panel"><div class="panel-head"><h2>Create fictional note</h2><span class="pill gold">Cloud</span></div><form id="notes-add"><label class="field-label">Title<input name="title" maxlength="120" required value="${e(noteDraft.title)}" ${busy?'disabled':''} placeholder="Example: QA fictional packing list"></label><label class="field-label">Description<textarea name="body" maxlength="1000" rows="4" ${busy?'disabled':''} placeholder="Fictional information only">${e(noteDraft.body)}</textarea></label><button class="btn btn-primary" type="submit" ${busy?'disabled':''}>Save private note</button></form><p class="tiny muted">Unsaved text stays in this page through errors and refresh checks. Leaving the page or signing out discards it.</p></section>
  <section class="panel"><div class="panel-head"><h2>My private cloud notes</h2><button id="notes-reload" class="btn btn-small" type="button" ${busy?'disabled':''}>Refresh</button></div><label class="field-label">Search notes<input id="notes-search" type="search" value="${e(query)}" placeholder="Filter saved notes"></label>${shown.length?`<ul class="item-list">${shown.map(noteRow).join('')}</ul>`:'<p class="empty">No notes match this search. If you created one in the earlier sign-in tester, clear the filter or refresh.</p>'}</section></div>
  <p class="warning tiny">Development test screen only. Never enter actual personal, work, school, household, financial or other sensitive information. Note editing, sharing, deleting and production login are not enabled.</p>`);
 }
@@ -44,21 +44,22 @@ root.addEventListener('submit',async ev=>{
  }
  if(ev.target.id==='notes-add'){
   ev.preventDefault();if(busy||!session)return;
-  const v=new FormData(ev.target),draft={title:String(v.get('title')||''),body:String(v.get('body')||'')};
+  const v=new FormData(ev.target),draft={title:String(v.get('title')||''),body:String(v.get('body')||'')};noteDraft=draft;
   let record;try{record=makeFictionalNote(draft.title,draft.body,user.id);}catch(err){show(err.message,'error');return;}
-  const n=generation;busy=true;render();
-  try{const token=await auth.getAccessToken();const created=await api.addNote(token,record);if(n!==generation)return;if(!Array.isArray(created)||created.length!==1)throw Error('Cloud note save could not be verified.');await refresh();if(session)show('Fictional note saved in private cloud.');}
-  catch(err){if(n===generation)show(err.message,'error');}
+  const n=generation;busy=true;error='';notice='';render();
+  try{const token=await auth.getAccessToken();const created=await api.addNote(token,record);if(n!==generation)return;if(!Array.isArray(created)||created.length!==1)throw Error('Cloud note save could not be verified. Refresh and check before retrying to avoid duplicates.');noteDraft={title:'',body:''};await refresh();if(session&&!error)show('Fictional note saved in private cloud.');}
+  catch(err){if(n===generation)show(String(err.message||err)+' If the result is uncertain, refresh and check saved notes before retrying.','error');}
   finally{if(n===generation){busy=false;render();}}
  }
 });
 root.addEventListener('input',ev=>{
+ if(ev.target.form?.id==='notes-add'&&['title','body'].includes(ev.target.name)&&!busy){noteDraft={...noteDraft,[ev.target.name]:ev.target.value};return;}
  if(ev.target.id==='notes-search'){
   // Keep focus during filtering to make search usable without repeated clicks.
   const next=ev.target.value;query=next;
-  const list=root.querySelector('#notes-results');
-  // Render the full view only on blur/enter; results update through replacement below.
+  // Replace only search results so the active input and unsaved note stay intact.
   const shown=viewNotes();
+  const count=root.querySelector('#notes-match-count');if(count)count.textContent=String(shown.length);
   const oldList=root.querySelector('.item-list, .empty');
   if(oldList)oldList.outerHTML=shown.length?`<ul class="item-list">${shown.map(noteRow).join('')}</ul>`:'<p class="empty">No notes match this search.</p>';
  }

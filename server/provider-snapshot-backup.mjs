@@ -1,0 +1,49 @@
+// Bounded owner-private saved-provider backup. No database writes, provider reads or restore operations.
+import {createCipheriv,createDecipheriv,randomBytes,randomUUID} from 'node:crypto';
+import {open,mkdir,lstat,realpath,unlink} from 'node:fs/promises';import {constants} from 'node:fs';import {resolve,dirname,join} from 'node:path';
+import {createTokenSealer} from './token-sealer.mjs';import {savedProviderRecords} from './saved-provider-records.mjs';import {savedFinanceRecords} from './saved-finance-records.mjs';import {savedMacCalendarRecords} from './saved-mac-calendar-records.mjs';import {stableStringify} from './stable-json.mjs';import {safeSavedAt} from './snapshot-freshness.mjs';
+const MAX_PLAINTEXT=5*1024*1024,MAX_FILE=8*1024*1024,uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+const kinds={provider_email:['Personal Life','google_readonly'],provider_event:['Calendar','google_readonly'],provider_bank_account:['Finances','plaid_readonly'],provider_bank_transaction:['Finances','plaid_readonly'],provider_mac_event:['Calendar','apple_readonly']};
+function onlyKeys(object,allowed){return object&&typeof object==='object'&&!Array.isArray(object)&&Object.keys(object).every(key=>allowed.includes(key));}
+export function validateProviderSnapshotRows(rows,ownerId,key,{fixtureRunId=null}={}){
+ if(fixtureRunId!==null&&!uuid(fixtureRunId))throw Error('Verified fictional recovery run required.');
+ if(!uuid(ownerId)||!Array.isArray(rows)||!rows.length||rows.length>250||!Buffer.isBuffer(key)||key.length!==32)throw Error('Bounded owner-private provider copies and existing key required.');const seen=new Set(),sealer=createTokenSealer(key);
+ return rows.map(row=>{
+  const kind=kinds[row?.item_type],origin=kind&&(fixtureRunId?({google_readonly:'google_import_qa',plaid_readonly:'plaid_import_qa',apple_readonly:'apple_import_qa'}[kind[1]]):kind[1]);if(!kind||!uuid(row.id)||seen.has(row.id)||row.owner_id!==ownerId||row.visibility!=='private'||row.household_id!==null||row.deleted_at!=null||row.section!==kind[0]||row.origin!==origin||!Number.isInteger(row.version)||row.version<1)throw Error('Unexpected provider backup scope.');seen.add(row.id);
+  const p=row.payload;
+  if(['provider_email','provider_event'].includes(row.item_type)){
+   if(!onlyKeys(p,['fictional','provider','connectionId','sourceId','content',...(fixtureRunId?['fixtureRunId']:[])])||p.fictional!==Boolean(fixtureRunId)||fixtureRunId&&p.fixtureRunId!==fixtureRunId)throw Error('Unexpected Google backup fields.');
+   if(row.item_type==='provider_email'?typeof p.sourceId!=='string':!Array.isArray(p.sourceId))throw Error('Unexpected source identity shape.');const ids=Array.isArray(p.sourceId)?p.sourceId:[p.sourceId];if(ids.some(id=>typeof id!=='string'||!id.length||id.length>1024||/[\u0000-\u001f\u007f]/.test(id))||ids.length!==(row.item_type==='provider_event'?2:1))throw Error('Invalid Google source identity.');
+   const fields=row.item_type==='provider_email'?['subject','sender','receivedAt']:['title','status','allDay',...(p.content?.allDay===true?['startDate','endDateExclusive']:['start','end'])];if(!onlyKeys(p.content,fields))throw Error('Unexpected source content; no credentials or bodies may be backed up.');savedProviderRecords([row],ownerId);
+  }else{
+   const financial=['provider_bank_account','provider_bank_transaction'].includes(row.item_type),scheme=financial?'chase-private-v1':'mac-calendar-private-v1',context=financial?'finance-record:'+ownerId+':'+row.id:'mac-calendar-record:'+ownerId+':'+row.id+':'+row.origin;
+   if(!onlyKeys(p,['version','scheme','encrypted'])||p.version!==1||p.scheme!==scheme||typeof p.encrypted!=='string')throw Error('Encrypted provider copy required.');
+   if(!onlyKeys(JSON.parse(p.encrypted),['v','iv','tag','data']))throw Error('Unexpected encrypted envelope fields.');
+   const opened={...row,payload:sealer.unseal(p.encrypted,context)},data=opened.payload;if(data.fictional!==Boolean(fixtureRunId)||fixtureRunId&&data.fixtureRunId!==fixtureRunId)throw Error('Recovery test mode does not match saved copies.');
+   if(financial){if(!onlyKeys(data,['fictional','provider','institution','connectionId','sourceId','content',...(fixtureRunId?['fixtureRunId']:[])])||!onlyKeys(data.content,row.item_type==='provider_bank_account'?['name','type','subtype','currency','currentMinor','availableMinor','balanceFreshness','sourceUpdatedAt']:['accountId','date','name','merchant','amountMinor','currency','direction','pending','pendingTransactionId'])||data.content.sourceUpdatedAt!=null||data.content.direction!==undefined&&!['outflow','inflow','neutral'].includes(data.content.direction))throw Error('Unexpected financial backup fields.');savedFinanceRecords([opened],ownerId);}
+   else{if(!onlyKeys(data,['fictional','provider','sourceId','content',...(fixtureRunId?['fixtureRunId']:[])])||!onlyKeys(data.sourceId,['calendarId','eventId','occurrenceStart'])||!onlyKeys(data.content,['title','calendarTitle','allDay',...(data.content?.allDay===true?['startDate','endDateExclusive']:['start','end'])]))throw Error('Unexpected Mac backup fields.');savedMacCalendarRecords([opened],ownerId);}
+  }
+  return{id:row.id,owner_id:row.owner_id,household_id:null,visibility:'private',section:row.section,item_type:row.item_type,origin:row.origin,payload:structuredClone(p),version:row.version,deleted_at:null,created_at:safeSavedAt(row.created_at)};
+ });
+}
+export function sealProviderSnapshot({projectRef,ownerId,rows,key,now=Date.now(),snapshotId=randomUUID(),fixtureRunId=null}){
+ if(typeof projectRef!=='string'||!/^[a-z0-9]{10,32}$/.test(projectRef)||!uuid(snapshotId)||!Number.isFinite(now))throw Error('Verified development snapshot identity required.');const records=validateProviderSnapshotRows(rows,ownerId,key,{fixtureRunId}),snapshot={kind:'curated-provider-snapshot-v1',...(fixtureRunId?{fixtureRunId}:{}),snapshotId,projectRef,ownerId,createdAt:new Date(now).toISOString(),records};
+ const plaintext=Buffer.from(JSON.stringify(snapshot));if(plaintext.length>MAX_PLAINTEXT)throw Error('Provider backup exceeds its size cap.');
+ try{const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv);cipher.setAAD(Buffer.from('curated-provider-snapshot-v1'));const ciphertext=Buffer.concat([cipher.update(plaintext),cipher.final()]);return{bytes:Buffer.from(JSON.stringify({v:1,iv:iv.toString('base64url'),tag:cipher.getAuthTag().toString('base64url'),data:ciphertext.toString('base64url')})),snapshot};}finally{plaintext.fill(0);}
+}
+export function inspectProviderSnapshot(bytes,{key,projectRef,ownerId,fixtureRunId=null}){
+ try{
+  if(!Buffer.isBuffer(bytes)||bytes.length>MAX_FILE||!Buffer.isBuffer(key)||key.length!==32)throw Error();const p=JSON.parse(bytes.toString('utf8'));if(!onlyKeys(p,['v','iv','tag','data'])||p.v!==1||![p.iv,p.tag,p.data].every(value=>typeof value==='string'&&/^[A-Za-z0-9_-]+$/.test(value)))throw Error();
+  const iv=Buffer.from(p.iv,'base64url'),tag=Buffer.from(p.tag,'base64url'),data=Buffer.from(p.data,'base64url');if(iv.length!==12||tag.length!==16||data.length>MAX_PLAINTEXT)throw Error();const decipher=createDecipheriv('aes-256-gcm',key,iv);decipher.setAAD(Buffer.from('curated-provider-snapshot-v1'));decipher.setAuthTag(tag);const plaintext=Buffer.concat([decipher.update(data),decipher.final()]);
+  try{const snapshot=JSON.parse(plaintext.toString('utf8'));if(!onlyKeys(snapshot,['kind','snapshotId','projectRef','ownerId','createdAt','records','fixtureRunId'])||snapshot.kind!=='curated-provider-snapshot-v1'||(snapshot.fixtureRunId??null)!==fixtureRunId||!uuid(snapshot.snapshotId)||snapshot.projectRef!==projectRef||snapshot.ownerId!==ownerId||!safeSavedAt(snapshot.createdAt))throw Error();snapshot.records=validateProviderSnapshotRows(snapshot.records,ownerId,key,{fixtureRunId});return snapshot;}finally{plaintext.fill(0);}
+ }catch{throw Error('Provider backup could not be authenticated for this owner, project and key. No restore attempted.');}
+}
+export async function writeProviderSnapshot({directory,...args}){
+ const target=resolve(directory),parent=dirname(target),parentStat=await lstat(parent);if(!parentStat.isDirectory()||parentStat.isSymbolicLink()||parentStat.uid!==process.getuid()||(parentStat.mode&0o077)||await realpath(parent)!==parent)throw Error('Existing owner-private canonical backup parent required.');
+ const sealed=sealProviderSnapshot(args);try{await mkdir(target,{mode:0o700});}catch(error){if(error.code!=='EEXIST')throw error;}const dirStat=await lstat(target);if(!dirStat.isDirectory()||dirStat.isSymbolicLink()||dirStat.uid!==process.getuid()||(dirStat.mode&0o077)||await realpath(target)!==target)throw Error('Private backup directory required.');
+ const path=join(target,sealed.snapshot.snapshotId+'.ccsnapshot');let identity;
+ try{const output=await open(path,'wx',0o600);try{identity=await output.stat();await output.writeFile(sealed.bytes);await output.sync();}finally{await output.close();}
+  const input=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);let stored;try{const stat=await input.stat();if(!stat.isFile()||stat.uid!==process.getuid()||(stat.mode&0o777)!==0o600||stat.size>MAX_FILE||stat.ino!==identity.ino||stat.dev!==identity.dev)throw Error('Private backup verification failed.');stored=await input.readFile();}finally{await input.close();}
+  const reread=inspectProviderSnapshot(stored,args);if(stableStringify(reread)!==stableStringify(sealed.snapshot))throw Error('Backup reread did not match.');return{path,snapshotId:reread.snapshotId,recordCount:reread.records.length,encrypted:true,verified:true,databaseWritten:false};
+ }catch(error){if(identity){try{const stat=await lstat(path);if(stat.ino===identity.ino&&stat.dev===identity.dev)await unlink(path);}catch{}}throw error;}
+}

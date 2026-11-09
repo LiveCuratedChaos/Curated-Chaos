@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {createDevApi} from '../src/dev-api.mjs';
+const sourceId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+test('atomic approval sends reviewed fields and source revision with caller token, never a chosen owner',async()=>{
+ const calls=[],api=createDevApi({supabaseUrl:'https://devproject123.supabase.co',projectRef:'devproject123',publishableKey:'sb_publishable_fixture'},async(url,options)=>{calls.push({url,options});return{ok:true,status:200,text:async()=>JSON.stringify({task_id:sourceId,already_saved:false})};});const draft={sourceId,expectedVersion:3,title:' Reviewed fixture ',day:'2026-11-10',section:'School'};await api.approveFictionalSuggestion('fixture-token',draft);assert.equal(calls.length,1);assert.equal(new URL(calls[0].url).pathname,'/rest/v1/rpc/cc_approve_fictional_suggestion');assert.equal(calls[0].options.headers.Authorization,'Bearer fixture-token');assert.deepEqual(JSON.parse(calls[0].options.body),{p_source_id:sourceId,p_source_version:3,p_title:'Reviewed fixture',p_day:'2026-11-10',p_section:'School'});
+ for(const bad of [{expectedVersion:0},{sourceId:'invalid'},{day:'2026-02-30'},{section:'Finances'}])assert.throws(()=>api.approveFictionalSuggestion('fixture-token',{...draft,...bad}));assert.equal(calls.length,1);
+});

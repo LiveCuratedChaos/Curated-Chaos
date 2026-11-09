@@ -9,11 +9,12 @@ import {TASK_FILTERS,selectTasks,taskCounts} from './dev-tasks-model.mjs';
 
 const root=document.getElementById('connected-tasks');
 let config=null,api=null,auth=null,session=null,user=null,records={tasks:[],notes:[]},busy=false,notice='',error='',generation=0;
-let status='all',section='all';
-const clearLocal=()=>{generation++;session=null;user=null;records={tasks:[],notes:[]};};
+let status='all',section='all',ready=false;
+const emptyDraft=()=>({title:'',day:dayString(),section:'Home'});let taskDraft=emptyDraft();
+const clearLocal=()=>{ready=false;busy=false;status='all';section='all';taskDraft=emptyDraft();generation++;session=null;user=null;records={tasks:[],notes:[]};};
 const alerts=()=>`${error?`<p class="warning" role="alert">${e(error)}</p>`:''}${notice?`<p class="notice" role="status">${e(notice)}</p>`:''}`;
 const wrap=inner=>renderConnectedShell(`<section class="connected-card"><p class="eyebrow">CURATED CHAOS · MILESTONE 0H</p><h1>My Tasks</h1><p class="muted">Private cloud task list · Fictional development records only</p><p class="tiny muted">Isolated project: ${e(config?.projectRef||'not connected')}</p>${alerts()}${inner}<p class="tiny muted"><a href="/dev-dashboard.html">Return to connected Daily Brief</a> · Cloud data is never copied into the local demonstration pages. Refreshes in this browser tab restore the temporary QA session.</p></section>`,{active:'tasks'});
-const taskRow=r=>`<li class="item"><button type="button" class="tick ${r.payload.done?'done':''}" data-toggle="${e(r.id)}" ${busy?'disabled':''} aria-label="${r.payload.done?'Mark incomplete':'Complete'} fictional task ${e(r.payload.title)}">${r.payload.done?'✓':''}</button><div class="item-main"><strong class="${r.payload.done?'completed':''}">${e(r.payload.title)}</strong><small>${e(r.section)} · Due ${e(formatDate(r.payload.day))} · ${r.payload.done?'Completed':'Open'} · Private cloud</small></div></li>`;
+const taskRow=r=>`<li class="item"><button type="button" class="tick ${r.payload.done?'done':''}" data-toggle="${e(r.id)}" ${busy||!ready?'disabled':''} aria-label="${r.payload.done?'Mark incomplete':'Complete'} fictional task ${e(r.payload.title)}">${r.payload.done?'✓':''}</button><div class="item-main"><strong class="${r.payload.done?'completed':''}">${e(r.payload.title)}</strong><small>${e(r.section)} · Due ${e(formatDate(r.payload.day))} · ${r.payload.done?'Completed':'Open'} · Private cloud</small></div></li>`;
 function render(){
  document.title='Cloud Tasks QA · Curated Chaos';
  if(!api){root.innerHTML=wrap('<p class="muted">Loading development connection settings…</p>');return;}
@@ -21,19 +22,20 @@ function render(){
  const counts=taskCounts(records.tasks),filtered=selectTasks(records.tasks,{status,section});
  const allOptions=['all',...TASK_SECTIONS].map(s=>`<option value="${e(s)}" ${section===s?'selected':''}>${s==='all'?'All sections':e(s)}</option>`).join('');
  const statusOptions=TASK_FILTERS.map(s=>`<option value="${s}" ${status===s?'selected':''}>${s==='all'?'All tasks':s==='open'?'Open tasks':'Completed tasks'}</option>`).join('');
- root.innerHTML=wrap(`<div class="auth-user"><p class="tiny muted">Signed in as ${e(user.email||'Test account')}</p><button id="tasks-logout" type="button" class="btn btn-small" ${busy?'disabled':''}>Sign out</button></div>
+ root.innerHTML=wrap(`<div class="auth-user"><p class="tiny muted">Signed in as ${e(user.email||'Test account')}</p><button id="tasks-logout" type="button" class="btn btn-small">Sign out</button></div>
  <div class="metric-grid"><div class="metric"><span>All private tasks</span><strong>${counts.total}</strong></div><div class="metric"><span>Open</span><strong>${counts.open}</strong></div><div class="metric"><span>Completed</span><strong>${counts.completed}</strong></div><div class="metric"><span>Notes in cloud</span><strong>${records.notes.length}</strong></div></div>
- <div class="two-columns"><section class="panel"><div class="panel-head"><h2>Add fictional task</h2><span class="pill gold">Cloud</span></div><form id="tasks-add"><label class="field-label">Task title<input name="title" maxlength="140" required placeholder="Example: QA prepare pretend groceries"></label><label class="field-label">Due date<input name="day" type="date" value="${dayString()}" required></label><label class="field-label">Section<select name="section">${TASK_SECTIONS.map(s=>`<option value="${e(s)}">${e(s)}</option>`).join('')}</select></label><button class="btn btn-primary" ${busy?'disabled':''} type="submit">Save private task</button></form></section>
+ <div class="two-columns"><section class="panel"><div class="panel-head"><h2>Add fictional task</h2><span class="pill gold">Cloud</span></div><form id="tasks-add"><label class="field-label">Task title<input name="title" maxlength="140" value="${e(taskDraft.title)}" required placeholder="Example: QA prepare pretend groceries"></label><label class="field-label">Due date<input name="day" type="date" value="${e(taskDraft.day)}" required></label><label class="field-label">Section<select name="section">${TASK_SECTIONS.map(s=>`<option value="${e(s)}" ${taskDraft.section===s?'selected':''}>${e(s)}</option>`).join('')}</select></label><button class="btn btn-primary" ${busy||!ready?'disabled':''} type="submit">Save private task</button></form></section>
  <section class="panel"><div class="panel-head"><h2>All my cloud tasks</h2><button id="tasks-reload" class="btn btn-small" type="button" ${busy?'disabled':''}>Refresh</button></div><div class="qa-filter-row"><label class="field-label">Status<select id="task-filter-status">${statusOptions}</select></label><label class="field-label">Section<select id="task-filter-section">${allOptions}</select></label></div>${filtered.length?`<ul class="item-list">${filtered.map(taskRow).join('')}</ul>`:'<p class="empty">No tasks match these filters.</p>'}</section></div><p class="warning tiny">Development test screen only. Do not enter actual personal, school, family, financial, or employer information. These browser-tab QA sessions are not production authentication.</p>`);
 }
 const show=(msg,kind='notice')=>{error=kind==='error'?msg:'';notice=kind==='error'?'':msg;render();};
 async function refresh(){
  if(!auth?.get()){clearLocal();show('Sign in to your development test account.','error');return;}
- const n=++generation,owner=user.id;busy=true;render();
- try{const token=await auth.getAccessToken();const raw=await api.listBriefRecords(token);if(n!==generation)return;records=normalizeCloudRecords(raw,owner);error='';notice='Cloud tasks loaded for this test account.';}
- catch(err){if(n!==generation)return;if(!auth.get()){clearLocal();error='Your test session expired. Please sign in again.';}else error=err.message;notice='';}
+ const n=++generation,owner=user.id;busy=true;ready=false;render();
+ try{const token=await auth.getAccessToken();if(n!==generation)return false;const raw=await api.listBriefRecords(token);if(n!==generation)return;records=normalizeCloudRecords(raw,owner);ready=true;error='';notice='Cloud tasks loaded for this test account.';return true;}
+ catch(err){if(n!==generation)return;if(!auth.get()){clearLocal();error='Your test session expired. Please sign in again.';}else error=err.message+' Displayed records are a last-confirmed snapshot; refresh successfully before saving.';notice='';}
  finally{if(n===generation){busy=false;render();}}
 }
+root.addEventListener('input',ev=>{if(ev.target.closest('form')?.id==='tasks-add'&&['title','day','section'].includes(ev.target.name))taskDraft={...taskDraft,[ev.target.name]:ev.target.value};});
 root.addEventListener('submit',async ev=>{
  if(ev.target.id==='tasks-login'){
   ev.preventDefault();if(busy)return;
@@ -45,27 +47,29 @@ root.addEventListener('submit',async ev=>{
   return;
  }
  if(ev.target.id==='tasks-add'){
-  ev.preventDefault();if(busy||!session)return;
+  ev.preventDefault();if(busy||!session||!ready)return;
   const v=Object.fromEntries(new FormData(ev.target).entries());
+  taskDraft={title:String(v.title||''),day:String(v.day||''),section:String(v.section||'')};const submitted=taskDraft;
   let task;try{task=makeFictionalTask(v,user.id);}catch(err){show(err.message,'error');return;}
   const n=generation;busy=true;render();
-  try{const token=await auth.getAccessToken();const result=await api.addFictionalTask(token,task);if(n!==generation)return;if(!Array.isArray(result)||result.length!==1)throw Error('Cloud save could not be verified.');await refresh();if(session)show('Fictional task saved to the private cloud.');}
+  try{const token=await auth.getAccessToken();if(n!==generation)return;const result=await api.addFictionalTask(token,task);if(n!==generation)return;if(!Array.isArray(result)||result.length!==1)throw Error('Cloud save could not be verified. Check Tasks before retrying.');if(taskDraft===submitted)taskDraft=emptyDraft();const refreshed=await refresh();if(refreshed&&session)show('Fictional task saved to the private cloud.');}
   catch(err){if(n===generation)show(err.message,'error');}
   finally{if(n===generation){busy=false;render();}}
  }
 });
 root.addEventListener('change',ev=>{
+ if(ev.target.closest('form')?.id==='tasks-add'&&['title','day','section'].includes(ev.target.name))taskDraft={...taskDraft,[ev.target.name]:ev.target.value};
  if(ev.target.id==='task-filter-status'){status=ev.target.value;render();}
  if(ev.target.id==='task-filter-section'){section=ev.target.value;render();}
 });
 root.addEventListener('click',async ev=>{
  if(ev.target.closest('#tasks-logout')){clearLocal();busy=false;show('Signed out of your test account.');await auth.signOut();return;}
  if(ev.target.closest('#tasks-reload')){await refresh();return;}
- const b=ev.target.closest('[data-toggle]');if(!b||busy||!session)return;
+ const b=ev.target.closest('[data-toggle]');if(!b||busy||!session||!ready)return;
  const r=records.tasks.find(r=>r.id===b.dataset.toggle);if(!r)return;
  let payload;try{payload=toggledTaskPayload(r);}catch(err){show(err.message,'error');return;}
  const n=generation;busy=true;render();
- try{const token=await auth.getAccessToken();const result=await api.toggleFictionalTask(token,r.id,user.id,payload);if(n!==generation)return;if(!Array.isArray(result)||result.length!==1)throw Error('Cloud update could not be verified.');await refresh();if(session)show('Task completion saved to the private cloud.');}
+ try{const token=await auth.getAccessToken();if(n!==generation)return;const result=await api.toggleFictionalTask(token,r.id,user.id,payload,r.version);if(n!==generation)return;if(!Array.isArray(result)||result.length!==1)throw Error('Cloud update could not be verified.');const refreshed=await refresh();if(refreshed&&session)show('Task completion saved to the private cloud.');}
  catch(err){if(n===generation)show(err.message,'error');}
  finally{if(n===generation){busy=false;render();}}
 });
