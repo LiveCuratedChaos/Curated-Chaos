@@ -6,8 +6,8 @@ export function createDurableSessionRepository({rpc} = {}) {
   if (!key(input.key)) throw Error('Hashed session key required.');
   let result;
   try { result = await rpc('cc_durable_session', {operation: action, input}); }
-  catch { throw Error('Session storage unavailable.'); }
-  if (result?.error) throw Error('Session storage unavailable.');
+  catch { throw Object.assign(Error('Session storage unavailable.'), {code:'SESSION_UNAVAILABLE'}); }
+  if (result?.error) throw Object.assign(Error('Session storage unavailable.'), {code:'SESSION_UNAVAILABLE'});
   const value = Object.hasOwn(result || {}, 'data') ? result.data : result;
   return value ?? null;
  }
