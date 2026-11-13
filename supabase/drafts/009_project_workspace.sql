@@ -45,7 +45,7 @@ create trigger cc_manual_workspace_guard before insert or update or delete on pu
 -- must remain byte-for-byte JSON equivalent; create accepts known fields only.
 create function cc_workspace_private.validate_payload(kind text,p jsonb,previous jsonb default null)
 returns void language plpgsql set search_path='' as $$
-declare editable text[]; field text; entry jsonb; seen text[] := '{}'; day_value text;
+declare editable text[]; field text; entry jsonb; seen text[] := '{}'; day_value text; prior_entry jsonb;
 begin
  if jsonb_typeof(p) is distinct from 'object' or p->'schemaVersion' is distinct from '1'::jsonb or p->'source' is distinct from '"manual"'::jsonb or p->'fictional' is distinct from 'false'::jsonb then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
  if kind='project' then editable:=array['title','summary','status'];
@@ -71,7 +71,12 @@ begin
   if jsonb_typeof(p->'subtasks') is distinct from 'array' then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
   if jsonb_array_length(p->'subtasks')>40 then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
   for entry in select value from jsonb_array_elements(p->'subtasks') loop
-   if jsonb_typeof(entry) is distinct from 'object' or (entry - array['id','title','done'])<>'{}'::jsonb or jsonb_typeof(entry->'id') is distinct from 'string' or entry->>'id' !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' or lower(entry->>'id')=any(seen) or jsonb_typeof(entry->'title') is distinct from 'string' or (char_length(btrim(entry->>'title'))=0 or char_length(entry->>'title')>140) or jsonb_typeof(entry->'done') is distinct from 'boolean' then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
+   if jsonb_typeof(entry) is distinct from 'object' or jsonb_typeof(entry->'id') is distinct from 'string' or entry->>'id' !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' or lower(entry->>'id')=any(seen) or jsonb_typeof(entry->'title') is distinct from 'string' or (char_length(btrim(entry->>'title'))=0 or char_length(entry->>'title')>140) or jsonb_typeof(entry->'done') is distinct from 'boolean' then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
+   prior_entry:=null;
+   if previous is not null then
+    select value into prior_entry from jsonb_array_elements(previous->'subtasks') where lower(value->>'id')=lower(entry->>'id') limit 1;
+   end if;
+   if (entry-array['id','title','done']) is distinct from coalesce(prior_entry-array['id','title','done'],'{}'::jsonb) then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
    seen:=array_append(seen,lower(entry->>'id'));
   end loop;
  end if;
@@ -135,7 +140,7 @@ begin
    if r.item_type='project' and exists(select 1 from public.cc_records where owner_id=actor and visibility='private' and household_id is null and deleted_at is null and origin='CC_MANUAL_WORKSPACE' and item_type='task' and payload @> '{"schemaVersion":1,"source":"manual","fictional":false}'::jsonb and payload->>'project_id'=r.id::text) then raise exception 'PROJECT_WORKSPACE_CONFLICT'; end if;
    update public.cc_records set deleted_at=clock_timestamp() where id=r.id returning * into r;
   else
-   perform cc_workspace_private.validate_payload(r.item_type,target_row.before_record->'payload',r.payload);
+   perform cc_workspace_private.validate_payload(r.item_type,target_row.before_record->'payload',target_row.before_record->'payload');
    update public.cc_records set payload=target_row.before_record->'payload',deleted_at=(target_row.before_record->>'deleted_at')::timestamptz where id=r.id returning * into r;
   end if;
  end if;
