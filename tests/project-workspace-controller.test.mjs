@@ -15,8 +15,8 @@ const project={id:'project-one',version:1,item_type:'project',section:'Personal 
 const task={id:'task-one',version:1,item_type:'task',section:'Personal Life',payload:{title:'Task',description:'',status:'Not Started',priority:'Normal',day:null,project_id:'project-one',subtasks:[]}};
 const model={
  normalizeProjectWorkspace:rows=>({projects:rows.filter(row=>row.item_type==='project'),tasks:rows.filter(row=>row.item_type==='task')}),
- projectWorkspaceView(rows,_owner,{view,projectId}){const all=this.normalizeProjectWorkspace(rows);return {...all,tasks:all.tasks.filter(row=>(!projectId||row.payload.project_id===projectId)&&(view==='completed'?row.payload.status==='Completed':view==='all'?row.payload.status!=='Completed':true)),counts:{}};},
- makeManualProject:form=>({item_type:'project',section:form.section,payload:{title:form.title,summary:form.summary,status:form.status}}),
+ projectWorkspaceView(rows,_owner,{view,projectId}){const all=this.normalizeProjectWorkspace(rows);return {...all,projects:all.projects.filter(project=>!projectId||project.id===projectId),tasks:all.tasks.filter(row=>(!projectId||row.payload.project_id===projectId)&&(view==='completed'?row.payload.status==='Completed':view==='all'?row.payload.status!=='Completed':true)),counts:{}};},
+ makeManualProject:form=>{assert.deepEqual(Object.keys(form).sort(),['section','status','summary','title']);return {item_type:'project',section:form.section,payload:{title:form.title,summary:form.summary,status:form.status}};},
  makeManualTask:form=>({item_type:'task',section:form.section,payload:{...form}}),
  changeManualProject:(record,patch)=>({...record.payload,...patch}),changeManualTask:(record,patch)=>({...record.payload,...patch})
 };
@@ -54,4 +54,11 @@ test('local validation fails before transport and keeps editable draft',async()=
  const doc={createElement:tag=>new Node(tag,doc)};const root=new Node('main',doc);let writes=0;
  await mountProjectWorkspace({root,ownerId:'owner',day:'2026-11-12',model:{...model,makeManualProject(){throw Error('validation');}},client:{list:async()=>[],create:async()=>{writes++;},update:async()=>{},undo:async()=>{},history:async()=>[]}});
  await find(root,'New project').fire('click');await change(root,'Title','Draft title');await nodes(root).find(node=>node.tag==='form').fire('submit');assert.equal(writes,0);assert.equal(find(root,'Title').value,'Draft title');assert.equal(find(root,'Save').disabled,false);assert.ok(text(root).includes('has not been sent'));
+});
+
+test('new editor actions preserve unsaved draft until explicit discard',async()=>{
+ const {root}=await setup();await find(root,'New project').fire('click');assert.equal(find(root,'Section').value,'Personal Life');await change(root,'Title','Unsaved project');assert.equal(find(root,'New task').disabled,true);assert.equal(find(root,'Edit task').disabled,true);assert.equal(find(root,'Complete').disabled,true);await find(root,'New task').fire('click');assert.equal(find(root,'Title').value,'Unsaved project');await find(root,'Discard draft').fire('click');await find(root,'New task').fire('click');assert.equal(find(root,'Title').value,'');
+});
+test('project filter options retain the full project list while a project is selected',async()=>{
+ const {root}=await setup({},[project,{...project,id:'project-two',payload:{...project.payload,title:'Second project'}},task]);await change(root,'Project filter','project-one');assert.ok(find(root,'Project filter').children.some(node=>node.attributes.value==='project-two'));
 });
