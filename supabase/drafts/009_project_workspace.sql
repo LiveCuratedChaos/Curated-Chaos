@@ -89,6 +89,13 @@ declare actor uuid; op uuid; target uuid; r public.cc_records; before_value json
 begin
  if jsonb_typeof(input) is distinct from 'object' or input->>'ownerId' is null then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
  actor:=(input->>'ownerId')::uuid;
+ if operation='replay' then
+  if input->>'operationId' is null or not coalesce(input->>'kind'=any(array['create','update','undo']),false) or jsonb_typeof(input->'intent') is distinct from 'object' or input->'intent'->>'ownerId' is distinct from actor::text or input->'intent' ? 'operationId' then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
+  select * into saved from cc_workspace_private.operations where owner_id=actor and operation_id=(input->>'operationId')::uuid;
+  if not found then return null; end if;
+  if saved.intent is distinct from jsonb_build_object('operation',input->>'kind','input',input->'intent') then raise exception 'PROJECT_WORKSPACE_CONFLICT'; end if;
+  return jsonb_build_object('record',saved.after_record,'operationId',saved.operation_id,'replayed',true);
+ end if;
  if operation='list' then
   if input->>'limit' is distinct from '50' or input->>'offset' is null then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
   offset_value:=(input->>'offset')::integer;

@@ -42,6 +42,12 @@ export function createProjectWorkspaceRepository({rpc,rpcTimeoutMs=5000,listTime
    }
    throw failure('PROJECT_WORKSPACE_LIMIT');
   },
+  async replay({ownerId,operationId,kind,intent}={}) {
+   if(!uuid(ownerId)||!uuid(operationId)||!['create','update','undo'].includes(kind)||!intent||Object.getPrototypeOf(intent)!==Object.prototype||intent.ownerId!==ownerId||Object.hasOwn(intent,'operationId'))fail();
+   const value=await call('replay',{ownerId,operationId,kind,intent});
+   if(value===null)return null;
+   if(!value||value.operationId!==operationId||value.replayed!==true)fail();record(value.record,ownerId);return value;
+  },
   async create(args={}) {if(!args.record||typeof args.record!=='object'||Array.isArray(args.record))fail();return mutation('create',args);},
   async update(args={}) {if(!uuid(args.id)||!Number.isSafeInteger(args.expectedVersion)||args.expectedVersion<1||!args.payload||typeof args.payload!=='object'||Array.isArray(args.payload))fail();return mutation('update',args);},
   async undo(args={}) {if(!uuid(args.targetOperationId))fail();return mutation('undo',args);},
