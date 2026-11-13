@@ -29,12 +29,21 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
  async function mutate(action){
   if(busy||uncertain||disposed)return;busy=true;message='Saving…';const ticket=epoch;render();
   try{const result=await action(uuid());if(disposed||ticket!==epoch)return;if(!result?.record||typeof result.operationId!=='string'||!result.operationId||typeof result.record.id!=='string'||!Number.isSafeInteger(result.record.version)||result.record.version<1)throw Error();
-   const record=result.record,previous=rows.find(row=>row.id===record.id);
+   const record=result.record;let next;
+   if(result.replayed===true){
+    // An immutable receipt can describe a version that was subsequently changed or removed.
+    // Validate its actor envelope, then use only a fresh coherent list as live state.
+    if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(record.id)||record.owner_id!==ownerId||record.visibility!=='private'||record.household_id!==null||record.origin!=='CC_MANUAL_WORKSPACE'||!['project','task'].includes(record.item_type)||!ORG_SECTIONS.includes(record.section)||record.payload?.schemaVersion!==1||record.payload.source!=='manual'||record.payload.fictional!==false||record.deleted_at!==null&&(typeof record.deleted_at!=='string'||!Number.isFinite(Date.parse(record.deleted_at))))throw Error();
+    next=await client.list();if(disposed||ticket!==epoch)return;model.normalizeProjectWorkspace(next,ownerId);
+   }else{
+   const previous=rows.find(row=>row.id===record.id);
    if(previous&&record.version<=previous.version)throw Error();
    const remaining=rows.filter(row=>row.id!==record.id);
    if(record.deleted_at!==null){if(!previous||typeof record.deleted_at!=='string'||!Number.isFinite(Date.parse(record.deleted_at)))throw Error();model.normalizeProjectWorkspace([{...record,deleted_at:null},...remaining],ownerId);}
-   const next=record.deleted_at===null?[...remaining,record]:remaining;
-   model.normalizeProjectWorkspace(next,ownerId);rows=next;
+   next=record.deleted_at===null?[...remaining,record]:remaining;
+   model.normalizeProjectWorkspace(next,ownerId);
+   }
+   rows=next;
    if(projectId&&!next.some(row=>row.item_type==='project'&&row.id===projectId))projectId='';receipt=result;draft=null;history=[];message='Saved. You can Undo while this version is current.';}
   catch{if(ticket===epoch&&!disposed){uncertain=true;message='Save outcome unknown. Your draft stays here. Refresh to check; no automatic retry or further writes on this page.';}}
   finally{if(ticket===epoch&&!disposed){busy=false;render();}}

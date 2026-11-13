@@ -84,3 +84,15 @@ test('malformed receipt version or deletion marker fails closed without corrupti
   const {root}=await setup({update:async input=>({record:{...task,...patch},operationId:input.operationId})});await find(root,'Complete').fire('click');assert.ok(text(root).includes('outcome unknown'));assert.ok(text(root).includes('Task'));assert.ok(!text(root).includes('could not be displayed'));
  }
 });
+test('replayed creation receipt never resurrects a record removed from the current live list',async()=>{
+ const realModel=await import('../src/project-workspace-model.mjs');const owner='10000000-0000-4000-8000-000000000001';const doc={createElement:tag=>new Node(tag,doc)};const root=new Node('main',doc);let lists=0;
+ const record={...realModel.makeManualProject({title:'Old removed project'},owner),id:crypto.randomUUID(),version:1,deleted_at:null};
+ const client={list:async()=>{lists++;return [];},create:async input=>({record,operationId:input.operationId,replayed:true}),update:async()=>{},undo:async()=>{},history:async()=>[]};
+ await mountProjectWorkspace({root,client,ownerId:owner,day:'2026-11-12',model:realModel});await find(root,'New project').fire('click');await change(root,'Title','Old removed project');await nodes(root).find(node=>node.tag==='form').fire('submit');assert.equal(lists,2);assert.ok(!text(root).includes('Old removed project'));assert.ok(!text(root).includes('could not be displayed'));assert.ok(text(root).includes('Saved.'));
+});
+test('replay refresh failure retains draft and does not trust stale receipt',async()=>{
+ const realModel=await import('../src/project-workspace-model.mjs');const owner='10000000-0000-4000-8000-000000000001';const doc={createElement:tag=>new Node(tag,doc)};const root=new Node('main',doc);let lists=0;
+ const record={...realModel.makeManualProject({title:'Old removed project'},owner),id:crypto.randomUUID(),version:1,deleted_at:null};
+ const client={list:async()=>{if(++lists>1)throw Error();return [];},create:async input=>({record,operationId:input.operationId,replayed:true}),update:async()=>{},undo:async()=>{},history:async()=>[]};
+ await mountProjectWorkspace({root,client,ownerId:owner,day:'2026-11-12',model:realModel});await find(root,'New project').fire('click');await change(root,'Title','Kept draft');await nodes(root).find(node=>node.tag==='form').fire('submit');assert.equal(find(root,'Title').value,'Kept draft');assert.ok(text(root).includes('outcome unknown'));assert.ok(!nodes(root).some(node=>node.tag==='h3'&&node.textContent==='Old removed project'));
+});
