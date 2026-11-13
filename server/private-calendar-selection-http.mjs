@@ -1,0 +1,12 @@
+// Optional authenticated selection setup. No event access and no app-record operations.
+import {createCalendarSelectionHandoff} from './mac-calendar-selection-handoff.mjs';import {readBoundedJsonBody} from './bounded-json-body.mjs';
+export function createPrivateCalendarSelectionSetup({confirmSession,publishGrant,saveSelection,now=Date.now}){
+ if([confirmSession,publishGrant,saveSelection].some(v=>typeof v!=='function'))throw Error('Explicit calendar-selection setup adapters required.');const handoff=createCalendarSelectionHandoff({confirmSession,now}),transfers=new Map();let disposed=false;
+ function forgetSession(ownerId,binding){handoff.forgetSession(ownerId,binding);for(const[k,v]of transfers)if(v.ownerId===ownerId&&v.binding===binding){clearTimeout(v.timer);transfers.delete(k);}}
+ return{
+  async prepare({ownerId,binding,sessionExpiresAt}){if(disposed)throw Error('Selection setup is closed.');forgetSession(ownerId,binding);const grant=await handoff.prepare({ownerId,binding,sessionExpiresAt,windowDays:30,maxEvents:5}),state={ownerId,binding,expiresAt:grant.expiresAt};state.timer=setTimeout(()=>transfers.delete(grant.capability),Math.max(1,grant.expiresAt-now()));state.timer.unref?.();transfers.set(grant.capability,state);try{await publishGrant(grant);if(disposed||!await confirmSession(ownerId,binding))throw Error();return{ready:true,maxCalendars:5,expiresAt:grant.expiresAt,rememberSelection:true,eventAccessEnabled:false,eventsRead:0};}catch{forgetSession(ownerId,binding);throw Error('Calendar-selection setup could not be prepared.');}},
+  async transfer(req){const capability=req.headers['x-cc-calendar-selection'],state=transfers.get(capability);if(!state||disposed||state.expiresAt<=now())throw Error('Selection setup expired.');transfers.delete(capability);clearTimeout(state.timer);try{const body=await readBoundedJsonBody(req,{maxBytes:12000});await handoff.accept(capability,body);const selection=await handoff.take(state);if(disposed||!await confirmSession(state.ownerId,state.binding))throw Error();const saved=await saveSelection(selection);if(saved?.saved!==true||saved.calendarCount!==selection.calendarIds.length||saved.eventsStored!==0||saved.refreshEnabled!==false)throw Error();return{remembered:true,calendarCount:saved.calendarCount,eventsRead:0,eventAccessEnabled:false};}finally{handoff.forgetSession(state.ownerId,state.binding);}},
+  forgetSession,
+  dispose(){disposed=true;for(const[k,v]of transfers){clearTimeout(v.timer);transfers.delete(k);}handoff.dispose();}
+ };
+}

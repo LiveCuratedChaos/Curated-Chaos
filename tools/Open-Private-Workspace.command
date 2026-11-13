@@ -14,13 +14,15 @@ fi
 print 'Opening Curated Chaos on this Mac, using the separate development workspace.'
 print 'Keep this window open. Control-C stops the private workspace and closes its sign-ins.'
 print 'Task and note changes require review and approval in the app.'
-"$cc_node" tools/private-session-preview-server.mjs \
+"$cc_node" tools/private-calendar-on-open-server.mjs \
+  --enable-private-calendar-on-open \
+  --calendar-reader="$cc_project_dir/.local/calendar-preview-builds/7e44a60e-316c-4ecc-8add-713a99adfaa7/Curated Chaos Calendar Selection.app/Contents/MacOS/CalendarPreview" \
   --start-private-session-preview --project=fngauurauwvbawlfzbbe \
-  --allow-private-brief-read --serve-private-dashboard \
-  --allow-private-task-create-reviewed --allow-private-task-edit-reviewed \
-  --allow-private-task-completion --allow-private-note-read \
-  --allow-private-note-edit-reviewed --allow-private-note-create-reviewed \
-  --allow-private-title-search --allow-private-appearance-read --allow-private-appearance-save-reviewed --open-private-dashboard
+  --allow-private-saved-mail-read --allow-private-brief-read --serve-private-dashboard --allow-private-task-workspace --allow-private-notes-workspace --allow-private-calendar-workspace --allow-private-calendar-selection --allow-private-brief-dates \
+  --allow-private-task-create-reviewed --allow-private-task-descriptions --allow-private-long-task-descriptions --allow-private-task-subtasks --allow-private-event-create-reviewed --allow-private-task-edit-reviewed --allow-private-task-description-edit-reviewed --allow-private-task-checklist-edit-reviewed --allow-private-task-checklist-titles-reviewed --allow-private-task-checklist-structure-reviewed --allow-private-event-edit-reviewed --allow-private-event-details --allow-private-all-day-events --allow-private-event-date-ranges --allow-private-recently-deleted \
+  --allow-private-task-read --allow-private-undated-tasks --allow-private-smart-task-entry --allow-private-smart-task-checklists --allow-private-task-quick-dates --allow-private-task-copy --allow-private-task-priority --allow-private-task-priority-lists --allow-private-task-completion --allow-private-task-reopen-reviewed --allow-private-note-read \
+  --allow-private-note-edit-reviewed --allow-private-note-copy --allow-private-note-create-reviewed --allow-private-long-notes \
+  --allow-private-title-search --allow-private-search-dates --allow-private-saved-searches --allow-private-appearance-read --allow-private-appearance-save-reviewed --open-private-dashboard
 cc_result=$?
 if [[ "$cc_result" -ne 0 ]]; then
   print 'The private workspace did not open. Existing files and services were left in place.'

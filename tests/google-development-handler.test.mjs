@@ -9,8 +9,8 @@ import {makeGoogleDevelopmentHandler} from '../server/google-development-handler
 import {makeConnectionsServer,GOOGLE_CALLBACK} from '../tools/connections-server.mjs';
 import {GMAIL_READ_SCOPE} from '../server/gmail.mjs';
 const origin='http://127.0.0.1:5301',ownerId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-async function call(handler,path,{method='GET',headers={},body={}}={}){
- const req={url:path,method,headers:{host:'127.0.0.1:5301',...headers},async *[Symbol.asyncIterator](){yield JSON.stringify(body);}};
+async function call(handler,path,{method='GET',headers={},body={},bodyReader}={}){
+ const req={url:path,method,headers:{host:'127.0.0.1:5301',...headers},[Symbol.asyncIterator]:bodyReader||async function*(){yield JSON.stringify(body);}};
  const res={writeHead(status,headers){this.status=status;this.headers=headers;return this;},end(body){this.body=body;}};
  assert.equal(await handler(req,res),true);return res;
 }
@@ -268,3 +268,5 @@ test('saved-source lookup combines whitelisted Mac and Google copies and fails c
 test('sign-out while Mac saved copies are loading cannot disclose a partial or late combined inventory',async t=>{
  let release;const gate=new Promise(resolve=>release=resolve);const s=await configured(t,{providerRepository:{listSaved:async()=>[]},macCalendarRepository:{listSavedMacCalendar:async()=>gate}});const pending=call(s.handler,'/auth/google/records',{headers:{cookie:s.cookie}});await new Promise(resolve=>setImmediate(resolve));await call(s.handler,'/auth/google/signout',{method:'POST',headers:s.headers});release([]);const result=await pending;assert.equal(result.status,401);assert.doesNotMatch(result.body,/records/);
 });
+
+test('fictional native-calendar Unicode titles survive byte-split transfer without provider or database access',async t=>{let grant;const scope={calendarCount:1,maxEvents:1,startDate:'2026-11-08',endDateExclusive:'2026-11-09',timeZone:'America/New_York'},s=await configured(t,{approvedMacCalendarScope:scope,publishMacCalendarGrant:async value=>grant=value});await call(s.handler,'/auth/google/mac-calendar-prepare',{method:'POST',headers:s.headers});const title='Fictional café 学 🗓',payload={kind:'mac-calendar-preview-v1',...scope,events:[{title,calendarTitle:'Fictional résumé 中文',allDay:false,start:'2026-11-08T12:00:00-05:00',end:'2026-11-08T13:00:00-05:00'}]},bytes=Buffer.from(JSON.stringify(payload)),transfer=await call(s.handler,'/auth/google/mac-calendar-transfer',{method:'POST',headers:{'content-type':'application/json','x-cc-mac-transfer':grant.capability},bodyReader:async function*(){for(const byte of bytes)yield Buffer.from([byte]);}});assert.equal(transfer.status,200);const result=await call(s.handler,'/auth/google/mac-calendar-brief?day=2026-11-08&timeZone=America%2FNew_York',{headers:{cookie:s.cookie}});assert.equal(JSON.parse(result.body).events[0].title,title);assert.equal(JSON.parse(result.body).persisted,false);await call(s.handler,'/auth/google/signout',{method:'POST',headers:s.headers});});

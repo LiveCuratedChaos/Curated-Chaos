@@ -1,3 +1,4 @@
+import {readBoundedJsonBody} from './bounded-json-body.mjs';
 import {savedMacCalendarRecords} from './saved-mac-calendar-records.mjs';
 import {planMacCalendarImport} from './mac-calendar-import-plan.mjs';
 import {createMacCalendarBridge} from './mac-calendar-bridge.mjs';
@@ -47,7 +48,7 @@ export function makeGoogleDevelopmentHandler({origin,devApi,oauthClient,clientId
   sessions.set(id,{ownerId,accessToken,csrf,expiresAt});
   send(res,200,{signedIn:true,csrf},{'Set-Cookie':'cc_google_dev='+id+'; HttpOnly; SameSite=Lax; Path=/auth/google; Max-Age='+Math.max(1,Math.floor((expiresAt-now())/1000))});
  }
- async function body(req,limit=4096){let value='';for await(const chunk of req){value+=chunk;if(Buffer.byteLength(value)>limit)throw Error('Request too large.');}return JSON.parse(value||'{}');}
+ async function body(req,limit=4096){return readBoundedJsonBody(req,{maxBytes:limit,allowEmpty:true});}
  return async(req,res)=>{
   const url=new URL(req.url,origin);if(!url.pathname.startsWith('/auth/google/'))return false;
   // Host/origin pinning prevents local DNS-rebinding and cross-site POST requests.

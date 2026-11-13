@@ -1,0 +1,46 @@
+// Prepared one-note database drill. No network/config access without exact explicit arguments.
+import {resolve} from 'node:path';import {fileURLToPath} from 'node:url';
+import {assertDevTarget,loadLocalConfig} from './dev-env.mjs';import {createDevApi} from '../src/dev-api.mjs';
+import {createPrivateRecordRecovery,privateRecoveryState} from '../server/private-record-recovery.mjs';import {stableStringify} from '../server/stable-json.mjs';
+const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+export function validateRecordRecoveryArguments(argv){
+ if(!argv.includes('--allow-fictional-record-recovery-test'))return null;
+ const project=argv.filter(x=>x.startsWith('--project=')),run=argv.filter(x=>x.startsWith('--run='));
+ if(argv.length!==4||new Set(argv).size!==4||project.length!==1||run.length!==1||!argv.includes('--fixtures=1')||!uuid(run[0].slice(6))||!/^[a-z0-9]{10,32}$/.test(project[0].slice(10)))throw Error('Exact one-record recovery approval required.');
+ return{project:project[0].slice(10),run:run[0].slice(6)};
+}
+export async function verifyPrivateRecordRecovery({project,run},{configLoader=loadLocalConfig,apiFactory=createDevApi,fetcher=fetch,log=console.log}={}){
+ if(!uuid(run))throw Error('Named recovery run required.');const config=assertDevTarget(configLoader());if(config.ref!==project)throw Error('Unexpected recovery target.');
+ const base=apiFactory({supabaseUrl:config.url,projectRef:config.ref,publishableKey:config.publishableKey}),sessions=[],actors=[];let draft,attempted=false,cleaned=false,writes=0,createdAt,service;
+ const query='?select=*&id=eq.'+run;
+ async function fixture(index,options={},suffix=''){
+  const response=await fetcher(config.url+'/rest/v1/cc_records'+query+suffix,{...options,headers:{apikey:config.publishableKey,Authorization:'Bearer '+sessions[index].accessToken,'Content-Type':'application/json',Prefer:'return=representation'},cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)});
+  if(!response.ok)throw Error('Fictional recovery storage request failed.');const data=await response.json();if(!Array.isArray(data))throw Error('Fictional recovery response unverified.');return data;
+ }
+ function exact(row){return row?.id===run&&row.owner_id===actors[0]?.ownerId&&row.household_id===null&&row.visibility==='private'&&row.section==='Personal Life'&&row.item_type==='note'&&row.origin==='PRIVATE_RECOVERY_QA'&&Number.isInteger(row.version)&&row.version>=1&&row.version<=4&&stableStringify(row.payload)===stableStringify(draft?.payload)&&(!createdAt||row.created_at===createdAt);}
+ async function checkFull(version,removed){const rows=await fixture(0);if(rows.length!==1||!exact(rows[0])||rows[0].version!==version||Boolean(rows[0].deleted_at)!==removed)throw Error('Fictional recovery state unverified.');return rows[0];}
+ async function cleanup(){const rows=await fixture(0);if(rows.length>1||rows.some(row=>!exact(row)))throw Error('Fictional recovery cleanup scope changed.');if(rows.length&&rows[0].deleted_at===null){const row=rows[0],ack=await fixture(0,{method:'PATCH',body:JSON.stringify({deleted_at:new Date().toISOString()})},'&owner_id=eq.'+actors[0].ownerId+'&visibility=eq.private&household_id=is.null&item_type=eq.note&origin=eq.PRIVATE_RECOVERY_QA&version=eq.'+row.version+'&deleted_at=is.null');if(ack.length!==1||!exact(ack[0])||!ack[0].deleted_at)throw Error('Fictional cleanup acknowledgement unverified.');}const after=await fixture(0);if(after.length!==rows.length||after.some(row=>!exact(row)||!row.deleted_at))throw Error('Fictional cleanup reread unverified.');cleaned=true;}
+ async function reject(promise){try{await promise;}catch{return;}throw Error('A forbidden recovery action was accepted.');}
+ try{
+  for(const user of config.users.slice(0,2)){const signed=await base.signIn(user.email,user.password);sessions.push(signed);const verified=await base.getUser(signed.accessToken);if(!uuid(verified?.id)||!await base.isSessionActive(signed.accessToken))throw Error('Recovery login unverified.');actors.push({ownerId:verified.id,accessToken:signed.accessToken});}
+  if(actors.length!==2||actors[0].ownerId===actors[1].ownerId)throw Error('Two distinct development accounts required.');if((await fixture(0)).length)throw Error('Existing fixture identity; refusing overwrite.');
+  draft={id:run,owner_id:actors[0].ownerId,household_id:null,visibility:'private',section:'Personal Life',item_type:'note',origin:'PRIVATE_RECOVERY_QA',payload:{fictional:true,title:'QA fictional recovery '+run.slice(0,8),body:'Fictional recovery text only.',extension:{preserve:true}}};
+  const sparseApi={getPrivateRecordState:async(token,id,owner)=>{if(id!==run||!actors.some(a=>a.ownerId===owner&&a.accessToken===token))throw Error('Only the new recovery fixture may be read.');return base.getPrivateRecordState(token,id,owner);},listPrivateDeletedRecords:async(token,owner)=>{if(!actors.some(a=>a.ownerId===owner&&a.accessToken===token))throw Error('Unknown recovery account.');return(await base.getPrivateRecordState(token,run,owner)).filter(row=>row.deleted_at!==null);},setPrivateRecordDeletedAt:async(token,record,owner,deletedAt)=>{if(owner!==actors[0].ownerId||token!==actors[0].accessToken||record.id!==run||writes>=2||record.version!==writes+1||(writes===0?deletedAt===null:deletedAt!==null)||!await base.isSessionActive(token))throw Error('Recovery write scope exceeded.');writes++;return base.setPrivateRecordDeletedAt(token,record,owner,deletedAt);}};
+  service=createPrivateRecordRecovery({api:sparseApi});attempted=true;const inserted=await base.addNote(actors[0].accessToken,draft);if(inserted.length!==1||!exact(inserted[0])||inserted[0].version!==1||inserted[0].deleted_at!==null)throw Error('Recovery fixture creation unverified.');createdAt=inserted[0].created_at;
+  const first=privateRecoveryState(await checkFull(1,false),actors[0].ownerId),token=service.begin('a',actors[0].ownerId,Date.now()+300000)(first).recordToken;
+  await reject(service.prepare('a',actors[1],token));const review=await service.prepare('a',actors[0],token);if(review.restoring||review.title!==draft.payload.title||writes)throw Error('Removal review mismatch.');await checkFull(1,false);
+  let claim;try{service.claim('a',actors[1].ownerId,review.reviewId);throw Error('Cross-account claim accepted.');}catch(error){if(error.message==='Cross-account claim accepted.')throw error;}
+  claim=service.claim('a',actors[0].ownerId,review.reviewId);if(!await service.authorize(claim,actors[0])||(await service.save(claim,actors[0])).restored!==false)throw Error('Removal unverified.');await reject(service.save(claim,actors[0]));await checkFull(2,true);
+  if((await base.getPrivateRecordState(actors[1].accessToken,run,actors[1].ownerId)).length||(await fixture(1)).length)throw Error('Other account can read removed fixture.');
+  const list=await service.list('a',actors[0],Date.now()+300000),other=await service.list('b',actors[1],Date.now()+300000);if(list.records.length!==1||other.records.length||list.retentionDays!==90)throw Error('Recovery list privacy mismatch.');
+  await reject(service.prepare('b',actors[1],list.records[0].recordToken));const restore=await service.prepare('a',actors[0],list.records[0].recordToken);if(!restore.restoring)throw Error('Restoration review mismatch.');await checkFull(2,true);
+  const restoring=service.claim('a',actors[0].ownerId,restore.reviewId);if(!await service.authorize(restoring,actors[0])||(await service.save(restoring,actors[0])).restored!==true)throw Error('Restoration unverified.');await reject(service.save(restoring,actors[0]));await checkFull(3,false);
+  if((await fixture(1)).length||writes!==2)throw Error('Restored fixture privacy/write count mismatch.');await cleanup();
+ }finally{
+  let failed=false;if(attempted&&!cleaned){try{await cleanup();}catch{failed=true;}}service?.dispose();
+  for(const session of sessions){try{await base.signOutLocal(session.accessToken);if(await base.isSessionActive(session.accessToken))failed=true;}catch{failed=true;}}
+  if(failed)throw Error('Recovery fixture or temporary login cleanup needs review.');
+ }
+ const report={qaRun:run,verified:true,fictionalRowsCreated:1,fictionalRowsRestored:1,fictionalRowsSoftDeleted:1,reviewWasNonWriting:true,oneUseRecoveryVerified:true,otherAccountVisibleRows:0,unchangedPayloadAndCreationTime:true,closedTemporaryLogins:2,existingRecordWrites:0,providerReads:0};log(JSON.stringify(report));return report;
+}
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){try{const args=validateRecordRecoveryArguments(process.argv.slice(2));if(args)await verifyPrivateRecordRecovery(args);else console.log('PLAN ONLY: no configuration, logins, network or records accessed. After approval, the exact named one-note development drill creates/removes/restores/reversibly removes one fictional private note, verifies sparse recovery/privacy/preserved content and closes both temporary logins. No UI activation or existing-record changes.');}catch{console.error('Fictional recovery drill STOPPED. Inspect the named fixture before retrying; cleanup may need review. No credentials or note contents displayed.');process.exitCode=1;}}

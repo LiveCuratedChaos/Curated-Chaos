@@ -7,7 +7,8 @@ export const ORG_SECTIONS=Object.freeze([...TASK_SECTIONS]);
 export const TASK_STATUSES=Object.freeze(['Not Started','In Progress','Waiting','On Hold','Completed']);
 export const PROJECT_STATUSES=Object.freeze(['Planned','In Progress','On Hold','Completed','Cancelled']);
 export const visibleProjectStatus=status=>status==='Active'?'In Progress':PROJECT_STATUSES.includes(status)?status:'Planned';
-export const TASK_PRIORITIES=Object.freeze(['Low','Normal','High','Urgent']);
+import {TASK_PRIORITIES} from './task-priorities.mjs';
+export {TASK_PRIORITIES};
 const requireOwner=id=>{if(!UUID_V4ISH.test(id||''))throw Error('Sign into a verified fictional development account.');return id;};
 const plain=(v,max,field,{required=false}={})=>{
   const str=String(v??'').trim();
