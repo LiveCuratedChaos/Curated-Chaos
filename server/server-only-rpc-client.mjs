@@ -1,5 +1,5 @@
 // Draft server-only transport. Explicit injected configuration; no environment or credential-file access.
-const rpcNames=new Set(['cc_durable_session','cc_durable_sync_job']);
+const rpcNames=new Set(['cc_durable_session','cc_durable_sync_job','cc_project_workspace']);
 const maxBytes=64*1024;
 const failure=()=>new Error('Server operation unavailable.');
 function targetOrigin(value,expectedProjectRef){
@@ -29,13 +29,13 @@ function encode(value){
  });}catch{throw failure();}
  if(new TextEncoder().encode(text).byteLength>maxBytes)throw failure();return text;
 }
-async function readJson(response){
+async function readJson(response,responseLimit=maxBytes){
  if(!response?.ok||!/^application\/json(?:\s*;|$)/i.test(response.headers?.get('content-type')||''))throw failure();
  const declared=response.headers.get('content-length');
- if(declared!==null&&(!/^\d+$/.test(declared)||Number(declared)>maxBytes))throw failure();
+ if(declared!==null&&(!/^\d+$/.test(declared)||Number(declared)>responseLimit))throw failure();
  const reader=response.body?.getReader();if(!reader)throw failure();
  const chunks=[];let size=0;
- try{while(true){const {done,value}=await reader.read();if(done)break;if(!(value instanceof Uint8Array))throw failure();size+=value.byteLength;if(size>maxBytes)throw failure();chunks.push(value);}}
+ try{while(true){const {done,value}=await reader.read();if(done)break;if(!(value instanceof Uint8Array))throw failure();size+=value.byteLength;if(size>responseLimit)throw failure();chunks.push(value);}}
  catch{try{await reader.cancel();}catch{}throw failure();}
  finally{reader.releaseLock();}
  const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
@@ -52,7 +52,7 @@ export function createServerOnlyRpcClient({supabaseOrigin,serviceRoleKey,expecte
    const cancelled=new Promise((_,reject)=>{onAbort=()=>{controller.abort();reject(failure());};signal?.addEventListener('abort',onAbort,{once:true});if(signal?.aborted)onAbort();});
    const operation=(async()=>{
     const response=await fetchImpl(origin+'/rest/v1/rpc/'+name,{method:'POST',headers:{...headers},body,signal:controller.signal,redirect:'error',cache:'no-store'});
-    return {data:await readJson(response),error:null};
+    return {data:await readJson(response,name==='cc_project_workspace'?512*1024:maxBytes),error:null};
    })();
    return await Promise.race([operation,timeout,cancelled]);
   }catch{throw failure();}finally{clearTimeout(timer);signal?.removeEventListener('abort',onAbort);controller.abort();}

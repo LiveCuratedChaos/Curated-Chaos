@@ -1,5 +1,7 @@
 # Full-scope AI delivery plan
 
+November 12 priority update: owner chose projects/tasks first and read-only Apple Calendar viewing for initial daily use. Local implementation and 1,671-test evidence are in `PROJECT_TASK_PROGRESS.md`; browser control/access and hosted gates remain open. Source checkpoint `c021ce6` and merge `6ecc004` supersede the older main-source snapshot for this branch. The next step is browser acceptance, not a purchase or live deployment. Full retained scope is unchanged.
+
 Reviewed November 9, 2026. Integration lead: this delivery chat. This plan does not narrow the approved product or authorize deployment/migration.
 
 ## Repository findings

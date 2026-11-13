@@ -1,5 +1,7 @@
 # Single AI delivery baseline
 
+November 12 increment: main-source checkpoint `c021ce6252c8cec9b8b79b7593b115efc372a4de`, merged at `6ecc004`, preserves the newer accepted private-preview work without changing the owner checkout. Projects/tasks batch contracts at `c4b0bb1`; worker model/store/UI and lead integration advance this same canonical branch. Full integrated evidence is 1,671 passing tests with no skips; browser/hosted acceptance remains open as recorded in `PROJECT_TASK_PROGRESS.md`.
+
 November 9, 2026. Lead: this delivery workflow. Canonical local integration branch: `codex/ai-delivery-integration-20261109-5bc130`; worktree: `/Users/sam/.codex/worktrees/ai-delivery-integration/Curated-Chaos`.
 
 ## Reconciliation receipt

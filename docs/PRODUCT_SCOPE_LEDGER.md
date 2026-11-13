@@ -1,5 +1,7 @@
 # Curated Chaos product scope and evidence ledger
 
+November 12 daily-use priority: projects/tasks first; Apple Calendar viewing is sufficient initially, with finance and all other commitments retained. CC-TASK-01/CC-ADD-01/CC-HIST-01 now have a new local manual project/task/Undo implementation tested through embedded SQL and HTTP, preserving old records and fictional guards. Browser control was unavailable, SQL009 is unapplied and full autosave/offline/cross-app production integration remains open. See `PROJECT_TASK_PROGRESS.md` for 1,671-test evidence and exact remaining gates; no row is promoted to production-complete.
+
 Reviewed November 9, 2026 against baseline `3acff57` and `APPROVED_BLUEPRINT.md` version 1.0. This ledger preserves the entire agreed product, including explicitly retained later-release commitments. It neither changes the blueprint nor authorizes deployment, migration, provider access, family invitations or database changes.
 
 The recorded full-suite checkpoint is **901 automated tests**. That count is evidence of regression coverage, not a percentage of the product completed. Hosted tests and browser checks recorded in `COMPLETION_PLAN.md` have narrower scopes than the full product. This ledger does not rerun or independently certify those external checks.
