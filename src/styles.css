@@ -333,3 +333,26 @@ body[data-density="spacious"] .cc-dashboard-root .metric{padding:19px 23px}
 .cc-preferences-fields{border:0;padding:0;margin:0;min-width:0}
 
 .private-note-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-height: 50vh; overflow: auto; }
+
+.field-label[hidden] { display: none; }
+
+.private-brief-date-controls{align-items:flex-end;gap:8px;margin:12px 0 16px}.connected-card .private-brief-date-controls .field-label{margin:0}.private-brief-date-controls .btn{min-height:40px}.private-brief-date-controls>p{flex-basis:100%;margin:4px 0 0}@media(max-width:590px){.private-brief-date-controls .field-label{flex-basis:100%}.private-brief-date-controls .btn{min-height:44px;flex:1 1 auto}}
+
+.private-mac-source-list{max-height:28rem;overflow:auto;overscroll-behavior:contain}
+
+.private-month-scroll { overflow-x: auto; }
+.private-month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 34rem; gap: .35rem; }
+.private-month-weekday { text-align: center; font-size: .8rem; padding: .4rem; }
+.private-month-day { min-height: 6.5rem; min-width: 0; padding: .45rem; text-align: left; border: 1px solid var(--border, #cbd5e1); border-radius: .5rem; background: var(--surface); color: inherit; cursor: pointer; }
+.private-month-day > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem; margin-top: .25rem; }
+.private-month-day > small { display: block; font-size: .7rem; }
+.private-month-day[aria-current="date"] { outline: 2px solid currentColor; outline-offset: -3px; }
+.private-month-day:disabled { opacity: .6; cursor: default; }
+.private-month-day:focus-visible { outline: 3px solid currentColor; outline-offset: 1px; }
+
+.private-task-date-item { flex-wrap: wrap; }
+.private-task-date-item .item-main { flex-basis: 100%; }
+#private-saved-mail-panel .item-main small { overflow-wrap: anywhere; }
+
+.private-mail-task-item { flex-wrap: wrap; }
+.private-mail-task-item .item-main { flex-basis: 100%; }

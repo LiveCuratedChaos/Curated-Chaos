@@ -1,0 +1,1 @@
+export function privateAllDayEvent(values){if(values.all_day!==undefined&&typeof values.all_day!=='boolean')throw Error('All-day status must be explicit.');const all_day=values.all_day===true;if(all_day&&(values.time!=='00:00'||values.end_time!=null&&values.end_time!==''))throw Error('An all-day event uses its selected date without a time range.');return{all_day};}

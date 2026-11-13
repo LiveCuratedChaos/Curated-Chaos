@@ -10,31 +10,35 @@ export function validDay(value){
   const candidate=new Date(y,m-1,d,12);
   return y>=2000 && y<=2100 && candidate.getFullYear()===y && candidate.getMonth()+1===m && candidate.getDate()===d;
 }
-export function makeFictionalTask({title,day=dayString(),section='Personal Life'},ownerId){
+export const isUndatedTaskDay=value=>value===undefined||value===null||value==='';
+export function makeFictionalTask({title,day=dayString(),section='Personal Life'},ownerId,{allowUndated=false}={}){
+  if(typeof allowUndated!=='boolean')throw Error('Explicit undated-task scope required.');
   if(!UUID.test(ownerId||''))throw Error('Sign in to your fictional test account.');
   title=String(title||'').trim();
   if(!title||title.length>140)throw Error('Enter a fictional task title (1–140 characters).');
-  if(!validDay(day))throw Error('Enter a valid task date.');
+  if(!(allowUndated&&day===''||typeof day==='string'&&validDay(day)))throw Error('Enter a valid task date.');
   if(!TASK_SECTIONS.includes(section) || !AREAS.includes(section)) throw Error('Choose a permitted section.');
-  return {owner_id:ownerId,household_id:null,visibility:'private',section,item_type:'task',origin:'manual-test',payload:{title,day,done:false,fictional:true,source:'M0D_DEV_BRIEF_TEST'}};
+  return {owner_id:ownerId,household_id:null,visibility:'private',section,item_type:'task',origin:'manual-test',payload:{title,day:day===''?null:day,done:false,fictional:true,source:'M0D_DEV_BRIEF_TEST'}};
 }
-export function normalizeCloudRecords(raw,ownerId){
+export function normalizeCloudRecords(raw,ownerId,{allowUndated=false}={}){
+  if(typeof allowUndated!=='boolean')throw Error('Explicit undated-task read scope required.');
   if(!Array.isArray(raw) || !UUID.test(ownerId||''))return {tasks:[],notes:[],events:[]};
   // Defense in depth in the UI; Supabase RLS enforces isolation server-side.
   const own=raw.filter(r=>r && r.owner_id===ownerId && r.visibility==='private' && r.household_id===null && r.payload?.fictional===true && r.deleted_at==null);
-  const tasks=own.filter(r=>r.item_type==='task' && TASK_SECTIONS.includes(r.section) && typeof r.payload?.title==='string' && r.payload.title.trim().length>0 && r.payload.title.length<=140 && typeof r.payload.done==='boolean' && validDay(r.payload?.day));
+  const tasks=own.filter(r=>r.item_type==='task' && TASK_SECTIONS.includes(r.section) && typeof r.payload?.title==='string' && r.payload.title.trim().length>0 && r.payload.title.length<=140 && typeof r.payload.done==='boolean' && (typeof r.payload?.day==='string'&&validDay(r.payload.day)||allowUndated&&isUndatedTaskDay(r.payload?.day)));
   const notes=own.filter(r=>r.item_type==='note' && r.section==='Personal Life' && typeof r.payload?.title==='string');
   const events=own.filter(r=>r.item_type==='event' && r.section==='Calendar'
     && typeof r.payload?.title==='string' && r.payload.title.trim().length>0 && r.payload.title.length<=140
     && validDay(r.payload?.day) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(r.payload?.time||''));
-  return {tasks:tasks.sort((a,b)=>a.payload.day.localeCompare(b.payload.day)||String(a.created_at||'').localeCompare(String(b.created_at||''))),notes:notes.sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||''))),events:events.sort((a,b)=>a.payload.day.localeCompare(b.payload.day)||a.payload.time.localeCompare(b.payload.time))};
+  return {tasks:tasks.sort((a,b)=>String(a.payload.day||'9999-12-31').localeCompare(String(b.payload.day||'9999-12-31'))||String(a.created_at||'').localeCompare(String(b.created_at||''))),notes:notes.sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||''))),events:events.sort((a,b)=>a.payload.day.localeCompare(b.payload.day)||a.payload.time.localeCompare(b.payload.time))};
 }
 export function briefForDate(records,day=dayString()){
   const {tasks=[],notes=[]}=records;
   return {due:tasks.filter(r=>!r.payload.done && r.payload.day<=day),doneToday:tasks.filter(r=>r.payload.done && r.payload.day===day),upcoming:tasks.filter(r=>!r.payload.done && r.payload.day>day).slice(0,8),notes:notes.slice(0,8)};
 }
-export function toggledTaskPayload(record){
-  if(record?.item_type!=='task' || record?.payload?.fictional!==true || record.deleted_at!=null || !validDay(record.payload.day))throw Error('This test task cannot be updated.');
+export function toggledTaskPayload(record,{allowUndated=false}={}){
+  if(typeof allowUndated!=='boolean')throw Error('Explicit undated completion scope required.');
+  if(record?.item_type!=='task' || record?.payload?.fictional!==true || record.deleted_at!=null || !(validDay(record.payload.day)||allowUndated&&isUndatedTaskDay(record.payload.day)))throw Error('This test task cannot be updated.');
   const {title,day,done}=record.payload;
   if(typeof done!=='boolean'||typeof title!=='string'||title.length>140)throw Error('Malformed test task.');
   return {...record.payload,done:!done,...(typeof record.payload.status==='string'?{status:!done?'Completed':'Not Started'}:{})};

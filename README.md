@@ -115,3 +115,8 @@ This separate preview can show saved task/event display fields and note titles. 
 
 
 The optional local content check is `node tools/check-repository-privacy.mjs --scan-content`. It checks working candidates, staged copies and bounded ZIP contents without uploading or printing matches. It reports skipped binary copies explicitly and detects only recognized credential patterns; a clean result is not an exhaustive secret audit. The default filename-only check remains available without the flag.
+
+
+## Combined local verification
+
+`npm run check:offline` runs the offline test suite, local repository content/privacy scan, tracked-diff whitespace check and Mac launcher syntax check. It prints only a bounded count/status report and fails if a check fails or test totals are missing/skipped. It does not invoke setup, credential loaders, cloud acceptance tools, provider refresh, database migrations, Git staging/push or preview restarts. Skipped binary content remains disclosed; this is local verification, not production release certification. The same command is available directly as `node tools/check-offline.mjs` with a supported Node runtime.

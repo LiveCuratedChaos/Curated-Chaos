@@ -35,6 +35,11 @@ struct EventSnapshot {
 
 final class PreviewController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let fixture: Bool
+    var openingFromPrivateApp = false
+    var selectionReviewedIndexes: [Int] = []
+    var readsApprovedOpenings: Bool { Bundle.main.object(forInfoDictionaryKey: "CCCalendarReadOnOpen") as? Bool ?? false }
+    var canRememberSelection: Bool { Bundle.main.object(forInfoDictionaryKey: "CCCalendarSelectionFile") is String }
+    var selectionReview: Bool { Bundle.main.object(forInfoDictionaryKey: "CCCalendarSelectionReview") as? Bool ?? false }
     var identityReview: Bool { Bundle.main.object(forInfoDictionaryKey: "CCMacIdentityReview") as? Bool ?? false }
     var window: NSWindow!
     var store: EKEventStore?
@@ -56,15 +61,15 @@ final class PreviewController: NSObject, NSApplicationDelegate, NSWindowDelegate
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 780, height: 690), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = fixture ? "Curated Chaos · Fictional Calendar Check" : "Curated Chaos · Local Calendar Preview"
+        window.title = selectionReview ? "Curated Chaos · Calendar Selection Review" : fixture ? "Curated Chaos · Fictional Calendar Check" : "Curated Chaos · Local Calendar Preview"
         window.delegate = self; window.isRestorable = false
         let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = false
         window.contentView!.addSubview(stack)
         NSLayoutConstraint.activate([stack.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 24), stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -24), stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 24), stack.bottomAnchor.constraint(lessThanOrEqualTo: window.contentView!.bottomAnchor, constant: -20)])
         let title = NSTextField(labelWithString: fixture ? "Fictional calendar preview" : "Calendars synced to this Mac"); title.font = .boldSystemFont(ofSize: 24); stack.addArrangedSubview(title)
         let transferEnabled = Bundle.main.object(forInfoDictionaryKey: "CCMacBridgeFile") is String
-        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: identityReview ? "This review includes event/calendar identifiers and recurrence anchors to recognize repeat copies. Transfer is only to the app on this Mac for up to five minutes. This helper does not save to a database. Saving selected events in the app requires separate approval. No AI processing or calendar edits." : transferEnabled ? "Preview selected calendars first. Review in Daily Brief explicitly transfers this preview to the app on this Mac for up to five minutes. No database or AI service receives it; no calendar events are changed." : "Choose calendars and dates before previewing. This helper reads only; it cannot save, edit or delete events. It sends no event data to Curated Chaos, a database or an AI service."))
-        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: fixture ? "FICTIONAL MODE: no Calendar permission or real EventKit access." : "macOS requires Full Calendar Access to read events. The system permission includes editing capability, but this helper contains no event-editing operations. Calendar names are listed only after permission; events are read only after Preview."))
+        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: readsApprovedOpenings ? "This helper serves an explicitly approved temporary Calendar preview. The private app supplies your remembered calendars and approved dates. No events are saved or edited. Connect here only if macOS asks for Calendar access; you do not need to select calendars again." : canRememberSelection ? "Review your chosen calendars, then explicitly remember their names and local identifiers privately on this Mac for your signed-in account. This does not read events or enable event access. Existing selections cannot be overwritten." : selectionReview ? "Select the calendars for the planned check when Calendar opens. This setup lists calendar names only. It does not read events, save the selection, start background access or enable the connection." : identityReview ? "This review includes event/calendar identifiers and recurrence anchors to recognize repeat copies. Transfer is only to the app on this Mac for up to five minutes. This helper does not save to a database. Saving selected events in the app requires separate approval. No AI processing or calendar edits." : transferEnabled ? "Preview selected calendars first. Review in Daily Brief explicitly transfers this preview to the app on this Mac for up to five minutes. No database or AI service receives it; no calendar events are changed." : "Choose calendars and dates before previewing. This helper reads only; it cannot save, edit or delete events. It sends no event data to Curated Chaos, a database or an AI service."))
+        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: fixture ? "FICTIONAL MODE: no Calendar permission or real EventKit access." : readsApprovedOpenings ? "macOS requires Calendar read permission. Events are read only for the approved opening in the private app. This helper does not run a background schedule or request an iCloud refresh." : canRememberSelection ? "macOS may require Full Calendar Access to list calendars. Only the Remember button transfers selected calendar names and identifiers to the private app on this Mac. No event contents are read." : selectionReview ? "macOS may require Full Calendar Access to list calendars. This selection-only setup does not read events. No selection is saved or transferred." : "macOS requires Full Calendar Access to read events. The system permission includes editing capability, but this helper contains no event-editing operations. Calendar names are listed only after permission; events are read only after Preview."))
         let connect = NSButton(title: fixture ? "Load fictional calendars" : "Connect calendars on this Mac", target: self, action: #selector(connectCalendars)); stack.addArrangedSubview(connect)
         calendarStack.orientation = .vertical; calendarStack.alignment = .leading; calendarStack.spacing = 5
         let calendarScroll = NSScrollView(); calendarScroll.hasVerticalScroller = true; calendarScroll.documentView = calendarStack; calendarScroll.translatesAutoresizingMaskIntoConstraints = false
@@ -73,19 +78,22 @@ final class PreviewController: NSObject, NSApplicationDelegate, NSWindowDelegate
         let dates = NSStackView(); dates.orientation = .horizontal; dates.spacing = 10
         for picker in [startPicker, endPicker] { picker.datePickerStyle = .textFieldAndStepper; picker.datePickerElements = .yearMonthDay; picker.target = self; picker.action = #selector(selectionChanged) }
         startPicker.dateValue = Calendar.current.startOfDay(for: Date()); endPicker.dateValue = Calendar.current.date(byAdding: .day, value: 30, to: startPicker.dateValue)!
-        dates.addArrangedSubview(NSTextField(labelWithString: "From (included)")); dates.addArrangedSubview(startPicker); dates.addArrangedSubview(NSTextField(labelWithString: "To (excluded)")); dates.addArrangedSubview(endPicker); stack.addArrangedSubview(dates)
-        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "Up to 5 selected calendars and 31 days. Time zone: \(TimeZone.current.identifier). This is a Mac calendar snapshot and may lag iCloud; no cloud refresh is requested by the helper."))
+        dates.addArrangedSubview(NSTextField(labelWithString: "From (included)")); dates.addArrangedSubview(startPicker); dates.addArrangedSubview(NSTextField(labelWithString: "To (excluded)")); dates.addArrangedSubview(endPicker); dates.isHidden = selectionReview; stack.addArrangedSubview(dates)
+        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: selectionReview ? "Choose 1–5 calendars. Review names below; closing this window clears any unsaved selection. A later authorization is required before event reading or saving." : "Up to 5 selected calendars and 31 days. Time zone: \(TimeZone.current.identifier). This is a Mac calendar snapshot and may lag iCloud; no cloud refresh is requested by the helper."))
         let buttons = NSStackView(); buttons.orientation = .horizontal; buttons.spacing = 10
-        buttons.addArrangedSubview(NSButton(title: "Preview selected dates", target: self, action: #selector(previewSelected)))
-        showButton = NSButton(title: "Show event details", target: self, action: #selector(toggleDetails)); showButton.isEnabled = false; buttons.addArrangedSubview(showButton)
+        buttons.addArrangedSubview(NSButton(title: selectionReview ? "Review selected calendars" : "Preview selected dates", target: self, action: #selector(previewSelected)))
+        showButton = NSButton(title: "Show event details", target: self, action: #selector(toggleDetails)); showButton.isEnabled = false; showButton.isHidden = selectionReview; buttons.addArrangedSubview(showButton)
         buttons.addArrangedSubview(NSButton(title: "Clear preview", target: self, action: #selector(clearAll))); stack.addArrangedSubview(buttons)
-        if Bundle.main.object(forInfoDictionaryKey: "CCMacBridgeFile") is String { let transfer = NSButton(title: "Review in Daily Brief", target: self, action: #selector(requestBridgeTransfer)); stack.addArrangedSubview(transfer) }
+        if !selectionReview && Bundle.main.object(forInfoDictionaryKey: "CCMacBridgeFile") is String { let transfer = NSButton(title: "Review in Daily Brief", target: self, action: #selector(requestBridgeTransfer)); stack.addArrangedSubview(transfer) }
+        if selectionReview && Bundle.main.object(forInfoDictionaryKey: "CCCalendarSelectionFile") is String { stack.addArrangedSubview(NSButton(title: "Remember selected calendars on this Mac", target: self, action: #selector(rememberSelection))) }
         status.setAccessibilityIdentifier("calendar-preview-status"); stack.addArrangedSubview(status)
         details.isEditable = false; details.isRichText = false; details.isAutomaticLinkDetectionEnabled = false; details.font = .systemFont(ofSize: 13)
         let detailScroll = NSScrollView(); detailScroll.hasVerticalScroller = true; detailScroll.documentView = details; detailScroll.translatesAutoresizingMaskIntoConstraints = false; stack.addArrangedSubview(detailScroll)
         detailScroll.heightAnchor.constraint(equalToConstant: 180).isActive = true; detailScroll.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-        window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        window.center(); if !openingFromPrivateApp { window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) } else { window.orderOut(nil); NSApp.setActivationPolicy(.accessory) }
     }
+    func application(_ sender: NSApplication, openFiles filenames: [String]) { if readsApprovedOpenings { openingFromPrivateApp = true; window?.orderOut(nil); NSApp.setActivationPolicy(.accessory) }; NotificationCenter.default.post(name: NSNotification.Name("CCReadCalendarOpening"), object: self, userInfo: ["paths": filenames]); sender.reply(toOpenOrPrint: .success) }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { openingFromPrivateApp = false; NSApp.setActivationPolicy(.regular); window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return false }
     @objc func connectCalendars() {
         clearAll()
         if fixture { populateChoices(["Fictional iCloud — Personal", "Fictional iCloud — Family"]); status.stringValue = "Two fictional calendars available. Select one before previewing."; armExpiry(); return }
@@ -109,11 +117,18 @@ final class PreviewController: NSObject, NSApplicationDelegate, NSWindowDelegate
         for view in calendarStack.arrangedSubviews { calendarStack.removeArrangedSubview(view); view.removeFromSuperview() }
         choices = names.enumerated().map { index, name in let button = NSButton(checkboxWithTitle: name, target: self, action: #selector(selectionChanged)); button.tag = index; calendarStack.addArrangedSubview(button); return button }
     }
-    @objc func requestBridgeTransfer() { NotificationCenter.default.post(name: NSNotification.Name("CCExplicitMacTransfer"), object: self) }
-    @objc func selectionChanged() { previewRange = nil; previewExpiresAt = nil; snapshots.removeAll(); details.string = ""; showButton.isEnabled = false; showButton.title = "Show event details"; status.stringValue = "Selection changed. Preview to read the selected window; nothing is saved." }
+    @objc func requestBridgeTransfer() { guard !selectionReview else { return }; NotificationCenter.default.post(name: NSNotification.Name("CCExplicitMacTransfer"), object: self) }
+    @objc func rememberSelection() { NotificationCenter.default.post(name: NSNotification.Name("CCRememberCalendarSelection"), object: self) }
+    @objc func selectionChanged() { selectionReviewedIndexes = []; previewRange = nil; previewExpiresAt = nil; snapshots.removeAll(); details.string = ""; showButton.isEnabled = false; showButton.title = "Show event details"; status.stringValue = "Selection changed. Preview to read the selected window; nothing is saved." }
     @objc func previewSelected() {
         previewRange = nil; previewExpiresAt = nil; snapshots.removeAll(); details.string = ""; showButton.isEnabled = false; showButton.title = "Show event details"
         let selected = choices.enumerated().filter { $0.element.state == .on }.map { $0.offset }
+        if selectionReview {
+            guard (1...5).contains(selected.count), fixture || (store != nil && EKEventStore.authorizationStatus(for: .event) == .fullAccess && selected.allSatisfy({ calendars.indices.contains($0) })) else { status.stringValue = "Choose 1–5 available calendars. No events read or selection saved."; return }
+            details.string = selected.map { choices[$0].title }.joined(separator: "\n")
+            status.stringValue = "Selection reviewed: \(selected.count) calendars. No events read, settings saved or connection enabled. Closing clears this selection."
+            selectionReviewedIndexes = selected; previewExpiresAt = Date().addingTimeInterval(300); armExpiry(); return
+        }
         guard let range = try? CalendarWindow.make(start: startPicker.dateValue, end: endPicker.dateValue, selectedCount: selected.count) else { status.stringValue = "Choose 1–5 calendars and an increasing date window of 1–31 days."; return }
         if fixture {
             snapshots = [EventSnapshot(title: "Fictional appointment", start: range.start.addingTimeInterval(36000), end: range.start.addingTimeInterval(39600), allDay: false, calendarTitle: "Fictional Personal", calendarId: identityReview ? "fictional-calendar" : nil, eventId: identityReview ? "fictional-event" : nil)]
@@ -146,7 +161,7 @@ final class PreviewController: NSObject, NSApplicationDelegate, NSWindowDelegate
         showButton.title = "Hide event details"
     }
     func armExpiry() { expiry?.invalidate(); expiry = Timer.scheduledTimer(withTimeInterval: 300, repeats: false) { [weak self] _ in self?.clearAll(); self?.status.stringValue = "Private calendar preview expired. Nothing was saved." } }
-    @objc func clearAll() { previewRange = nil; previewExpiresAt = nil; expiry?.invalidate(); expiry = nil; snapshots.removeAll(); calendars.removeAll(); populateChoices([]); details.string = ""; showButton?.isEnabled = false; showButton?.title = "Show event details"; store?.reset(); store = nil; status.stringValue = "Preview cleared. No calendars or events retained in this view." }
+    @objc func clearAll() { selectionReviewedIndexes = []; previewRange = nil; previewExpiresAt = nil; expiry?.invalidate(); expiry = nil; snapshots.removeAll(); calendars.removeAll(); populateChoices([]); details.string = ""; showButton?.isEnabled = false; showButton?.title = "Show event details"; store?.reset(); store = nil; status.stringValue = "Preview cleared. No calendars or events retained in this view." }
     func applicationShouldSaveApplicationState(_ app: NSApplication) -> Bool { false }
     func applicationShouldRestoreApplicationState(_ app: NSApplication) -> Bool { false }
     func applicationDidBecomeActive(_ notification: Notification) { if !fixture && store != nil && EKEventStore.authorizationStatus(for: .event) != .fullAccess { clearAll() } }

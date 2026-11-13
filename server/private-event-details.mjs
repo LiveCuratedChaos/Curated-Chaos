@@ -1,0 +1,3 @@
+// Plain-text fields only; no links, markup rendering or provider access.
+export function privateEventDetails(values){const location=values.location??'',description=values.description??'';if(typeof location!=='string'||location.length>500||typeof description!=='string'||description.length>10000)throw Error('Use a location up to 500 characters and event details up to 10000 characters.');return{location,description};}
+export function validateEventDetailProposal(values){for(const key of ['location','description'])if(Object.hasOwn(values,key)&&typeof values[key]!=='string')throw Error('Optional event details must be text.');return privateEventDetails(values);}
