@@ -11,8 +11,8 @@ const nodes=node=>[node,...node.children.flatMap(nodes)];
 const text=node=>node.textContent+node.children.map(text).join(' ');
 const find=(root,label)=>nodes(root).find(node=>node.attributes['aria-label']===label)||nodes(root).find(node=>node.textContent===label);
 const change=async(root,label,value)=>{const node=find(root,label);node.value=value;await node.fire('input');await node.fire('change');};
-const project={id:'project-one',version:1,item_type:'project',section:'Personal Life',payload:{title:'Project',summary:'',status:'Planned'}};
-const task={id:'task-one',version:1,item_type:'task',section:'Personal Life',payload:{title:'Task',description:'',status:'Not Started',priority:'Normal',day:null,project_id:'project-one',subtasks:[]}};
+const project={id:'project-one',version:1,deleted_at:null,item_type:'project',section:'Personal Life',payload:{title:'Project',summary:'',status:'Planned'}};
+const task={id:'task-one',version:1,deleted_at:null,item_type:'task',section:'Personal Life',payload:{title:'Task',description:'',status:'Not Started',priority:'Normal',day:null,project_id:'project-one',subtasks:[]}};
 const model={
  normalizeProjectWorkspace:rows=>({projects:rows.filter(row=>row.item_type==='project'),tasks:rows.filter(row=>row.item_type==='task')}),
  projectWorkspaceView(rows,_owner,{view,projectId}){const all=this.normalizeProjectWorkspace(rows);return {...all,projects:all.projects.filter(project=>!projectId||project.id===projectId),tasks:all.tasks.filter(row=>(!projectId||row.payload.project_id===projectId)&&(view==='completed'?row.payload.status==='Completed':view==='all'?row.payload.status!=='Completed':true)),counts:{}};},
@@ -22,7 +22,7 @@ const model={
 };
 async function setup(overrides={},rows=[project,task]){
  const doc={createElement:tag=>new Node(tag,doc)};const root=new Node('main',doc);const calls=[];
- const client={list:async()=>structuredClone(rows),create:async input=>{calls.push(['create',input]);return {record:{...input.record,id:'new-record',version:1},operationId:input.operationId};},update:async input=>{calls.push(['update',input]);return {record:{...rows.find(row=>row.id===input.id),payload:input.payload,version:2},operationId:input.operationId};},undo:async input=>{calls.push(['undo',input]);return {record:{...task,version:3},operationId:input.operationId};},history:async()=>[{action:'Updated',createdAt:'2026-11-12'}],...overrides};
+ const client={list:async()=>structuredClone(rows),create:async input=>{calls.push(['create',input]);return {record:{...input.record,id:'new-record',version:1,deleted_at:null},operationId:input.operationId};},update:async input=>{calls.push(['update',input]);return {record:{...rows.find(row=>row.id===input.id),payload:input.payload,version:2},operationId:input.operationId};},undo:async input=>{calls.push(['undo',input]);return {record:{...task,version:3},operationId:input.operationId};},history:async()=>[{action:'Updated',createdAt:'2026-11-12'}],...overrides};
  const controller=await mountProjectWorkspace({root,client,ownerId:'owner',day:'2026-11-12',model});return {root,controller,calls};
 }
 test('routine project creation saves directly with unique intent and guarded undo',async()=>{
@@ -61,4 +61,26 @@ test('new editor actions preserve unsaved draft until explicit discard',async()=
 });
 test('project filter options retain the full project list while a project is selected',async()=>{
  const {root}=await setup({},[project,{...project,id:'project-two',payload:{...project.payload,title:'Second project'}},task]);await change(root,'Project filter','project-one');assert.ok(find(root,'Project filter').children.some(node=>node.attributes.value==='project-two'));
+});
+
+test('real model workflow creates assigned task, completes/reopens, edits subtasks and Undoes creation tombstone',async()=>{
+ const realModel=await import('../src/project-workspace-model.mjs');const owner='10000000-0000-4000-8000-000000000001';
+ const doc={createElement:tag=>new Node(tag,doc)};const root=new Node('main',doc);let records=[];const operations=new Map();
+ const client={list:async()=>structuredClone(records),history:async()=>[],create:async input=>{
+  const record={...structuredClone(input.record),id:crypto.randomUUID(),version:1,deleted_at:null};records.push(record);operations.set(input.operationId,{before:null,record});return {record,operationId:input.operationId};
+ },update:async input=>{const before=records.find(row=>row.id===input.id);assert.equal(input.expectedVersion,before.version);const record={...before,payload:input.payload,version:before.version+1};records=records.map(row=>row.id===record.id?record:row);operations.set(input.operationId,{before,record});return {record,operationId:input.operationId};},undo:async input=>{
+  const operation=operations.get(input.targetOperationId);const current=records.find(row=>row.id===operation.record.id);const record=operation.before?{...operation.before,version:current.version+1}:{...current,version:current.version+1,deleted_at:'2026-11-12T12:00:00Z'};records=records.filter(row=>row.id!==record.id);if(record.deleted_at===null)records.push(record);return {record,operationId:input.operationId};
+ }};
+ await mountProjectWorkspace({root,client,ownerId:owner,day:'2026-11-12',model:realModel});
+ await find(root,'New project').fire('click');await change(root,'Title','Real model project');await nodes(root).find(node=>node.tag==='form').fire('submit');assert.equal(records.length,1);assert.ok(text(root).includes('Saved.'));
+ const projectId=records[0].id;await find(root,'New task').fire('click');await change(root,'Title','Real model task');await change(root,'Assigned project',projectId);await change(root,'Due date','2026-11-12');await find(root,'Add subtask').fire('click');await change(root,'Subtask title 1','First subtask');await nodes(root).find(node=>node.tag==='form').fire('submit');assert.equal(records.length,2);assert.equal(records[1].payload.project_id,projectId);assert.equal(records[1].payload.subtasks.length,1);
+ await find(root,'Complete').fire('click');assert.ok(text(root).includes('1 of 1 tasks complete'));await find(root,'Completed').fire('click');await find(root,'Reopen').fire('click');assert.ok(text(root).includes('0 of 1 tasks complete'));await find(root,'All').fire('click');
+ await find(root,'Edit task').fire('click');await change(root,'Subtask title 1','Edited subtask');await nodes(root).find(node=>node.tag==='form').fire('submit');assert.equal(records[1].payload.subtasks[0].title,'Edited subtask');await find(root,'Undo last save').fire('click');assert.equal(records[1].payload.subtasks[0].title,'First subtask');
+ // New unlinked task makes the last operation a creation; Undo returns a tombstone.
+ await find(root,'New task').fire('click');await change(root,'Title','Disposable task');await nodes(root).find(node=>node.tag==='form').fire('submit');assert.equal(records.length,3);await find(root,'Undo last save').fire('click');assert.equal(records.length,2);assert.ok(!text(root).includes('Disposable task'));assert.ok(!text(root).includes('could not be displayed'));
+});
+test('malformed receipt version or deletion marker fails closed without corrupting visible records',async()=>{
+ for(const patch of [{version:1},{version:2,deleted_at:'not-a-date'},{version:2,deleted_at:undefined}]){
+  const {root}=await setup({update:async input=>({record:{...task,...patch},operationId:input.operationId})});await find(root,'Complete').fire('click');assert.ok(text(root).includes('outcome unknown'));assert.ok(text(root).includes('Task'));assert.ok(!text(root).includes('could not be displayed'));
+ }
 });
