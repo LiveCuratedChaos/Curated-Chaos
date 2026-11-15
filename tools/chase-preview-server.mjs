@@ -1,5 +1,6 @@
 // Approved, bounded, memory-only financial preview. No imports, mutations or paid refresh.
 import {createServer} from 'node:http';
+import {tmpdir} from 'node:os';
 import {readFile,writeFile,mkdtemp,unlink} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -29,7 +30,7 @@ export async function startChasePreview(root,approved,{configLoader=loadLocalCon
  const confirmSession=async owner=>Date.now()<expiresAt&&owner===ownerId&&(await api.getUser(signed.accessToken))?.id===ownerId;
  const readPreview=previewFactory?await previewFactory({confirmSession}):createChasePreview({adapter:createPlaidChaseRead({...await loadPlaidProductionConfig(root,{approved:true}),productionApproved:true}),confirmSession,loadGrant:owner=>loadChasePreviewGrant(root,owner)});
  preview=await readPreview({ownerId,binding,confirmed:true,...approved});ticket=randomBytes(32).toString('base64url');
- const temp=await mkdtemp('/private/tmp/curated-chase-preview-');launchFile=join(temp,'launch-url');await writeFile(launchFile,origin+'/start/'+ticket,{flag:'wx',mode:0o600});
+ const temp=await mkdtemp(join(tmpdir(),'curated-chase-preview-'));launchFile=join(temp,'launch-url');await writeFile(launchFile,origin+'/start/'+ticket,{flag:'wx',mode:0o600});
  const page='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chase read-only preview · Curated Chaos</title><link rel="stylesheet" href="/src/styles.css"></head><body data-theme="neutral"><main class="content cc-connections-page"><p class="eyebrow">CURATED CHAOS · PRIVATE PREVIEW</p><h1>Chase read-only preview</h1><div id="financial-preview"><p>Loading private preview…</p></div></main><script type="module" src="/auth/finances/ui.mjs"></script></body></html>';
  function send(res,status,body,type='application/json',extra={}){res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",...extra});res.end(typeof body==='string'?body:JSON.stringify(body));}
  server=serverFactory(async(req,res)=>{try{
