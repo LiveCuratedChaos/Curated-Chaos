@@ -1,0 +1,10 @@
+import {savedFinanceRecords} from './saved-finance-records.mjs';
+export function privateSavedFinanceAccounts(rows,ownerId,{now=Date.now(),expiresAt=now+300000}={}){
+ if(!Number.isFinite(now)||!Number.isFinite(expiresAt)||expiresAt<=now||!Array.isArray(rows)||rows.length>10||rows.some(r=>r?.item_type!=='provider_bank_account'||r.origin!=='plaid_readonly'||r.payload?.fictional!==false))throw Error('Saved account snapshots could not be verified.');
+ const data=savedFinanceRecords(rows,ownerId);if(data.accounts.some(a=>!a.savedAt))throw Error('Verified account save dates required.');return{source:'Saved Chase account copies',readOnly:true,snapshot:true,providerRead:false,currency:'USD',limit:10,checkedAt:new Date(now).toISOString(),expiresAt:Math.min(expiresAt,now+300000),accounts:data.accounts.map(({name,type,subtype,currentMinor,availableMinor,savedAt})=>({name,type,subtype,currentMinor,availableMinor,savedAt}))};
+}
+
+export function privateSavedFinanceTransactions(rows,ownerId,{now=Date.now(),expiresAt=now+300000,offset=0}={}){
+ if(!Number.isFinite(now)||!Number.isFinite(expiresAt)||expiresAt<=now||!Number.isInteger(offset)||offset<0||offset>480||offset%20||!Array.isArray(rows)||rows.length>21||rows.some(r=>r?.item_type!=='provider_bank_transaction'||r.origin!=='plaid_readonly'||r.payload?.fictional!==false))throw Error('Saved transaction snapshots could not be verified.');
+ const data=savedFinanceRecords(rows,ownerId);if(data.transactions.some(a=>!a.savedAt))throw Error('Verified transaction save dates required.');return{source:'Saved Chase transaction copies',readOnly:true,snapshot:true,providerRead:false,currency:'USD',limit:20,offset,hasMore:rows.length>20&&offset<480,browseLimitReached:rows.length>20&&offset===480,checkedAt:new Date(now).toISOString(),expiresAt:Math.min(expiresAt,now+300000),transactions:data.transactions.slice(0,20).map(({date,name,merchant,amountMinor,direction,pending,savedAt})=>({date,name,merchant,amountMinor,direction,pending,savedAt})).sort((a,b)=>b.date.localeCompare(a.date))};
+}

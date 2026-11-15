@@ -47,7 +47,7 @@ export function isDuplicateTask(tasks,draft){
 }
 export function validateSuggestedTask(fixture,draft){
   if(!fixture || fixture.rule!=='email_to_task' && !['school_to_task','household_to_task'].includes(fixture.rule))throw Error('Suggestion unavailable.');
-  const title=String(draft?.title||'').trim(), day=String(draft?.day||fixture.day),section=String(draft?.section||fixture.section);
+  const title=String(draft?.title||'').trim(), day=String(draft?.day??fixture.day),section=String(draft?.section??fixture.section);
   if(!title || title.length>140 || !validDay(day) || !TASK_SECTIONS.includes(section))throw Error('Check the fictional task title, date and section.');
   if(safeAutomationMode(fixture.rule,'automatic')!=='ask' && fixture.rule==='email_to_task')throw Error('Email actions require review.');
   return {title,day,section};

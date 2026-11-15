@@ -9,5 +9,5 @@ test('account preferences preserve private navigation selection',()=>{const p=no
 test('M3C: account form save binds navigation state in submit scope',()=>{
  const source=readFileSync('src/dev-account.mjs','utf8');
  const submit=source.slice(source.indexOf("root.addEventListener('submit'"));
- assert.match(submit,/const nav=normalizeNavigation\(settings\.navigation\);\s*const v=new FormData\(ev\.target\)/);
+ assert.match(submit,/const nav=normalizeNavigation\(\(preferencesDraft\|\|settings\)\.navigation\);\s*const v=new FormData\(ev\.target\)/);
 });

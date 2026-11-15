@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {auditSnapshot,acceptanceProgress,ACCEPTANCE_CASES} from '../src/dev-acceptance-model.mjs';
+import {createDevApi} from '../src/dev-api.mjs';
 import {allowedPublicPath} from '../tools/local-server.mjs';
 const id='48b87aa5-7051-4c59-9477-8d731183d731';
 const rec=(item_type,idSuffix)=>({id:`53b87aa5-7051-4c59-9477-8d731183d73${idSuffix}`,owner_id:id,household_id:null,visibility:'private',item_type});
@@ -36,7 +37,7 @@ test('M1H page makes no data writes and only scans authenticated private cloud',
   for(const s of ['addFictionalTask','addSuggestionDecision','toggleFictionalTask','deleteRecord'])assert.doesNotMatch(t,new RegExp(s));
 });
 
-test('M1H decision read includes household scope metadata for read-only scan',()=>{
-  const s=readFileSync(new URL('../src/dev-api.mjs',import.meta.url),'utf8');
-  assert.match(s,/select=id,owner_id,household_id,visibility,item_type,payload,created_at&visibility=eq.private&owner_id=eq.\$\{encodeURIComponent\(ownerId\)\}&item_type=eq.suggestion_decision/);
+test('decision reads retain scope metadata and exclude deleted or household rows',async()=>{
+ let query;const api=createDevApi({supabaseUrl:'https://devproject123.supabase.co',projectRef:'devproject123',publishableKey:'sb_publishable_fixture'},async url=>{query=new URL(url).searchParams;return{ok:true,status:200,text:async()=>'[]'};});await api.listSuggestionDecisions('fixture-token',id);
+ assert.equal(query.get('owner_id'),'eq.'+id);assert.equal(query.get('household_id'),'is.null');assert.equal(query.get('deleted_at'),'is.null');assert.equal(query.get('item_type'),'eq.suggestion_decision');assert.ok(query.get('select').includes('household_id'));assert.ok(query.get('select').includes('deleted_at'));
 });

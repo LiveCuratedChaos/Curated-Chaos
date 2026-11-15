@@ -7,7 +7,8 @@ export const ORG_SECTIONS=Object.freeze([...TASK_SECTIONS]);
 export const TASK_STATUSES=Object.freeze(['Not Started','In Progress','Waiting','On Hold','Completed']);
 export const PROJECT_STATUSES=Object.freeze(['Planned','In Progress','On Hold','Completed','Cancelled']);
 export const visibleProjectStatus=status=>status==='Active'?'In Progress':PROJECT_STATUSES.includes(status)?status:'Planned';
-export const TASK_PRIORITIES=Object.freeze(['Low','Normal','High','Urgent']);
+import {TASK_PRIORITIES} from './task-priorities.mjs';
+export {TASK_PRIORITIES};
 const requireOwner=id=>{if(!UUID_V4ISH.test(id||''))throw Error('Sign into a verified fictional development account.');return id;};
 const plain=(v,max,field,{required=false}={})=>{
   const str=String(v??'').trim();
@@ -66,6 +67,16 @@ export function toggleSubtask(record,id){
  const previous=readSubtasks(record?.payload?.subtasks);
  if(record?.item_type!=='task'||record.payload?.fictional!==true||!previous.some(s=>s.id===id))throw Error('Choose an existing fictional subtask.');
  return {...record.payload,subtasks:previous.map(s=>s.id===id?{...s,done:!s.done}:s)};
+}
+export function changeSubtasks(record,changes,owner){
+ if(record?.item_type!=='task'||record.owner_id!==requireOwner(owner)||record.visibility!=='private'||record.household_id!=null||record.payload?.fictional!==true)throw Error('This private fictional task cannot be modified.');
+ const previous=readSubtasks(record.payload.subtasks),edits=new Map();
+ if(!Array.isArray(changes)||changes.length>40)throw Error('Invalid subtask changes.');
+ for(const change of changes){
+  if(!change||!previous.some(s=>s.id===change.id)||edits.has(change.id)||typeof change.remove!=='boolean')throw Error('Choose an existing subtask once.');
+  edits.set(change.id,{remove:change.remove,title:change.remove?'':plain(change.title,140,'Subtask title',{required:true})});
+ }
+ return {...record.payload,subtasks:previous.filter(s=>!edits.get(s.id)?.remove).map(s=>edits.has(s.id)?{...s,title:edits.get(s.id).title}:s)};
 }
 export function projectCounts(projects,tasks){
  return projects.map(p=>({project:p,total:tasks.filter(t=>t.payload.project_id===p.id).length,completed:tasks.filter(t=>t.payload.project_id===p.id&&(t.payload.done===true||getTaskStatus(t)==='Completed')).length}));

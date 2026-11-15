@@ -16,7 +16,7 @@ export function loadLocalConfig(file=resolve('.env.local')) {
 }
 export function assertDevTarget(config) {
   const url=new URL(config.CC_DEV_SUPABASE_URL||'');
-  if (url.protocol !== 'https:' || !/^[a-z0-9-]+\.supabase\.co$/.test(url.hostname) || url.pathname!=='/') throw Error('Development project URL must be an exact HTTPS Supabase project URL ending in /');
+  if (url.protocol !== 'https:' || !/^[a-z0-9-]+\.supabase\.co$/.test(url.hostname) || url.pathname!=='/' || url.username || url.password || url.port || url.search || url.hash) throw Error('Development project URL must be an exact HTTPS Supabase project URL ending in /');
   const ref=url.hostname.split('.')[0];
   if (config.CC_DEV_PROJECT_REF!==ref) throw Error('CC_DEV_PROJECT_REF must equal the development Supabase project URL reference.');
   if (!/^[a-z0-9]{10,32}$/.test(config.CC_ORIGINAL_PROJECT_REF||'') || config.CC_ORIGINAL_PROJECT_REF===ref) throw Error('Provide the actual ORIGINAL project reference (10–32 lowercase letters/digits), which must differ from the development project.');

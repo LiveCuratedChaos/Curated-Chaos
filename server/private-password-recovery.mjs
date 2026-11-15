@@ -1,0 +1,25 @@
+import {randomBytes,createHash} from 'node:crypto';
+import {recoveryEmail} from './supabase-password-recovery.mjs';
+export const recoveryRequestNotice='If this address has an eligible account, a recovery code will be emailed. Check your inbox and spam folder. No password has changed.';
+// Recovery sessions are never ordinary workspace sessions. No app/provider/record API exists here.
+export function createPrivatePasswordRecovery({api,now=Date.now,maxFlows=128,flowMs=600000}={}){
+ if(!api||['sendRecoveryCode','verifyRecoveryCode','setRecoveryPassword','closeRecoverySession'].some(k=>typeof api[k]!=='function')||typeof now!=='function'||!Number.isInteger(maxFlows)||maxFlows<1||maxFlows>256||!Number.isInteger(flowMs)||flowMs<1000||flowMs>600000)throw Error('Explicit bounded recovery configuration required.');
+ const flows=new Map(),emailLimits=new Map(),pending=new Set();let disposed=false,windowStart=now(),windowCount=0;
+ const key=v=>createHash('sha256').update(v).digest('hex');
+ function track(p){pending.add(p);p.finally(()=>pending.delete(p)).catch(()=>{});return p;}
+ async function revoke(token,global=false){if(!token)return true;try{await api.closeRecoverySession(token,{global});return true;}catch{return false;}}
+ function drop(id){const f=flows.get(id);if(!f)return;flows.delete(id);clearTimeout(f.timer);if(f.token){const token=f.token;f.token=null;track(revoke(token));}}
+ function sweep(){for(const[id,f]of flows)if(f.expiresAt<=now())drop(id);for(const[k,t]of emailLimits)if(t<=now())emailLimits.delete(k);if(now()-windowStart>=60000){windowStart=now();windowCount=0;}}
+ function find(id){sweep();const f=typeof id==='string'?flows.get(id):null;if(disposed||!f)throw Error('Start password recovery again.');return f;}
+ function current(id,f){return !disposed&&flows.get(id)===f&&f.expiresAt>now();}
+ function view(f){return{stage:f.stage,expiresAt:f.expiresAt};}
+ return{
+  start(){sweep();if(disposed||flows.size>=maxFlows)throw Error('Recovery is busy. Try again later.');const id=randomBytes(32).toString('base64url'),f={stage:'email',expiresAt:now()+flowMs,email:null,token:null,busy:false,sends:0,checks:0,timer:null};f.timer=setTimeout(()=>drop(id),flowMs);f.timer.unref?.();flows.set(id,f);return{flowId:id,...view(f)};},
+  status(id){return view(find(id));},
+  async send(id,email){const f=find(id);if(f.busy||f.stage!=='email')throw Error('Start password recovery again.');email=recoveryEmail(email);const hash=key(email);if(f.sends>=1||windowCount>=20||emailLimits.has(hash)||emailLimits.size>=1024)throw Error('Wait a minute before requesting another recovery code.');windowCount++;f.sends++;emailLimits.set(hash,now()+60000);f.email=email;f.busy=true;f.stage='code';try{await track(Promise.resolve().then(()=>api.sendRecoveryCode(email)).catch(()=>{}));if(!current(id,f))throw Error('Start password recovery again.');return{...view(f),message:recoveryRequestNotice};}finally{f.busy=false;}},
+  async verify(id,code){const f=find(id);if(f.busy||f.stage!=='code'||f.checks>=5||typeof code!=='string'||!/^\d{6,10}$/.test(code))throw Error('Recovery code could not be verified.');f.busy=true;f.checks++;try{const candidate=await track(Promise.resolve().then(()=>api.verifyRecoveryCode(f.email,code)));if(!candidate||typeof candidate.accessToken!=='string'||!candidate.accessToken||candidate.user?.email!==f.email||!Number.isFinite(candidate.expiresAt)||candidate.expiresAt<=now()){if(candidate?.accessToken)await revoke(candidate.accessToken);throw Error();}if(!current(id,f)){await revoke(candidate.accessToken);throw Error();}f.token=candidate.accessToken;f.expiresAt=Math.min(f.expiresAt,candidate.expiresAt,now()+180000);clearTimeout(f.timer);f.timer=setTimeout(()=>drop(id),Math.max(1,f.expiresAt-now()));f.timer.unref?.();f.stage='password';return view(f);}catch{throw Error('Recovery code could not be verified. Start again if it expired.');}finally{f.busy=false;}},
+  async change(id,{password,confirmation,approved}={}){const f=find(id);if(f.busy||f.stage!=='password'||!f.token||approved!==true)throw Error('Verify the recovery code and confirm the password change.');if(typeof password!=='string'||password.length<12||password.length>128||password.includes('\0')||password!==confirmation)throw Error('Use matching passwords of 12–128 characters.');const token=f.token;f.token=null;f.busy=true;f.stage='changing';let changed=false;try{await track(Promise.resolve().then(()=>api.setRecoveryPassword(token,password)));changed=true;const revoked=await track(revoke(token,true));return{passwordChanged:true,signInRequired:true,otherSessionsRevoked:revoked};}catch{throw Error('The password change could not be confirmed. It may have completed. Try signing in before requesting another code.');}finally{if(!changed)await track(revoke(token));drop(id);}},
+  cancel(id){drop(id);},
+  async dispose(){disposed=true;for(const id of flows.keys())drop(id);await Promise.allSettled([...pending]);for(const id of flows.keys())drop(id);await Promise.allSettled([...pending]);emailLimits.clear();}
+ };
+}

@@ -5,3 +5,14 @@ node_modules/
 .local/
 .DS_Store
 *.log
+
+# Private encrypted recovery copies stay outside Git.
+*.ccrecovery
+*.ccsnapshot
+*.ccworkspace
+
+# Password-protected key recovery and fictional browser-test outputs.
+*.cckeyrecovery
+/test-results/
+/playwright-report/
+/blob-report/

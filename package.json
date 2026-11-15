@@ -9,9 +9,21 @@
     "setup:reuse": "node tools/reuse-dev-config.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:rls": "node tools/verify-rls.mjs",
-    "check:setup": "node tools/preflight.mjs"
+    "backup:private": "node tools/private-recovery.mjs --create",
+    "check:offline": "node tools/check-offline.mjs",
+    "check:privacy": "node tools/check-repository-privacy.mjs",
+    "check:setup": "node tools/preflight.mjs",
+    "start:connections": "node tools/connections-server.mjs",
+    "test:browser": "playwright test"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
+  },
+  "dependencies": {
+    "google-auth-library": "11.3.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
+    "@playwright/test": "1.65.1"
   }
 }

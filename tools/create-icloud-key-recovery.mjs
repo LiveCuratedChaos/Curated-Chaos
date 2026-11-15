@@ -1,0 +1,20 @@
+// Owner-run only: password input is hidden in Terminal; no credentials enter the cloud copy.
+import {resolve,join} from 'node:path';import {fileURLToPath} from 'node:url';import {homedir} from 'node:os';import {mkdir,lstat,realpath,open} from 'node:fs/promises';import {constants} from 'node:fs';import {randomUUID,timingSafeEqual} from 'node:crypto';
+import {readExistingFinanceKey} from '../server/private-saved-finance-reader.mjs';import {sealRecoveryKit,openRecoveryKit} from '../server/private-recovery.mjs';import {hiddenPassword} from './private-password-prompt.mjs';
+export async function keyOnlyRecoveryEnvelope(key,password){
+ if(!Buffer.isBuffer(key)||key.length!==32)throw Error('Existing original key required.');
+ const kit={version:1,scope:'local-key-and-credentials-only',createdAt:new Date().toISOString(),entries:[{path:'.local/provider-storage/encryption-key',data:key.toString('base64')}]},envelope=await sealRecoveryKit(kit,password),verified=await openRecoveryKit(envelope,password),check=Buffer.from(verified.entries[0].data,'base64');
+ try{if(verified.entries.length!==1||check.length!==32||!timingSafeEqual(key,check))throw Error('Recovery key verification failed.');}finally{check.fill(0);}
+ return envelope;
+}
+async function writeExclusive(path,bytes){const file=await open(path,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{await file.writeFile(bytes);await file.sync();}finally{await file.close();}const check=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);try{if(!bytes.equals(await check.readFile()))throw Error('Recovery file verification failed.');}finally{await check.close();}}
+async function run(){
+ if(process.argv.slice(2).join(' ')!=='--create'){if(process.argv.length!==2)throw Error('Only --create is supported.');console.log('PLAN ONLY: no keys, credentials, files or network accessed. Owner-run --create asks for a private password, creates a password-encrypted copy of only the existing data encryption key, verifies it, and writes new exclusive copies in local Recovery and iCloud Drive. No account credentials, records, database, provider or password changes.');return;}
+ const cloud=join(homedir(),'Library/Mobile Documents/com~apple~CloudDocs'),stat=await lstat(cloud);if(!stat.isDirectory()||stat.isSymbolicLink()||await realpath(cloud)!==cloud)throw Error('Original iCloud Drive folder required.');
+ const password=await hiddenPassword('Choose a backup recovery password (at least 16 characters; input hidden): ');if(password.length<16)throw Error('At least 16 characters required.');const repeated=await hiddenPassword('Enter the password again (input hidden): ');if(password!==repeated)throw Error('Passwords did not match.');
+ const root=resolve(fileURLToPath(new URL('..',import.meta.url))),key=await readExistingFinanceKey(root);let bytes;try{bytes=Buffer.from(await keyOnlyRecoveryEnvelope(key,password));}finally{key.fill(0);}
+ const local=join(homedir(),'Library/Application Support/Curated Chaos/Recovery'),localInfo=await lstat(local);if(!localInfo.isDirectory()||localInfo.isSymbolicLink()||(localInfo.mode&0o077)||await realpath(local)!==local)throw Error('Private original recovery folder required.');
+ const name='curated-chaos-key-'+randomUUID()+'.cckeyrecovery',cloudFolder=join(cloud,'Curated Chaos Key Recovery '+randomUUID());await mkdir(cloudFolder,{mode:0o700});await writeExclusive(join(local,name),bytes);await writeExclusive(join(cloudFolder,name),bytes);
+ console.log('Password-protected encryption-key recovery copy created and verified locally and in iCloud Drive. Contains one data encryption key and no account credentials. Originals preserved. Keep this password in your password manager; never send it in chat. iCloud upload still needs status verification.');
+}
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))try{await run();}catch{console.error('Key recovery setup did not complete. Originals were not replaced. A new encrypted copy may exist; check before retrying. No secrets displayed.');process.exitCode=1;}

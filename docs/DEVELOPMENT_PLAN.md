@@ -1,3 +1,7 @@
+> November 8 current checkpoint: the latest verified implementation, approvals and outstanding release gates are summarized at the top of COMPLETION_PLAN.md. The milestone notes below are historical. The isolated development app now contains approved real Gmail metadata and encrypted Chase snapshots in addition to fictional records; it is not production-ready. The original live app/database remain unchanged.
+
+> Current status: M3D Phase 2 includes connected, private fictional records in a separately configured Supabase development project. The local-only descriptions and early milestone checklists below are historical, not a statement that current cloud isolation has been verified. Sessions retain a development refresh token in per-tab sessionStorage. Live providers and production security remain unfinished. See ../M3D_PHASE2_START_HERE.md for current local usage.
+
 # Curated Chaos — Milestone Plan (living)
 
 ## Completed during this session — M0A

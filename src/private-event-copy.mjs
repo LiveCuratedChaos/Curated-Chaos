@@ -1,0 +1,9 @@
+// Uses only the explicitly opened display. No identifiers, edit capability or provider links are copied.
+const day=v=>typeof v==='string'&&/^(?:20\d\d|2100)-\d\d-\d\d$/.test(v)&&Number.isFinite(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;
+const time=v=>typeof v==='string'&&/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v);
+export function eventCopyDraft(view,{now=Date.now()}={}){
+ if(!Number.isFinite(now)||!view||!Number.isFinite(view.expiresAt)||view.expiresAt<=now)throw Error('Open a fresh event view before copying it.');
+ const keys=['title','day','time','end_time','end_day','all_day','section','location','description','expiresAt'];
+ if(Object.keys(view).some(k=>!keys.includes(k))||keys.some(k=>!Object.hasOwn(view,k))||typeof view.title!=='string'||!view.title.trim()||view.title!==view.title.trim()||view.title.length>140||view.section!=='Calendar'||!day(view.day)||!time(view.time)||typeof view.end_time!=='string'||view.end_time!==''&&!time(view.end_time)||typeof view.end_day!=='string'||view.end_day!==''&&(!day(view.end_day)||view.end_day<view.day||Date.parse(view.end_day+'T00:00:00Z')-Date.parse(view.day+'T00:00:00Z')>366*86400000)||typeof view.all_day!=='boolean'||view.all_day&&(view.time!=='00:00'||view.end_time!=='')||!view.all_day&&(view.end_day>view.day?!time(view.end_time):view.end_time!==''&&view.end_time<=view.time)||typeof view.location!=='string'||view.location.length>500||typeof view.description!=='string'||view.description.length>10000)throw Error('This event cannot be copied completely within the new-event limits. Nothing was copied.');
+ return{event:true,title:view.title,day:view.day,time:view.time,end_time:view.end_time,end_day:view.end_day,all_day:view.all_day,section:'Calendar',location:view.location,description:view.description};
+}

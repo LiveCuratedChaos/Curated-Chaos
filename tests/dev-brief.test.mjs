@@ -44,7 +44,7 @@ test('API includes authenticated RLS token and private filters for QA brief',asy
   const calls=[];
   const fetcher=async(url,options)=>{calls.push({url,options});return {ok:true,status:200,text:async()=>JSON.stringify(url.includes('PATCH')?[]:[])};};
   const api=createDevApi({supabaseUrl:'https://development123.supabase.co/',projectRef:'development123',publishableKey:'sb_publishable_fixture'},fetcher);
-  await api.listBriefRecords('fake-token');await api.addFictionalTask('fake-token',t);await api.toggleFictionalTask('fake-token',record.id,a,{...t.payload,done:true});
+  await api.listBriefRecords('fake-token');await api.addFictionalTask('fake-token',t);await api.toggleFictionalTask('fake-token',record.id,a,{...t.payload,done:true},1);
   assert.match(calls[0].url,/visibility=eq\.private/);assert.match(calls[0].url,/item_type=in\.\(task,note,event\)/);
   assert.equal(calls[0].options.headers.Authorization,'Bearer fake-token');
   assert.equal(calls[1].options.method,'POST');assert.equal(calls[2].options.method,'PATCH');
@@ -80,4 +80,11 @@ test('connected Daily Brief saves and reloads suggestion decisions before hiding
   assert.match(code,/api\.addSuggestionDecision/);
   assert.match(code,/if\(!Array\.isArray\(result\)\|\|result\.length!==1\)throw Error\('Dismissal/);
   assert.doesNotMatch(code,/dismissed\.add\(toDismiss/);
+});
+test('brief excludes removed records and malformed task completion state',()=>{
+ const deleted={...record,deleted_at:'2026-11-08T12:00:00Z'};
+ const note={...record,item_type:'note',section:'Personal Life',deleted_at:'2026-11-08T12:00:00Z'};
+ const event={...record,item_type:'event',section:'Calendar',deleted_at:'2026-11-08T12:00:00Z',payload:{fictional:true,title:'Deleted fixture event',day:'2026-11-08',time:'10:00'}};
+ const cloud=normalizeCloudRecords([record,deleted,note,event,{...record,payload:{...record.payload,done:'false'}},{...record,payload:{...record.payload,title:'   '}}],a);
+ assert.deepEqual(cloud.tasks,[record]);assert.deepEqual(cloud.notes,[]);assert.deepEqual(cloud.events,[]);assert.throws(()=>toggledTaskPayload(deleted));
 });

@@ -3,9 +3,9 @@ import {createDevSessionManager} from './dev-session.mjs';
 import {renderConnectedShell} from './dev-cloud-shell.mjs';
 import {escapeHtml} from './core.mjs';
 import {homeRecords,homeKind,homeCreate,homeProgress} from './dev-home-model.mjs';
-const root=document.getElementById('cc-home');let api,auth,user=null,records=[],busy=false,error='',notice='',current='all',editor=null,seq=0;
+const root=document.getElementById('cc-home');let api,auth,user=null,records=[],busy=false,error='',notice='',current='all',editor=null,seq=0,quickDraft='';
 const e=v=>escapeHtml(String(v??''));
-const btn=(title,action)=>`<button type="button" class="btn btn-small" data-action="${e(action)}">${e(title)}</button>`;
+const btn=(title,action)=>`<button type="button" class="btn btn-small" data-action="${e(action)}" ${busy?'disabled':''}>${e(title)}</button>`;
 function render(){
  let h=`<section class="cc-work-header"><p class="eyebrow">THE CHAOS · MILESTONE 2H</p><h1>Home & Household</h1><p class="cc-work-deck">Start with the big picture. Open a project when you want smaller steps.</p><div class="cc-work-badges"><span class="pill">Fictional test data</span><span class="pill">Private by account</span><span class="pill">Simple quick-add</span></div></section>`;
  if(error)h+=`<p class="warning" role="alert">${e(error)}</p>`;
@@ -24,14 +24,41 @@ function render(){
    h+='</div></details>';
   }
   h+='</section>';
-  if(editor){h+=`<section class="cc-work-card"><h2>Add ${e(editor.kind==='step'?'step':editor.kind)}</h2><form id="home-add" class="cc-org-fields"><label class="field-label">Name<input name="title" maxlength="140" required autofocus placeholder="What would you like to work on?"></label><button type="submit" class="btn btn-primary">Save</button>${btn('Cancel','cancel')}</form></section>`;}
+  if(editor){h+=`<section class="cc-work-card"><h2>Add ${e(editor.kind==='step'?'step':editor.kind)}</h2><form id="home-add" class="cc-org-fields"><label class="field-label">Name<input name="title" maxlength="140" value="${e(quickDraft)}" ${busy?'disabled':''} required autofocus placeholder="What would you like to work on?"></label><button type="submit" class="btn btn-primary">Save</button>${btn('Cancel','cancel')}</form></section>`;}
   h+=`<section class="cc-work-card"><h2>Coming later</h2><p class="tiny muted">Recurring cleaning schedules, quantity tracking for groceries, warranties and usage-based maintenance, return deadlines, reminders, sharing and freely configurable widgets. These are not live in this foundation.</p></section>`;
  }
  root.innerHTML=renderConnectedShell(`<div class="cc-workspace-page">${h}</div>`,{active:'home',workspace:'home'});
 }
-async function load(){if(!user)return;const id=user.id,version=++seq;busy=true;render();try{const all=await api.listOrganization(await auth.getAccessToken(),id);if(version!==seq||user?.id!==id)return;records=homeRecords(all,id);error='';}catch(ex){error=String(ex.message||ex).slice(0,220);}finally{if(version===seq){busy=false;render();}}}
+async function load(){if(!user)return;const id=user.id,version=++seq;busy=true;render();try{const all=await api.listOrganization(await auth.getAccessToken(),id);if(version!==seq||user?.id!==id)return;records=homeRecords(all,id);error='';}catch(ex){if(version===seq&&user?.id===id){notice='';error=String(ex.message||ex).slice(0,220);}}finally{if(version===seq){busy=false;render();}}}
 root.addEventListener('submit',ev=>{if(!['home-login','home-add'].includes(ev.target.id))return;ev.preventDefault();if(busy)return;const v=Object.fromEntries(new FormData(ev.target).entries());if(ev.target.id==='home-login'){busy=true;render();void(async()=>{try{const a=await auth.signIn(v.email.trim(),v.password);user=a.user;await load();}catch(ex){error=String(ex.message||ex);user=null;}finally{busy=false;render();}})();return;}
- const ed=editor;busy=true;render();void(async()=>{try{const rec=homeCreate(ed.kind,v.title,user.id,ed.projectId);const rows=await api.addOrganizationRecord(await auth.getAccessToken(),rec);if(!Array.isArray(rows)||rows.length!==1)throw Error('Save not confirmed.');editor=null;notice='Saved fictional item.';await load();}catch(ex){error=String(ex.message||ex).slice(0,230);}finally{busy=false;render();}})();});
-root.addEventListener('click',ev=>{const b=ev.target.closest('[data-action]');if(!b||!user||busy)return;const a=b.dataset.action;if(a==='refresh')void load();else if(a==='signout'){++seq;const session=auth;user=null;records=[];editor=null;render();void session.signOut();}else if(a.startsWith('view-')){current=a.slice(5);render();}else if(a.startsWith('new-step:')){editor={kind:'step',projectId:a.slice(9)};render();}else if(a.startsWith('new-')){editor={kind:a.slice(4),projectId:null};render();}else if(a==='cancel'){editor=null;render();}else if(a==='details'){notice='More optional details are planned for a later milestone.';render();}});
-root.addEventListener('change',ev=>{const input=ev.target;if(!input.matches('input[data-step-id]')||!user||busy)return;const r=records.find(x=>x.id===input.dataset.stepId);if(!r)return;const done=input.checked;busy=true;render();void(async()=>{try{const payload={...r.payload,done,status:done?'Completed':'Not Started'};const rows=await api.updateOrganizationRecord(await auth.getAccessToken(),r,user.id,'task',payload,'Home');if(!Array.isArray(rows)||rows.length!==1)throw Error('Update not confirmed');await load();}catch(ex){error=String(ex.message||ex).slice(0,230);await load();}finally{busy=false;render();}})();});
+ if(!user||!editor)return;
+ quickDraft=String(v.title||'');void createItem(v);
+});
+async function createItem(v){
+ const ed=editor,owner=user.id,version=seq;busy=true;error='';notice='';render();
+ try{
+  const rec=homeCreate(ed.kind,v.title,owner,ed.projectId);
+  const token=await auth.getAccessToken();if(version!==seq||user?.id!==owner)return;
+  const result=await api.addOrganizationRecord(token,rec);if(version!==seq||user?.id!==owner)return;
+  if(!Array.isArray(result)||result.length!==1)throw Error('Save not confirmed. Refresh and check before retrying.');
+  editor=null;quickDraft='';notice='Saved fictional item.';await load();
+ }catch(ex){if(version===seq&&user?.id===owner){notice='';error=String(ex.message||ex).slice(0,230);}}
+ finally{if(version===seq){busy=false;render();}}
+}
+root.addEventListener('input',ev=>{if(ev.target.form?.id==='home-add'&&ev.target.name==='title'&&!busy)quickDraft=ev.target.value;});
+root.addEventListener('click',ev=>{const b=ev.target.closest('[data-action]');if(!b||!user||busy)return;const a=b.dataset.action;if(a==='refresh')void load();else if(a==='signout'){++seq;const session=auth;user=null;records=[];editor=null;quickDraft='';error='';notice='';render();void session.signOut();}else if(a.startsWith('view-')){current=a.slice(5);render();}else if(a.startsWith('new-step:')){editor={kind:'step',projectId:a.slice(9)};quickDraft='';render();}else if(a.startsWith('new-')){editor={kind:a.slice(4),projectId:null};quickDraft='';render();}else if(a==='cancel'){editor=null;quickDraft='';render();}else if(a==='details'){notice='More optional details are planned for a later milestone.';render();}});
+async function toggleStep(input){
+ if(!user||busy)return;const r=records.find(x=>x.id===input.dataset.stepId);if(!r)return;
+ const owner=user.id,version=seq,done=input.checked;busy=true;error='';notice='';render();
+ try{
+  const token=await auth.getAccessToken();if(version!==seq||user?.id!==owner)return;
+  const payload={...r.payload,done,status:done?'Completed':'Not Started'};
+  const result=await api.updateOrganizationRecord(token,r,owner,'task',payload,'Home');if(version!==seq||user?.id!==owner)return;
+  if(!Array.isArray(result)||result.length!==1)throw Error('Update not confirmed. Refresh before retrying.');
+  await load();
+ }catch(ex){if(version===seq&&user?.id===owner){notice='';error=String(ex.message||ex).slice(0,230);}}
+ finally{if(version===seq){busy=false;render();}}
+}
+root.addEventListener('change',ev=>{if(ev.target.matches('input[data-step-id]'))void toggleStep(ev.target);});
+
 (async()=>{try{const res=await fetch('/dev-config.json',{cache:'no-store'});if(!res.ok)throw Error('Development configuration unavailable');const conf=await res.json();api=createDevApi(conf);auth=createDevSessionManager(api,conf.projectRef,sessionStorage);user=(await auth.restore())?.user||null;if(user)await load();else render();}catch(ex){error=String(ex.message||ex);render();}})();

@@ -1,7 +1,7 @@
 // M1C fictional email insight QA — no email provider, no background import, no sending email.
 import { createDevApi } from './dev-api.mjs';
 import { createDevSessionManager } from './dev-session.mjs';
-import { renderConnectedShell } from './dev-cloud-shell.mjs';
+import { renderConnectedShell,renderDevelopmentConnectionsLink } from './dev-cloud-shell.mjs';
 import { escapeHtml as e, dayString, formatDate } from './core.mjs';
 import { EMAIL_EXAMPLES, makeFictionalEmail, normalizeFictionalEmails, emailSuggestions } from './dev-email-model.mjs';
 const root=document.getElementById('connected-email');
@@ -11,7 +11,7 @@ const alerts=()=>`${error?`<p role="alert" class="warning">${e(error)}</p>`:''}$
 const panel=(title,inner)=>`<section class="panel"><div class="panel-head"><h2>${e(title)}</h2></div>${inner}</section>`;
 function show(){
   const signedIn=Boolean(user&&auth?.get());
-  const header=`<section class="connected-card"><p class="eyebrow">CURATED CHAOS · MILESTONE 1D</p><h1>Email Insights · Fictional Inbox</h1><p class="muted">Review sample-only messages, detect possible tasks, and send suggestions to the Daily Brief for approval.</p><p class="warning tiny">NO GMAIL OR APPLE MAIL CONNECTION. Never enter or paste real emails, confidential work details, or private information here.</p>${alerts()}`;
+  const header=`<section class="connected-card"><p class="eyebrow">CURATED CHAOS · MILESTONE 1D</p><h1>Email Insights · Fictional Inbox</h1><p class="muted">Review sample-only messages, detect possible tasks, and send suggestions to the Daily Brief for approval.</p><p class="warning tiny">This sample inbox uses fictional messages only. Manage read-only Gmail connections and saved source snapshots separately below. Never paste private email into the sample workflow.</p>${alerts()}`;
   let body='';
   if(!api)body='<p>Loading your isolated test connection…</p>';
   else if(!signedIn)body=panel('Sign in to your test account',`<form id="email-login" autocomplete="off"><label class="field-label">Test email<input name="email" type="email" autocomplete="username" required></label><label class="field-label">Test password<input name="password" type="password" autocomplete="off" required></label><button class="btn btn-primary" type="submit" ${busy?'disabled':''}>Sign in</button></form><p class="tiny muted">Use the same development Account A as the agenda. Your 12-hour tab session can be restored after refresh.</p>`);
@@ -25,7 +25,7 @@ function show(){
       panel('Your saved fictional inbox',`<p class="tiny muted">${emails.length} private sample email(s) visible to this test account · stored in isolated development Supabase</p>${emails.length?`<ul class="item-list">${ownRows}</ul>`:ownRows}`)+
       panel('Possible task insights · review in Daily Brief',`<p>Detected <strong>${suggestions.length}</strong> possible task(s) from the fictional messages. Smart Independence preview: harmless categorization happens automatically; creating tasks never does. Open the <a href="/dev-dashboard.html">Daily Brief</a> to review, edit, approve or dismiss each suggestion. They do not create tasks until you approve.</p><p class="tiny muted">Approved tasks appear in Tasks and the Agenda. Dismissals persist in this account. A sample receipt is informational and creates no task.</p><button type="button" class="btn" id="email-reload" ${busy?'disabled':''}>Refresh private inbox</button>`);
   }
-  root.innerHTML=renderConnectedShell(header+body+'</section>',{active:'email'});
+  root.innerHTML=renderConnectedShell(header+renderDevelopmentConnectionsLink(location.href)+body+'</section>',{active:'email'});
 }
 function message(msg,failed=false){error=failed?msg:'';notice=failed?'':msg;show();}
 async function load(){if(!user||!auth?.get())return;const seq=++generation;busy=true;show();try{const token=await auth.getAccessToken();const raw=await api.listFictionalEmails(token);if(seq!==generation)return;emails=normalizeFictionalEmails(raw,user.id);error='';notice='Private fictional inbox loaded.';}catch(err){if(seq!==generation)return;error=err.message;notice='';if(!auth.get())reset();}finally{if(seq===generation){busy=false;show();}}}

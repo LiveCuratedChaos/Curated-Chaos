@@ -1,0 +1,41 @@
+#!/bin/zsh
+# Local development workspace only. No credential values or file contents are printed.
+cc_project_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)" || exit 1
+cd "$cc_project_dir" || exit 1
+cc_node="$(command -v node 2>/dev/null)"
+if [[ -z "$cc_node" ]] || ! "$cc_node" -e 'if(Number(process.versions.node.split(".")[0])<22)process.exit(1)' 2>/dev/null; then
+  cc_node="/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
+fi
+if [[ ! -x "$cc_node" ]] || ! "$cc_node" -e 'if(Number(process.versions.node.split(".")[0])<22)process.exit(1)' 2>/dev/null; then
+  print 'A supported Node runtime is needed to open this private workspace.'
+  read -r 'cc_finish?Press Return to close.'
+  exit 1
+fi
+cc_probe_tool="$cc_project_dir/tools/check-private-workspace-running.mjs"
+"$cc_node" "$cc_probe_tool" --project=fngauurauwvbawlfzbbe --open
+cc_probe_result=$?
+if [[ "$cc_probe_result" -eq 20 ]]; then
+  exit 0
+elif [[ "$cc_probe_result" -ne 0 ]]; then
+  print 'The local app address is in use or could not be checked. Nothing was stopped or replaced.'
+  read -r 'cc_finish?Press Return to close.'
+  exit 1
+fi
+print 'Opening Curated Chaos on this Mac, using the separate development workspace.'
+print 'Keep this window open. Control-C stops the private workspace and closes its sign-ins.'
+print 'Task and note changes require review and approval in the app.'
+"$cc_node" tools/private-calendar-on-open-server.mjs \
+  --enable-private-calendar-on-open \
+  --calendar-reader="$cc_project_dir/.local/calendar-preview-builds/7e44a60e-316c-4ecc-8add-713a99adfaa7/Curated Chaos Calendar Selection.app/Contents/MacOS/CalendarPreview" \
+  --start-private-session-preview --project=fngauurauwvbawlfzbbe \
+  --allow-private-password-recovery --allow-private-saved-finance-read --allow-private-saved-transactions-read --allow-private-saved-mail-read --allow-private-brief-read --serve-private-dashboard --allow-private-task-workspace --allow-private-notes-workspace --allow-private-calendar-workspace --allow-private-calendar-selection --allow-private-brief-dates \
+  --allow-private-task-create-reviewed --allow-private-task-descriptions --allow-private-long-task-descriptions --allow-private-task-subtasks --allow-private-event-create-reviewed --allow-private-task-edit-reviewed --allow-private-task-description-edit-reviewed --allow-private-task-checklist-edit-reviewed --allow-private-task-checklist-titles-reviewed --allow-private-task-checklist-structure-reviewed --allow-private-event-edit-reviewed --allow-private-event-details --allow-private-all-day-events --allow-private-event-date-ranges --allow-private-recently-deleted \
+  --allow-private-task-read --allow-private-undated-tasks --allow-private-smart-task-entry --allow-private-smart-task-checklists --allow-private-task-quick-dates --allow-private-task-copy --allow-private-task-priority --allow-private-task-priority-lists --allow-private-task-completion --allow-private-task-reopen-reviewed --allow-private-note-read \
+  --allow-private-note-edit-reviewed --allow-private-note-copy --allow-private-note-create-reviewed --allow-private-long-notes \
+  --allow-private-title-search --allow-private-search-dates --allow-private-saved-searches --allow-private-appearance-read --allow-private-appearance-save-reviewed --open-private-dashboard
+cc_result=$?
+if [[ "$cc_result" -ne 0 ]]; then
+  print 'The private workspace did not open. Existing files and services were left in place.'
+  read -r 'cc_finish?Press Return to close.'
+fi
+exit "$cc_result"

@@ -1,0 +1,13 @@
+import {spawn} from 'node:child_process';import {resolve} from 'node:path';import {fileURLToPath} from 'node:url';
+const statusUrl='http://127.0.0.1:5312/private-workspace-status.json';
+export async function checkPrivateWorkspaceRunning({project,fetcher=fetch,timeoutMs=2500}={}){
+ if(typeof project!=='string'||!/^[a-z0-9]{10,32}$/.test(project)||typeof fetcher!=='function'||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>5000)throw Error('Exact development workspace check required.');
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+ try{let response;try{response=await fetcher(statusUrl,{method:'GET',cache:'no-store',redirect:'error',credentials:'omit',signal:controller.signal});}catch(error){if(error?.cause?.code==='ECONNREFUSED'||error?.code==='ECONNREFUSED')return{state:'not-running'};return{state:'unconfirmed'};}
+ if(!response.ok)return{state:'unconfirmed'};const raw=await response.text();if(raw.length>4096)return{state:'unconfirmed'};let view;try{view=JSON.parse(raw);}catch{return{state:'unconfirmed'};}
+ if(!view||Object.keys(view).sort().join(',')!=='app,passwordRecovery,projectRef,protocol,savedFinancialAccounts,savedTransactions,scope'||view.app!=='Curated Chaos'||view.scope!=='isolated-development'||view.protocol!==1||view.projectRef!==project||view.passwordRecovery!==true||view.savedFinancialAccounts!==true||view.savedTransactions!==true)return{state:'unconfirmed'};
+ return{state:'running',url:'http://127.0.0.1:5312/dev-dashboard.html'};
+ }catch{return{state:'unconfirmed'};}finally{clearTimeout(timer);}
+}
+export function workspaceCheckArguments(args){if(!Array.isArray(args)||args.length!==2||!args.includes('--open')||args.filter(v=>/^--project=[a-z0-9]{10,32}$/.test(v)).length!==1)throw Error('Explicit workspace address check required.');return{project:args.find(v=>v.startsWith('--project=')).slice(10)};}
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){try{const result=await checkPrivateWorkspaceRunning(workspaceCheckArguments(process.argv.slice(2)));if(result.state==='running'){console.log('Curated Chaos is already running. Reopening your workspace.');const child=spawn('/usr/bin/open',[result.url],{stdio:'ignore'});await new Promise((done,reject)=>{child.once('error',reject);child.once('close',code=>code===0?done():reject(Error()));});process.exitCode=20;}else if(result.state==='unconfirmed'){console.log('The local address could not be confirmed as this development workspace. Nothing was stopped or replaced.');process.exitCode=1;}}catch{console.log('The private workspace address could not be checked. Nothing was stopped or replaced.');process.exitCode=1;}}
