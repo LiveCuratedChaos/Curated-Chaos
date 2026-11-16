@@ -1,6 +1,6 @@
 # Automated browser tests and GitHub checks
 
-Prepared November15,2026. Latest local acceptance:1,681 Node tests plus36 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
+Prepared November15,2026. Latest local acceptance:1,700 Node tests plus40 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
 
 ## Run locally
 
@@ -64,3 +64,7 @@ Latest review acceptance: remote7ed77da768f82c09fc127bc55ba06b41e9a53aed passed 
 ## November15 recurrence preparation
 
 Fifteen new pure-model/draft tests verify anchored schedule calculations and unchanged source views, including UTC/New York/Apia child-process checks for a civil date skipped by a historical local timezone. Offline total1,681. No UI imports/routes were added, so existing36-case browser evidence remains applicable without a new browser run for these dormant helpers. Recurrence activation still requires atomic database and browser acceptance; see TASK_RECURRENCE.md.
+
+## November15 reviewed recurring saving
+
+All1700 offline tests and40 browser cases pass. New real offline PostgreSQL tests cover atomic completion/successor insertion, exact and conflicting replays, rollback on successor collision, stale/expired/cancelled reviews, competing requests, wrong account/revoked-session denial, SQL/calendar-model agreement, corrupted acknowledgements and unchanged successor after historical reopening/recompletion. API transport is opt-in, fixed-RPC-only and never retries. Browser recurrence is enabled only in the fictional fixture, with review/approval/cancel and reopening checks at both viewport sizes; its review passes axe checks. Source API/UI changes required full offline and browser reruns. Migration007 is prepared only; no hosted execution. Test loader now strips all top-level import lines rather than assuming one; all204 controller tests pass.
