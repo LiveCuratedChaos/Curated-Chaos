@@ -1,0 +1,43 @@
+name: Disposable project concurrency
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: project-concurrency-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  postgres:
+    name: Overlapping project writes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fictional_ci_only
+          POSTGRES_DB: cc_disposable_qa
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cc_disposable_qa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      - name: Install PostgreSQL test client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Verify independent overlapping transactions
+        env:
+          CC_DISPOSABLE_POSTGRES: 'true'
+        run: node tools/verify-disposable-project-concurrency.mjs --disposable-ci-only
