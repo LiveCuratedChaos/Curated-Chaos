@@ -33,3 +33,9 @@ Next core checkpoint: master/subproject structure. Establish whether a smaller p
 ## Cloud hierarchy follow-up
 
 The owner approved several larger projects per subproject. The isolated cloud implementation and unapplied storage draft are documented in PROJECT_HIERARCHY.md; the earlier pending one-versus-several question is resolved. Direct project task progress remains available alongside explicitly labeled deduplicated hierarchy progress. No hosted activation is implied.
+
+## Target-date browsing
+
+Projects offers All target dates, With a target date and No target date, inclusive optional Target from/Target through bounds, and Title/Earliest target first/Latest target first order. Title order remains the default. Both target-date orders put undated projects last; title and exact server-side identity break ties. Legacy missing dates and explicit blanks both count as undated. Choosing No target date clears/disables date bounds. Clear project filters restores current projects, all target dates and title order.
+
+Filters apply explicitly, combine with title/area/current-or-archive/status selection, and precede the complete list's fifty-row pagination. Changing a filter/order returns pagination to the first page; refresh and acknowledged saves retain the chosen filters. The browser verifies the returned filter echo, requested page, date inclusion and ordering. Invalid/reversed/impossible dates and unsupported values fail before a project read. These controls are temporary view preferences; they never enter saved project payloads, move dates, load descriptions, alter memberships or change parent progress. No schema, provider or owner-runtime change is needed.

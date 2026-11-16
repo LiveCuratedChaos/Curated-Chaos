@@ -9,3 +9,16 @@ export function projectFields(value){
 
 // Display wording preserves existing saved and transported status values.
 export function projectStatusLabel(status){return status==='Active'?'In Progress':status;}
+
+// View preferences only; these fields never enter saved project payloads.
+export function projectBrowseFields(value={}){
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['query','section','status','dateMode','dateFrom','dateTo','sort'].includes(k)))throw Error('Choose supported project filters.');
+ const fields={query:'',section:'all',status:'all',dateMode:'all',dateFrom:'',dateTo:'',sort:'title',...value};
+ if(typeof fields.query!=='string'||fields.query.trim().length>100||!['all',...PROJECT_AREAS].includes(fields.section)||!['all','current','archived',...PROJECT_STATUSES].includes(fields.status)||!['all','dated','undated'].includes(fields.dateMode)||!['title','target-asc','target-desc'].includes(fields.sort)||!validProjectDay(fields.dateFrom)||!validProjectDay(fields.dateTo)||fields.dateFrom&&fields.dateTo&&fields.dateFrom>fields.dateTo||fields.dateMode==='undated'&&(fields.dateFrom||fields.dateTo))throw Error('Use supported project filters and real, ordered target dates from 2000 through 2100.');
+ return{...fields,query:fields.query.trim()};
+}
+export function projectMatchesDates(day='',fields){return(fields.dateMode==='all'||Boolean(day)===(fields.dateMode==='dated'))&&(!(fields.dateFrom||fields.dateTo)||Boolean(day)&&(!fields.dateFrom||day>=fields.dateFrom)&&(!fields.dateTo||day<=fields.dateTo));}
+export function compareProjectSummaries(a,b,sort='title'){
+ const left=a.day??'',right=b.day??'';
+ return(sort==='title'?0:!left&&right?1:left&&!right?-1:left&&right?(sort==='target-desc'?-1:1)*left.localeCompare(right):0)||a.title.localeCompare(b.title)||(a.id??'').localeCompare(b.id??'');
+}

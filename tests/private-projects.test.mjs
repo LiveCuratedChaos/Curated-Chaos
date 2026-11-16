@@ -35,3 +35,18 @@ test('optional project target dates validate before writes, preserve legacy edit
  const list=await s.list(),writes=s.state.writes;for(const day of ['2027-02-29','2026-11-31','1999-12-31','2101-01-01','2026-1-01','2026-11-16T00:00:00Z',null,0,{}])await assert.rejects(s.service.prepare('ctx',s.user,{action:'edit',projectToken:list.projects[0].projectToken,fields:{...fields,day}}));assert.equal(s.state.writes,writes);
  row=await edit({day:'',archived:true});assert.equal(row.payload.day,'');assert.equal(row.payload.status,'Active');assert.equal(row.payload.archived,true);assert.deepEqual(await related(),before);
 });
+
+test('target-date project filters and stable ordering apply across all pages without writes',async t=>{
+ const s=await setup(t);
+ for(let n=0;n<64;n++)await s.db.query("insert into public.cc_records(owner_id,visibility,section,item_type,origin,payload) values($1,'private','Work','project',$2,$3)",[i.a,PROJECT_ORIGIN,JSON.stringify({fictional:true,schemaVersion:1,title:'Fictional date '+String(63-n).padStart(2,'0'),description:'PRIVATE_DATE_BODY',status:'Active',...(n<60?{day:'2028-02-'+String(n%29+1).padStart(2,'0')}:{...(n===60?{day:''}:{})}),...(n===63?{archived:true}:{})})]);
+ const before=(await s.db.query('select * from public.cc_records order by id')).rows;
+ const list=options=>s.service.list('browse',s.user,s.state.clock+300000,{status:'current',...options});
+ const asc=await list({sort:'target-asc'}),last=await list({sort:'target-asc',offset:50});assert.equal(asc.matchCount,63);assert.equal(asc.projects.length,50);assert.equal(last.projects.length,13);const all=[...asc.projects,...last.projects];assert.deepEqual(all.slice(-3).map(p=>p.day??''),['','','']);assert.equal(new Set(all.map(p=>p.title)).size,63);for(let n=1;n<60;n++)assert.ok(all[n-1].day<=all[n].day);
+ const descending=await list({sort:'target-desc'});assert.equal(descending.projects[0].day,'2028-02-29');assert.doesNotMatch(JSON.stringify(descending),/PRIVATE_DATE_BODY|owner_id/);
+ const range=await list({dateFrom:'2028-02-28',dateTo:'2028-02-29',sort:'target-desc'});assert.equal(range.matchCount,4);assert.ok(range.projects.every(p=>p.day>='2028-02-28'&&p.day<='2028-02-29'));assert.equal((await list({dateMode:'undated'})).matchCount,3);assert.equal((await list({dateMode:'dated'})).matchCount,60);assert.equal((await list({status:'archived',dateMode:'undated'})).matchCount,1);assert.equal((await list({status:'Active',dateMode:'dated',dateTo:'2028-02-01'})).matchCount,3);
+ assert.equal(s.state.writes,0);await administrator(s.db);assert.deepEqual((await s.db.query('select * from public.cc_records order by id')).rows,before);
+});
+test('invalid project date filters fail before fetching or issuing a replacement view',async t=>{
+ const s=await setup(t);let reads=0;const original=s.api.listPrivateProjects;s.api.listPrivateProjects=(...args)=>{reads++;return original(...args);};
+ for(const patch of [{dateFrom:'2027-02-29'},{dateTo:null},{dateFrom:'1999-12-31'},{dateTo:'2101-01-01'},{dateFrom:'2028-02-29',dateTo:'2028-02-28'},{dateMode:'undated',dateFrom:'2028-02-01'},{dateMode:'unknown'},{sort:'unknown'},{sort:null},{extra:true}])await assert.rejects(s.service.list('invalid',s.user,s.state.clock+300000,patch));assert.equal(reads,0);assert.equal(s.state.writes,0);
+});
