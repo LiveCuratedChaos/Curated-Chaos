@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-16",
+  "cloudBase": "14e691b811ffd9b1527491c9ddf46627eb65f00e",
+  "capturedMac": "718596e",
+  "capturedIntegration": "2ef9ee1",
+  "offline": {
+    "total": 2032,
+    "passed": 2032,
+    "failed": 0,
+    "skipped": 0,
+    "platformExclusions": [],
+    "privacy": true,
+    "whitespace": true,
+    "launcherSyntax": true
+  },
+  "browser": {
+    "existingPrivateWorkspace": 88,
+    "retainedManualWorkspace": 4,
+    "failed": 0,
+    "skipped": 0,
+    "projects": [
+      "desktop-chromium",
+      "mobile-chromium"
+    ],
+    "physicalDeviceClaim": false
+  },
+  "initialFailure": "One offline safety test falsely matched deployment in a legitimate test filename; corrected test runner/path validation, full offline rerun passed. Earlier missing-dependency run is not acceptance.",
+  "runtimeBoundaries": {
+    "realRecordChanges": 0,
+    "providerRefreshes": 0,
+    "AppleCalendarRefresh": "OFF",
+    "databaseMigrations": 0,
+    "deployments": 0,
+    "remoteBranchChanges": 0,
+    "existingCheckoutChanges": 0,
+    "existingCandidateRestarted": false
+  },
+  "remaining": "Unify manual/provenance/history contract without losing several-parent memberships; no legacy conversion or production activation is implied."
+}
