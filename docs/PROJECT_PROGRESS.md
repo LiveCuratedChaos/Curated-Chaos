@@ -29,3 +29,7 @@ Extended the existing rollback-only development QA to switch a fictional project
 Narrow-screen fictional progress reviewed at /private/tmp/curated-project-progress-mobile.png, with no horizontal overflow. Automated Chromium/axe checks are partial evidence; physical Safari/iPhone and full screen-reader release acceptance remain open.
 
 Next core checkpoint: master/subproject structure. Establish whether a smaller project may belong to one larger project or several before defining membership uniqueness, cycle protection and roll-up behavior. No hierarchy behavior is enabled or assumed.
+
+## Cloud hierarchy follow-up
+
+The owner approved several larger projects per subproject. The isolated cloud implementation and unapplied storage draft are documented in PROJECT_HIERARCHY.md; the earlier pending one-versus-several question is resolved. Direct project task progress remains available alongside explicitly labeled deduplicated hierarchy progress. No hosted activation is implied.

@@ -1,0 +1,43 @@
+# Several-parent private project structure
+
+Owner decision recorded in this cloud chat, November 16, 2026: one subproject may belong to several larger projects. Full product scope is retained. This is local implementation and fictional acceptance, not activation in the owner's workspace.
+
+## Complete local workflow
+
+Tasks → View projects → Project structure opens the selected project's structure. Browse subprojects or larger projects, search titles, then review adding/removing one relationship. A summary names the larger project and subproject before the existing explicit save action. Cancel changes nothing. Closing structure refreshes project choices so the endpoint revisions advanced by a relationship change do not leave stale metadata controls.
+
+Project relationships reference the same private project records. Several larger projects can include the same subproject. Removing a relationship neither removes the subproject nor changes other relationships, task contents, task memberships, recurring schedules, checklist state or manually chosen project status. Self-links and direct/indirect cycles are rejected. Structure changes preserve canonical identities across unlink/relink and never retry an uncertain save automatically. Expired views require an explicit fetch. Session clearing, offline handling and delayed-response guards discard obsolete private views/reviews.
+
+Progress including subprojects covers the selected project and every reachable descendant. Shared descendants and shared task identities count once. It uses the selected project's saved repeating-chores option; descendant projects keep their own saved options. Counts ignore the visible title filter and page, and never change project status. The existing Project tasks view continues to show direct memberships. No arbitrary hierarchy depth policy is added; complete collections have a technical 2,000-record bound and fail rather than show partial totals.
+
+## Private read/write boundaries
+
+Hierarchy transport is separately opt-in (`--allow-private-project-hierarchy-reviewed`) and requires existing Projects and task-membership scopes. The launcher is unchanged; the scope defaults off outside explicitly enabled fictional fixtures. Browser actions use selected opaque tokens, owner/session-bound expiring views and single-use reviews. Raw database IDs stay server-side. Sparse complete snapshots omit task descriptions/checklists and project descriptions. One stable invoker-only database snapshot prevents combining unrelated read moments into a graph.
+
+`supabase/drafts/private_project_hierarchy.sql` is an **unapplied draft outside the migration ledger**. It prepares one canonical owner/parent/child relationship per pair, strict scope/session/target checks, atomic cycle rejection, endpoint revision bumps and removal/retype protection. Owner-wide transaction advisory locks serialize graph changes; mutation requires READ COMMITTED so waiting transactions cannot validate against a retained old graph. Invoker-only public functions are granted only to authenticated, with internal trigger functions private and empty search paths. Existing RLS/session enforcement remains required. No new service-role privilege or hosted configuration is introduced.
+
+Embedded PostgreSQL checks cover atomic multirow cycle failure, multiple parents, immutable/canonical relationships, unchanged task records, stale revisions, target scope/removal, cross-account/session rejection, grants, sparse snapshots and refusal above the read bound. Embedded execution cannot prove actual multi-connection PostgreSQL contention; that remains an explicit acceptance gate. The cloud has no installed PostgreSQL server/client. Public Supabase documentation fetch was unavailable in this environment; implementation reused existing repository invoker/RLS patterns and tested SQL locally. CLI was unavailable; this is not a CLI-generated migration or hosted-ledger entry.
+
+## Fictional recovery compatibility
+
+Fake-key encrypted archives preserve project relationships and reject cycles, duplicate canonical pairs, missing/foreign/deleted/shared targets and unsupported scopes. Restore remains comparison-only. It blocks absent targets, occupied canonical slots and cycles formed by current records plus individual or combined candidates. A future executor must revalidate the entire proposal atomically and reconcile trigger-driven versions; no restore is enabled by this batch. No real backup, key or recovery archive was read.
+
+## Acceptance and next gates
+
+Hierarchy source integration checkpoint: `93f07018ce780be797e879dd30ef60bb14d888c4`. Final candidate c2dd16c3d557a664cca5e18d22012730955d1ba0 passed 1,844 offline checks (zero failures/skips). The runtime-identical 29b119782bbb8d115888564c3319565dfe457c4f passed 72 full browser cases (zero failures/skips). Exact commands, platform exclusions and privacy follow-up are recorded in CLOUD_INTEGRATION_2026-11-16.md. Targeted desktop/narrow checks verify two larger projects sharing a subproject, actionable cycle rejection, no uncertain-save retry, sign-out clearing, distinct shared-task counts, keyboard approval, accessible structure controls, filter-independent progress and fresh return navigation. Existing project/task/recurring/Calendar journeys remain in the full suite.
+
+No source push, PR change, hosted schema/database/security change, provider read/refresh, access grant, deployment or owner Mac preview restart occurred. Actual hosted installation and rollback-only synthetic QA need separate exact approval. Source publication retains its own approval boundary. Linux does not certify Mac native Calendar permission, real Calendar freshness, automatic startup, preview forwarding or physical iPhone/iPad/Safari behavior. Phone notification tests 1–3 all received negative owner responses; notification delivery has not been established.
+
+Resume in `/workspace/Curated-Chaos-integration`, branch `codex/cloud-integration-20261116`; inspect status first and preserve the prepared baseline and all worktrees. Run `npm run check:offline` and `npm run test:browser -- --config cloud-playwright.config.mjs`. Do not apply drafts or switch the owner preview implicitly. No hierarchy product question remains open about the number of larger projects.
+
+## Calendar privacy follow-up
+
+Standalone one-time Apple Calendar previews now listen to the existing same-origin session-change channel. Signing out/changing account in another tab clears displayed events and aborts pending work immediately; delayed status/preview responses cannot reopen the view. Unavailable BroadcastChannel retains existing expiry/page-hide/offline guards and remains a browser capability limitation. Six synthetic regressions and two actual browser-tab checks use fictional events only; no native Calendar/provider request was made. This supplements the integrated Calendar page's existing parent-session clearing.
+
+## Proposed next approval package — not executed
+
+The next hierarchy activation step requires an explicit hosted-change approval: install only the reviewed forward draft in the existing isolated development project recorded as `fngauurauwvbawlfzbbe`, after verifying that target's identity and migration ledger read-only. This draft adds one partial unique index, three validation/protection/revision triggers and five invoker-only functions, using the existing `cc_records` table; it creates no application records. Do not apply any older migration or blindly push the mixed local/hosted ledger.
+
+Then run bounded synthetic, rollback-only database QA for several-parent links, cycles, stale versions, account/session isolation and untouched task/membership contents. Use only approved existing fictional identities and temporary test sessions; no new accounts, real records or actual backups/keys. Actual multi-connection contention needs separate verification on that approved development target. If the available connection cannot guarantee synthetic-only isolation, stop with the concrete blocker rather than testing with real logins.
+
+The guarded inverse draft is separately reviewable and never deletes retained relationship records. Do not run it automatically. It must obtain an exclusive table lock and reject retained relationships before removing protection objects. Applying either draft would briefly lock the existing records table and must not interrupt an active owner edit. A schema approval would not authorize publishing source, deployment, changing the owner's Mac startup, reading Calendar/providers, changing authentication settings, or touching the original/live project. No such approval has been received in this chat.
