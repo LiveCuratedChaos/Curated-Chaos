@@ -27,3 +27,7 @@ Validation: exact final source, full offline/browser commands and zero/nonzero s
 The tested runtime checkpoint is `8471d0b9c99683a711d813c4577373ddc2144608`; later evidence-only commits must not alter it. Use `/workspace/Curated-Chaos-integration` and inspect status first. Preserve the original baseline and isolated worker worktrees. Untracked `cloud-playwright.config.mjs` is an environment-specific system-Chromium override and is excluded from the publication package. There are no new dependencies or binary artifacts in the code diff.
 
 After any approved publication, attach the created PR to this cloud chat and verify the actual checks; do not infer CI success from local tests. Owner Mac preview update/restart, actual device acceptance, source merge and deployment each retain their applicable approval boundary. The three failed phone notification tests do not establish reliable delivery of future questions.
+
+## Owner approval and actual publication
+
+The owner approved this exact private branch/draft-review scope. Draft PR2 is open at https://github.com/LiveCuratedChaos/Curated-Chaos/pull/2 against release-readiness; PR1 remains unchanged. Initial hosted checks found an initial-preview/Pause keyboard race, corrected at8f09189f6b5344083b136b0244282fb41cef6d60. The PR description is the authoritative final hosted-check handoff and will be updated only after its actual results are known. Publication is not approval to merge, deploy or update the Mac preview.
