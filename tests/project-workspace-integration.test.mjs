@@ -66,3 +66,5 @@ test('fictional preview requires explicit mode and serves only reviewed public a
  assert.equal((await fetch(origin+'/api/workspace/session',{headers:{Origin:'https://evil.example'}})).status,403);
  }finally{await app.close();}
 });
+
+test('long Unicode task and checklist survive the bounded HTTP and SQL workflow',async()=>{const f=await createProjectWorkspaceFixture();try{const {value:c}=client(f);await c.status();const body='  \n'+'界'.repeat(9994)+'\n  ',steps=Array.from({length:40},()=>({id:randomUUID(),title:'界'.repeat(140),done:false}));const record=makeManualTask({title:'Fictional long task',description:body,subtasks:steps},PROJECT_FIXTURE_OWNER);assert(Buffer.byteLength(JSON.stringify(record))>32768);const saved=await c.create({operationId:randomUUID(),record});assert.equal(saved.record.payload.description,body);assert.equal(saved.record.payload.subtasks.length,40);assert.equal((await c.list())[0].payload.description,body);await c.signOut();}finally{await f.close();}});

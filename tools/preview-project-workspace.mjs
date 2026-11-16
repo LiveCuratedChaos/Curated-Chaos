@@ -17,7 +17,7 @@ export async function makeProjectWorkspaceFixturePreview(){
     if(req.headers.host!==new URL(localOrigin).host||req.headers.origin&&req.headers.origin!==localOrigin||req.headers['sec-fetch-site']&&!['same-origin','none'].includes(req.headers['sec-fetch-site'])){res.writeHead(403).end('Use the fictional preview address.');return;}
     const url=new URL(req.url,localOrigin);
     if(url.pathname.startsWith('/api/workspace/')){
-      const chunks=[];let bytes=0;for await(const chunk of req){bytes+=chunk.length;if(bytes>32768)throw Error();chunks.push(chunk);}
+      const chunks=[];let bytes=0;for await(const chunk of req){bytes+=chunk.length;if(bytes>65536)throw Error();chunks.push(chunk);}
       const headers=new Headers({'Cookie':'__Host-cc_workspace='+'a'.repeat(43)});
       if(req.headers['content-type'])headers.set('Content-Type',req.headers['content-type']);
       if(req.headers['x-cc-csrf'])headers.set('X-CC-CSRF',req.headers['x-cc-csrf']);

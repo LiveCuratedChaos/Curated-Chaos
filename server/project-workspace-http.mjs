@@ -43,7 +43,7 @@ async function readCommand(request, timeoutMs) {
   });
   try {
     while (true) { const {value,done} = await Promise.race([reader.read(),ended]); if(done) break;
-      bytes += value.byteLength; if(bytes > 32768 || request.signal.aborted) throw Error(); chunks.push(value); }
+      bytes += value.byteLength; if(bytes > 65536 || request.signal.aborted) throw Error(); chunks.push(value); }
     const text = new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)); const input = JSON.parse(text);
     if (!input || Object.getPrototypeOf(input) !== Object.prototype) throw Error(); return input;
   } catch { void reader.cancel().catch(() => {}); throw Error(); }
