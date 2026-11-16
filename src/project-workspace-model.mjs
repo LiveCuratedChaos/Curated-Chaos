@@ -1,5 +1,6 @@
 // First-party manual workspace model. Existing fictional organizer guards stay intact.
 // Pure/browser-safe: identity, IDs, versions and clocks are supplied by the server.
+import {projectProgress,ongoingRecurringTask,separatesRecurring} from './project-progress.mjs';
 import {validDay} from './dev-brief-model.mjs';
 import {ORG_SECTIONS,PROJECT_STATUSES,TASK_STATUSES,TASK_PRIORITIES,readSubtasks,projectCounts} from './dev-organize-model.mjs';
 export const MANUAL_WORKSPACE_ORIGIN='CC_MANUAL_WORKSPACE';
@@ -31,7 +32,7 @@ function subtasks(value,previous=[]){
 function projectPayload(value){
  return {title:text(value.title,140,'project title',true),summary:content(value.summary===undefined?'':value.summary,'project summary'),status:choice(value.status===undefined?'Planned':value.status,PROJECT_STATUSES,'project status')};
 }
-function projectRecord(record,owner){discriminator(record,owner,'project');const checked=projectPayload(record.payload);if(checked.title!==record.payload.title||checked.summary!==record.payload.summary||checked.status!==record.payload.status)throw Error('Invalid stored project.');return record;}
+function projectRecord(record,owner){discriminator(record,owner,'project');separatesRecurring(record.payload);const checked=projectPayload(record.payload);if(checked.title!==record.payload.title||checked.summary!==record.payload.summary||checked.status!==record.payload.status)throw Error('Invalid stored project.');return record;}
 function linkedProject(id,section,owner,projects){
  if(id===null)return;
  if(typeof id!=='string'||!uuid.test(id)||!Array.isArray(projects))throw Error('Invalid project assignment.');
@@ -74,5 +75,5 @@ export function projectWorkspaceView(rows,owner,{day,view='all',projectId=null}=
  const projects=normalized.projects.filter(p=>projectId===null||p.id===projectId),scoped=normalized.tasks.filter(t=>projectId===null||t.payload.project_id===projectId);
  const tasks=scoped.filter(t=>{const p=t.payload;if(view==='completed')return p.done;if(p.done)return false;if(view==='today')return p.day!==null&&p.day<=day;if(view==='upcoming')return p.day!==null&&p.day>day;if(view==='undated')return p.day===null;return true;});
  const completed=tasks.filter(t=>t.payload.done).length;
- return {projects,tasks,counts:{total:tasks.length,completed,remaining:tasks.length-completed,projectCounts:projectCounts(projects,scoped)}};
+ return {projects,tasks,counts:{total:tasks.length,completed,remaining:tasks.length-completed,projectCounts:projectCounts(projects,scoped).map(row=>({...row,progress:projectProgress(scoped.filter(t=>t.payload.project_id===row.project.id).map(t=>({completed:t.payload.done,recurring:ongoingRecurringTask(t.payload)})),{separateRecurring:separatesRecurring(row.project.payload)})}))}};
 }
