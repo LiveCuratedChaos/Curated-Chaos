@@ -46,3 +46,7 @@ All1,662 local offline tests and28 browser checks pass. The full-workspace HTTPS
 ## November15 recovery and restart acceptance
 
 Four additional desktop/narrow-screen cases verify full-workspace recovery navigation, focus progression, mismatch rejection, one fictional approved password change, recovery-cookie separation/cleanup, and fresh sign-in after server restart rejects the old cookie. All32 browser checks and1,662 offline checks pass. Browser responses are intercepted fictional HTTPS; no email or external API calls, no database writes and no claim of persistent server sessions. Current policy requires sign-in after a restart.
+
+## November15 published review checks
+
+Published13 code/dependency files as remote53d76110888862fc5394bdb41e0c62f7ddf5ec30 on codex/release-readiness. Draft PR1 targets codex/browser-checks, not main: https://github.com/LiveCuratedChaos/Curated-Chaos/pull/1 . All three jobs passed in run43790161507: https://github.com/LiveCuratedChaos/Curated-Chaos/actions/runs/43790161507 . Tests and privacy, Browser workflows and Mac Calendar native checks each report success. The current source includes32 browser cases; local Mac acceptance remains1,662 offline tests. Documentation checkpoints remain local; no credentials/private files, merge, deployment, database change or pinned Cloud revision update. Local5397620 includes the same code plus documentation and was not rewritten to the service-created remote snapshot commit.
