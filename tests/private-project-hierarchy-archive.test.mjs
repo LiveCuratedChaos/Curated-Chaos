@@ -53,3 +53,6 @@ test('missing archived edge with exact current targets remains a review-only can
 test('archive authentication is still bound to fictional owner, project and fake key',()=>{
  const bytes=seal([project(1),project(2),relationship(10,1,2)]).bytes;for(const patch of [{ownerId:foreignOwner},{projectRef:'otherfictional123'},{key:Buffer.alloc(32,18)}])assert.throws(()=>inspectPrivateWorkspace(bytes,{ownerId,projectRef,key,...patch}),/authenticated/);
 });
+test('restore comparison rejects a combined candidate cycle even when each missing edge alone is valid',()=>{
+ const projects=[project(1),project(2),project(3)],archive=[...projects,relationship(10,1,2),relationship(11,3,1)],current=[...projects,relationship(12,2,3)];const plan=preview(archive,current);assert.equal(action(plan,10),'blocked-hierarchy-cycle');assert.equal(action(plan,11),'blocked-hierarchy-cycle');assert.equal(plan.executed,false);
+});
