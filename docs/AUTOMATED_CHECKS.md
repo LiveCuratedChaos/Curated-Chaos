@@ -1,6 +1,6 @@
 # Automated browser tests and GitHub checks
 
-Prepared November15,2026. Latest local acceptance:1,666 Node tests plus32 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
+Prepared November15,2026. Latest local acceptance:1,666 Node tests plus36 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
 
 ## Run locally
 
@@ -54,3 +54,7 @@ Published13 code/dependency files as remote53d76110888862fc5394bdb41e0c62f7ddf5e
 ## November15 household/recovery follow-up
 
 Four new offline checks apply every numbered migration and verify current household section rights, departure/private retention, session revocation and a full isolated-engine snapshot restored into a different engine. The restore tests actual RLS, grants, triggers, functions and unique protections, then invalidates restored old sessions before testing fresh access. No hosted database/configuration or real data is used. Offline total1,666; browser code remains the previously verified32 cases. These new checks are not yet included in the published review run recorded above. See DATABASE_RECOVERY_ACCEPTANCE.md for the remaining hosted recovery gate.
+
+## November15 keyboard/cross-tab checkpoint
+
+All36 local browser cases pass. Four new desktop/narrow-screen cases verify keyboard focus/shortcuts, read-only Escape behavior, retained unsaved note text and cross-tab sign-out clearing an open private note. No application logic changes were required. Household/recovery source45ef99cf501f19f41d0a5c11aca089dfe707c978 passed all three GitHub jobs in run43791154499, before these four browser cases were added. Offline total remains1,666. No physical-device/screen-reader certification is implied.
