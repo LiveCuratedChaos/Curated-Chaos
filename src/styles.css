@@ -359,3 +359,11 @@ body[data-density="spacious"] .cc-dashboard-root .metric{padding:19px 23px}
 
 /* Room for touch and keyboard use in private-workspace disclosure controls. */
 .connected-card details > summary { min-height:44px; padding:10px 0; cursor:pointer; }
+
+.private-project-description { white-space: pre-wrap; overflow-wrap: anywhere; }
+#private-project-editor { display: grid; gap: 8px; margin-top: 14px; }
+#private-project-editor .field-label { margin: 8px 0 0; }
+#private-project-editor :is(input, textarea, select), #private-project-copy { width: 100%; box-sizing: border-box; }
+#private-project-editor textarea, #private-project-copy { min-height: 130px; }
+#private-project-editor .btn { justify-self: start; }
+@media(max-width:590px) { .connected-card .item-main { flex-basis: 100%; } }
