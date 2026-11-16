@@ -1,6 +1,6 @@
 # Automated browser tests and GitHub checks
 
-Prepared November15,2026. Latest local acceptance:1,662 Node tests plus28 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
+Prepared November15,2026. Latest local acceptance:1,662 Node tests plus32 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
 
 ## Run locally
 
@@ -42,3 +42,7 @@ Browser suite expanded to26 passing cases: reviewed task editing/checklist prese
 ## November15 full-workspace HTTPS candidate
 
 All1,662 local offline tests and28 browser checks pass. The full-workspace HTTPS adapter reuses the existing sign-in boundary without expanding the old auth-only adapter. Node tests cover protected core reads/reviewed writes, strict TLS/host/origin checks, source route exclusion and optional separately scoped password recovery. One test starts a real TLS listener with an ephemeral fictional certificate and verifies the certificate; temporary files are removed. Two new desktop/narrow-screen browser cases use intercepted fictional HTTPS responses to verify secure HttpOnly cookies, reviewed saves, no browser-stored tokens and sign-out denial. The browser interception is not a real TLS handshake; the separate Node check supplies that evidence. No real credentials, database or provider access. These follow-ups remain local until publication; existing successful GitHub evidence above is unchanged.
+
+## November15 recovery and restart acceptance
+
+Four additional desktop/narrow-screen cases verify full-workspace recovery navigation, focus progression, mismatch rejection, one fictional approved password change, recovery-cookie separation/cleanup, and fresh sign-in after server restart rejects the old cookie. All32 browser checks and1,662 offline checks pass. Browser responses are intercepted fictional HTTPS; no email or external API calls, no database writes and no claim of persistent server sessions. Current policy requires sign-in after a restart.
