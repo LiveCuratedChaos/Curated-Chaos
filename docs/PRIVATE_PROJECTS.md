@@ -19,3 +19,7 @@ Local automated checks cover model/service, sparse API transport, protected HTTP
 ## Next checkpoint
 
 Reviewed task linking is implemented; see PROJECT_TASK_LINKING.md for multi-project identity, recurring inheritance, development installation and recovery protections. Shared projects, hierarchy, project progress and cross-app placement remain later blueprint work.
+
+## Progress and project filters
+
+PROJECT_PROGRESS.md records the optional saved repeating-chore progress mode, complete linked-task counts and title/area/status project browsing. Both modes preserve links and manual project status; default legacy/new-draft display is separate. No data or schema migration is needed.

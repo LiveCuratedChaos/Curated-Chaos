@@ -34,6 +34,6 @@ The existing Supabase-provided public automatic-RLS event helper exposed client 
 
 The remaining development advisor is [compromised-password protection disabled](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). Treat its availability/configuration as a hosted-release gate; no authentication setting, subscription or live project was changed. Public deployment remains out of scope.
 
-## Next product checkpoint
+## Progress checkpoint completed
 
-Prepare project progress summaries without changing project status automatically. Decide whether ongoing recurring chores count in the completion percentage or appear separately; including every historical and newly scheduled occurrence makes the denominator grow indefinitely. Task memberships and history remain intact whichever display policy the owner chooses.
+Owner requested a saved option for repeating chores rather than a fixed exclusion policy. PROJECT_PROGRESS.md records both modes, full linked-task counters independent of filtering/paging, stopped-repeat treatment and read-only project title/area/status browsing. All1,766 local/62 browser checks pass. Extended development rollback QA verified option round trips preserve exact tasks and membership snapshots. Next product decision is master/subproject structure: one versus several larger projects per project.
