@@ -58,3 +58,5 @@ Four new offline checks apply every numbered migration and verify current househ
 ## November15 keyboard/cross-tab checkpoint
 
 All36 local browser cases pass. Four new desktop/narrow-screen cases verify keyboard focus/shortcuts, read-only Escape behavior, retained unsaved note text and cross-tab sign-out clearing an open private note. No application logic changes were required. Household/recovery source45ef99cf501f19f41d0a5c11aca089dfe707c978 passed all three GitHub jobs in run43791154499, before these four browser cases were added. Offline total remains1,666. No physical-device/screen-reader certification is implied.
+
+Latest review acceptance: remote7ed77da768f82c09fc127bc55ba06b41e9a53aed passed all three jobs in run43791968090 (https://github.com/LiveCuratedChaos/Curated-Chaos/actions/runs/43791968090), including the36-case browser suite and new household/full-engine recovery tests. Draft PR1 remains unmerged; no deployment.
