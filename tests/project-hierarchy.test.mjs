@@ -63,3 +63,7 @@ test('inactive historical relationships may refer to deleted projects absent fro
 test('all supplied snapshots must be complete arrays with unique project identities',()=>{
  const s=snapshot();assert.throws(()=>validateProjectHierarchy({...s,projects:[...s.projects,s.projects[0]]}));assert.throws(()=>validateProjectHierarchy({...s,relationships:null}));assert.throws(()=>hierarchyProgress({...s,rootProjectId:id(1),tasks:[],memberships:Array(2001).fill(membership(30,20,1))}));
 });
+
+test('archived descendants retain deduplicated parent progress until their last path is unlinked',()=>{
+ const s={...snapshot(),rootProjectId:id(1),tasks:[task(20,true),task(21)],memberships:[membership(30,20,4),membership(31,21,2)]};const before=hierarchyProgress(s);s.projects.find(p=>p.id===id(4)).payload.archived=true;assert.deepEqual(hierarchyProgress(s),before);s.relationships.find(r=>r.id===id(12)).deleted_at='2026-11-16T00:00:00Z';assert.deepEqual(hierarchyProgress(s),before);s.relationships.find(r=>r.id===id(13)).deleted_at='2026-11-16T00:00:00Z';assert.notDeepEqual(hierarchyProgress(s),before);assert.equal(s.tasks[0].payload.done,true);assert.equal(s.memberships.length,2);
+});
