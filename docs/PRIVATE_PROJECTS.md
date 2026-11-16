@@ -1,6 +1,6 @@
 # Private project basics
 
-The private Tasks workspace now includes an explicitly enabled Projects panel. View projects loads only private project titles, areas and status. Open project retrieves its details into an editable draft. Create and edit both require a server-verified review followed by explicit approval. Project statuses are Planned, Active, On hold and Completed; areas are Home, Personal Life, Work and School.
+The private Tasks workspace now includes an explicitly enabled Projects panel. View projects loads only private project titles, areas and status. Open project retrieves its details into an editable draft. Create and edit both require a server-verified review followed by explicit approval. Project statuses are Planned, In Progress, On hold and Completed (the saved value for In Progress remains `Active`); areas are Home, Personal Life, Work and School.
 
 The initial checkpoint organizes project information only; the subsequent task-linking checkpoint is described in PROJECT_TASK_LINKING.md. Project information edits do not complete, reschedule or share tasks. It does not add household access, deletion, providers, AI processing or a new database schema.
 
