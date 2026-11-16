@@ -58,9 +58,9 @@ begin
  end if;
  if jsonb_typeof(p->'title') is distinct from 'string' or (char_length(btrim(p->>'title'))=0 or char_length(p->>'title')>140) then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
  if kind='project' then
-  if jsonb_typeof(p->'summary') is distinct from 'string' or char_length(p->>'summary')>1000 or not coalesce(p->>'status'=any(array['Planned','In Progress','On Hold','Completed','Cancelled']),false) then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
+  if jsonb_typeof(p->'summary') is distinct from 'string' or char_length(p->>'summary')>10000 or not coalesce(p->>'status'=any(array['Planned','In Progress','On Hold','Completed','Cancelled']),false) then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
  else
-  if jsonb_typeof(p->'description') is distinct from 'string' or char_length(p->>'description')>1000 or not coalesce(p->>'status'=any(array['Not Started','In Progress','Waiting','On Hold','Completed']),false) or not coalesce(p->>'priority'=any(array['Low','Normal','High','Urgent']),false) or p->'done' is distinct from to_jsonb(p->>'status'='Completed') then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
+  if jsonb_typeof(p->'description') is distinct from 'string' or char_length(p->>'description')>10000 or not coalesce(p->>'status'=any(array['Not Started','In Progress','Waiting','On Hold','Completed']),false) or not coalesce(p->>'priority'=any(array['Low','Normal','High','Urgent']),false) or p->'done' is distinct from to_jsonb(p->>'status'='Completed') then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
   if not p ? 'day' or not p ? 'project_id' then raise exception 'PROJECT_WORKSPACE_INVALID'; end if;
   if p->'day'<>'null'::jsonb then
    day_value:=p->>'day';

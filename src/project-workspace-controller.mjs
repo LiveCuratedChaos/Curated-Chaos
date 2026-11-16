@@ -12,7 +12,7 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
   const wrapper=el('label',label);const node=el(options?'select':key==='summary'||key==='description'?'textarea':'input',undefined,{'aria-label':label,name:key});
   if(options)for(const option of options){const [value,text]=Array.isArray(option)?option:[option,option];const item=el('option',text,{value});node.append(item);}
   else if(key==='day')node.type='date';else if(key==='title')node.maxLength=140;
-  if(key==='summary'||key==='description')node.maxLength=1000;
+  if(key==='summary'||key==='description')node.maxLength=10000;
   node.value=value??'';node.disabled=busy;node.addEventListener('input',()=>{draft.form[key]=node.value;});node.addEventListener('change',()=>{draft.form[key]=node.value;});wrapper.append(node);form.append(wrapper);return node;
  };
  function start(kind,record){

@@ -6,10 +6,12 @@ export const MANUAL_WORKSPACE_ORIGIN='CC_MANUAL_WORKSPACE';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const projectFields=new Set(['title','summary','status','section']);
 const taskFields=new Set(['title','description','day','status','priority','project_id','subtasks','section']);
+export const MANUAL_DESCRIPTION_LIMIT=10000;
 const views=new Set(['all','today','upcoming','undated','completed']);
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)&&[Object.prototype,null].includes(Object.getPrototypeOf(v));
 function ownerId(owner){if(typeof owner!=='string'||!uuid.test(owner))throw Error('Verified workspace owner required.');return owner;}
 function text(value,max,label,required=false){if(typeof value!=='string')throw Error('Invalid '+label+'.');const result=value.trim();if(result.length>max||(required&&!result.length))throw Error('Invalid '+label+'.');return result;}
+function content(value,label){if(typeof value!=='string'||value.length>MANUAL_DESCRIPTION_LIMIT||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value))throw Error('Invalid '+label+'.');return value;}
 function choice(value,allowed,label){if(!allowed.includes(value))throw Error('Invalid '+label+'.');return value;}
 function fields(form,allowed){if(!object(form)||Object.keys(form).some(k=>!allowed.has(k)))throw Error('Protected or unsupported workspace field.');return form;}
 function json(value,depth=0){if(depth>30)throw Error('Invalid workspace extension.');if(value===null||typeof value==='string'||typeof value==='boolean'||(typeof value==='number'&&Number.isFinite(value)))return;if(Array.isArray(value)){for(const item of value)json(item,depth+1);return;}if(object(value)){for(const item of Object.values(value))json(item,depth+1);return;}throw Error('Invalid workspace extension.');}
@@ -27,7 +29,7 @@ function subtasks(value,previous=[]){
  return read.map(item=>({...structuredClone(value.find(p=>p.id===item.id)),...structuredClone(previous.find(p=>p.id===item.id)||{}),...item,title:text(item.title,140,'subtask title',true)}));
 }
 function projectPayload(value){
- return {title:text(value.title,140,'project title',true),summary:text(value.summary===undefined?'':value.summary,1000,'project summary'),status:choice(value.status===undefined?'Planned':value.status,PROJECT_STATUSES,'project status')};
+ return {title:text(value.title,140,'project title',true),summary:content(value.summary===undefined?'':value.summary,'project summary'),status:choice(value.status===undefined?'Planned':value.status,PROJECT_STATUSES,'project status')};
 }
 function projectRecord(record,owner){discriminator(record,owner,'project');const checked=projectPayload(record.payload);if(checked.title!==record.payload.title||checked.summary!==record.payload.summary||checked.status!==record.payload.status)throw Error('Invalid stored project.');return record;}
 function linkedProject(id,section,owner,projects){
@@ -39,7 +41,7 @@ function linkedProject(id,section,owner,projects){
 function taskPayload(value,section,owner,projects,previous=[]){
  const day=value.day??null;if(day!==null&&(typeof day!=='string'||!validDay(day)))throw Error('Invalid task date.');
  const status=choice(value.status===undefined?'Not Started':value.status,TASK_STATUSES,'task status'),project_id=value.project_id??null;linkedProject(project_id,section,owner,projects);
- return {title:text(value.title,140,'task title',true),description:text(value.description===undefined?'':value.description,1000,'task description'),day,status,priority:choice(value.priority===undefined?'Normal':value.priority,TASK_PRIORITIES,'task priority'),project_id,subtasks:subtasks(value.subtasks===undefined?[]:value.subtasks,previous),done:status==='Completed'};
+ return {title:text(value.title,140,'task title',true),description:content(value.description===undefined?'':value.description,'task description'),day,status,priority:choice(value.priority===undefined?'Normal':value.priority,TASK_PRIORITIES,'task priority'),project_id,subtasks:subtasks(value.subtasks===undefined?[]:value.subtasks,previous),done:status==='Completed'};
 }
 function taskRecord(record,owner,projects){
  discriminator(record,owner,'task');if(!Array.isArray(record.payload.subtasks))throw Error('Invalid stored task.');const checked=taskPayload(record.payload,record.section,owner,projects,record.payload.subtasks);
