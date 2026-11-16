@@ -14,6 +14,18 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
+      - name: Verify repository read access
+        env:
+          CC_CHECK_TOKEN: ${{ github.token }}
+          CC_CHECK_REPOSITORY: ${{ github.repository }}
+          CC_CHECK_SHA: ${{ github.sha }}
+        run: |
+          cc_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer ${CC_CHECK_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${CC_CHECK_REPOSITORY}/contents/package.json?ref=${CC_CHECK_SHA}")
+          printf 'Repository contents API HTTP status: %s\n' "$cc_status"
+          test "$cc_status" = 200
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
@@ -35,6 +47,18 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
+      - name: Verify repository read access
+        env:
+          CC_CHECK_TOKEN: ${{ github.token }}
+          CC_CHECK_REPOSITORY: ${{ github.repository }}
+          CC_CHECK_SHA: ${{ github.sha }}
+        run: |
+          cc_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer ${CC_CHECK_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${CC_CHECK_REPOSITORY}/contents/package.json?ref=${CC_CHECK_SHA}")
+          printf 'Repository contents API HTTP status: %s\n' "$cc_status"
+          test "$cc_status" = 200
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
@@ -50,6 +74,18 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 15
     steps:
+      - name: Verify repository read access
+        env:
+          CC_CHECK_TOKEN: ${{ github.token }}
+          CC_CHECK_REPOSITORY: ${{ github.repository }}
+          CC_CHECK_SHA: ${{ github.sha }}
+        run: |
+          cc_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer ${CC_CHECK_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${CC_CHECK_REPOSITORY}/contents/package.json?ref=${CC_CHECK_SHA}")
+          printf 'Repository contents API HTTP status: %s\n' "$cc_status"
+          test "$cc_status" = 200
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false

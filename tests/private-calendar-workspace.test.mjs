@@ -19,3 +19,21 @@ test('month overview cannot imply full inventory for a paged, unsupported or tit
 
 test('month navigation uses whole calendar months rather than selected-range length',()=>{const f={dateFrom:'2026-11-12',dateTo:'2026-11-12'};assert.deepEqual(calendarRange(f,'previous-month',{now}),{dateFrom:'2026-10-01',dateTo:'2026-10-31'});assert.deepEqual(calendarRange(f,'shown-month',{now}),{dateFrom:'2026-11-01',dateTo:'2026-11-30'});assert.deepEqual(calendarRange(f,'next-month',{now}),{dateFrom:'2026-12-01',dateTo:'2026-12-31'});assert.deepEqual(calendarRange({dateFrom:'2028-01-31'},'next-month',{now}),{dateFrom:'2028-02-01',dateTo:'2028-02-29'});assert.deepEqual(calendarRange({dateFrom:'2026-12-31'},'next-month',{now}),{dateFrom:'2027-01-01',dateTo:'2027-01-31'});});
 test('month navigation rejects unsupported dates and keeps the supported year boundaries',()=>{for(const f of [{dateFrom:''},{dateFrom:'2026-02-30'},{dateFrom:'1999-12-31'}])assert.throws(()=>calendarRange(f,'next-month',{now}));assert.throws(()=>calendarRange({dateFrom:'2000-01-12'},'previous-month',{now}));assert.throws(()=>calendarRange({dateFrom:'2100-12-12'},'next-month',{now}));assert.deepEqual(calendarRange({dateFrom:'2100-12-12'},'shown-month',{now}),{dateFrom:'2100-12-01',dateTo:'2100-12-31'});});
+
+test('saved Calendar freshness rejects stale, future and extended display lifetimes',()=>{
+ for(const patch of [
+ {checkedAt:new Date(now+1).toISOString()},
+ {checkedAt:new Date(now-86400000).toISOString()},
+ {expiresAt:now+300001},
+ {checkedAt:now},
+ {checkedAt:'invalid'}
+ ]){const value={...result(),...patch};assert.throws(()=>verifyCalendarWorkspaceList(value,fields,{now}));assert.throws(()=>calendarMonthOverview(value,{now}));}
+ const value=result();assert.equal(verifyCalendarWorkspaceList(value,fields,{now:now+299999}),value);
+ assert.throws(()=>verifyCalendarWorkspaceList(value,fields,{now:now+300000}));
+ assert.equal(verifyCalendarWorkspaceList({...value,expiresAt:now+1},fields,{now}).expiresAt,now+1);
+});
+test('saved Calendar transport caps display lifetime independently of sign-in',async t=>{
+ const {call}=await http(t);const before=Date.now(),list=await call('/auth/workspace/calendar',calendarWorkspaceFields());
+ assert.equal(list.status,200);assert.ok(list.data.expiresAt<=Date.parse(list.data.checkedAt)+300000);assert.ok(list.data.expiresAt>before);
+ const status=await call('/auth/workspace/status');assert.equal(status.data.signedIn,true);assert.ok(status.data.expiresAt>list.data.expiresAt);
+});

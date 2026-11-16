@@ -1,3 +1,7 @@
+import {createPrivateProjectHierarchyApi} from './private-project-hierarchy-api.mjs';
+import {createPrivateProjectTaskLinkApi} from './private-project-task-link-api.mjs';
+import {createPrivateProjectApi} from './private-project-api.mjs';
+import {createPrivateRecurringChoreApi} from './private-recurring-chore-api.mjs';
 import {createPrivateSavedSearchApi} from './private-saved-search-api.mjs';
 // Isolated development API: never stores sessions in cookies, sessionStorage, localStorage or files.
 // NEVER put real personal information, bank details or provider keys in the test records.
@@ -13,8 +17,8 @@ export function makeFictionalNote(title,body,ownerId){
   if(title.length<1||title.length>120 || body.length>1000) throw Error('Enter a title (1–120 characters) and optional description (up to 1000 characters).');
   return {owner_id:ownerId,household_id:null,visibility:'private',section:'Personal Life',item_type:'note',origin:'manual-test',payload:{title,body,fictional:true,source:'M0C_DEV_LOGIN_TEST'}};
 }
-export function createDevApi(config,fetcher=fetch,{timeoutMs=15000,includeAllDay=false,includeEventEndDay=false,includeTaskPriority=false,includeTaskPriorityLists=false}={}){
-  if(typeof includeTaskPriorityLists!=='boolean')throw Error('Explicit task priority list projection required.');if(typeof includeTaskPriority!=='boolean')throw Error('Explicit task priority projection required.');if(typeof includeAllDay!=='boolean'||typeof includeEventEndDay!=='boolean')throw Error('Explicit all-day projection required.');if(!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>60000)throw Error('Invalid development request timeout.');
+export function createDevApi(config,fetcher=fetch,{timeoutMs=15000,includeAllDay=false,includeEventEndDay=false,includeTaskPriority=false,includeTaskPriorityLists=false,includeRecurringChores=false,includeProjects=false,includeProjectTaskLinks=false,includeProjectHierarchy=false}={}){
+  if(typeof includeProjectHierarchy!=='boolean'||includeProjectHierarchy&&(!includeProjects||!includeProjectTaskLinks))throw Error('Explicit project hierarchy scope required.');if(typeof includeProjectTaskLinks!=='boolean'||includeProjectTaskLinks&&!includeProjects)throw Error('Explicit project membership scope required.');if(typeof includeProjects!=='boolean')throw Error('Explicit project scope required.');if(typeof includeRecurringChores!=='boolean')throw Error('Explicit recurring chore scope required.');if(typeof includeTaskPriorityLists!=='boolean')throw Error('Explicit task priority list projection required.');if(typeof includeTaskPriority!=='boolean')throw Error('Explicit task priority projection required.');if(typeof includeAllDay!=='boolean'||typeof includeEventEndDay!=='boolean')throw Error('Explicit all-day projection required.');if(!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>60000)throw Error('Invalid development request timeout.');
   const {origin,key}=validatePublicDevConfig(config);
   async function request(path,options={},token){
     const headers={'apikey':key,'Accept':'application/json',...(options.body?{'Content-Type':'application/json'}:{}),...(token?{'Authorization':`Bearer ${token}`}:{})};
@@ -51,6 +55,8 @@ export function createDevApi(config,fetcher=fetch,{timeoutMs=15000,includeAllDay
   function recoveryPath(ownerId){if(!recoveryUuid(ownerId))throw Error('Verified recovery owner required.');return '/rest/v1/cc_records?select='+recoverySelect+'&owner_id=eq.'+encodeURIComponent(ownerId)+'&visibility=eq.private&household_id=is.null&item_type=in.(task,note,event)';}
   function recoveryRows(rows,max=1){if(!Array.isArray(rows)||rows.length>max)throw Error('Sparse recovery response unverified.');return rows.map(({recovery_fictional,recovery_title,...row})=>({...row,payload:{fictional:recovery_fictional,title:recovery_title}}));}
   return {
+    ...(includeProjectHierarchy?createPrivateProjectHierarchyApi(request):{}),...(includeProjects?createPrivateProjectApi(request):{}),...(includeProjectTaskLinks?createPrivateProjectTaskLinkApi(request):{}),
+    ...(includeRecurringChores?createPrivateRecurringChoreApi(request):{}),
     ...createPrivateSavedSearchApi(request),
     async getPrivateRecordState(token,id,ownerId){if(!recoveryUuid(id))throw Error('Verified recovery item required.');return recoveryRows(await request(recoveryPath(ownerId)+'&id=eq.'+encodeURIComponent(id)+'&limit=2',{},token));},
     async listPrivateDeletedRecords(token,ownerId,since){if(typeof since!=='string'||!Number.isFinite(Date.parse(since))||new Date(since).toISOString()!==since)throw Error('Exact recovery cutoff required.');const rows=[];let last='';for(;;){const page=recoveryRows(await request(recoveryPath(ownerId)+'&deleted_at=gte.'+encodeURIComponent(since)+'&order=id.asc&limit=100'+(last?'&id=gt.'+encodeURIComponent(last):''),{},token),100);if(page.some((row,i)=>typeof row.id!=='string'||row.id<=(i?page[i-1].id:last)))throw Error('Recovery pagination unverified.');rows.push(...page);if(rows.length>2000)throw Error('Recovery list exceeds its record limit.');if(page.length<100)return rows;last=page.at(-1).id;}},

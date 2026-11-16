@@ -1,3 +1,5 @@
+import {validateProjectHierarchy} from '../src/project-hierarchy.mjs';
+import {projectMembershipState} from './private-project-task-links.mjs';
 // Private cc_records archive only. No credentials files, shared records, database writes or restore.
 import {createCipheriv,createDecipheriv,randomBytes,randomUUID} from 'node:crypto';
 import {open,mkdir,lstat,realpath,unlink} from 'node:fs/promises';import {constants} from 'node:fs';import {resolve,dirname,join} from 'node:path';
@@ -6,11 +8,13 @@ const MAX_PLAINTEXT=5*1024*1024,MAX_FILE=8*1024*1024,uuid=value=>typeof value===
 function onlyKeys(object,allowed){return object&&typeof object==='object'&&!Array.isArray(object)&&Object.keys(object).every(key=>allowed.includes(key));}
 export function validatePrivateWorkspaceRows(rows,ownerId,key){
  if(!uuid(ownerId)||!Array.isArray(rows)||rows.length>2000||!Buffer.isBuffer(key)||key.length!==32)throw Error('Bounded private workspace and existing key required.');
- const seen=new Set();return rows.map(row=>{
+ const seen=new Set();const result=rows.map(row=>{
   if(!onlyKeys(row,['id','owner_id','household_id','visibility','section','item_type','origin','payload','version','deleted_at','created_at','updated_at'])||!uuid(row.id)||seen.has(row.id)||row.owner_id!==ownerId||row.visibility!=='private'||row.household_id!==null||!['Home','Calendar','Personal Life','Work','School','Finances'].includes(row.section)||typeof row.item_type!=='string'||row.item_type.length<1||row.item_type.length>60||typeof row.origin!=='string'||!row.origin.length||row.origin.length>500||!row.payload||typeof row.payload!=='object'||Array.isArray(row.payload)||!Number.isInteger(row.version)||row.version<1)throw Error('Unexpected private workspace scope.');
   if(!safeSavedAt(row.created_at)||!safeSavedAt(row.updated_at)||row.deleted_at!=null&&!safeSavedAt(row.deleted_at))throw Error('Unverified workspace timestamps.');seen.add(row.id);
   const copy=JSON.parse(JSON.stringify(row));if(Buffer.byteLength(JSON.stringify(copy.payload))>1024*1024)throw Error('Workspace record exceeds its size cap.');return copy;
  });
+ const byId=new Map(result.map(r=>[r.id,r])),pairs=new Set();for(const row of result){if(row.item_type!=='project_task_link')continue;projectMembershipState(row,ownerId);const task=byId.get(row.payload.taskId),project=byId.get(row.payload.projectId),pair=row.payload.taskId+':'+row.payload.projectId;if(pairs.has(pair)||!task||task.item_type!=='task'||!project||project.item_type!=='project'||project.origin!=='PRIVATE_COOKIE_PROJECT'||row.deleted_at===null&&(task.deleted_at!==null||project.deleted_at!==null))throw Error('Project membership backup requires its exact private targets without duplicate pairs.');pairs.add(pair);}
+ const relationships=result.filter(r=>r.item_type==='project_project_link');if(relationships.length){for(const r of relationships){const parent=byId.get(r.payload.parentProjectId),child=byId.get(r.payload.childProjectId);if(!parent||!child||parent.item_type!=='project'||child.item_type!=='project'||parent.origin!=='PRIVATE_COOKIE_PROJECT'||child.origin!=='PRIVATE_COOKIE_PROJECT')throw Error('Hierarchy backup requires exact private targets.');}validateProjectHierarchy({ownerId,projects:result.filter(r=>r.item_type==='project'&&r.deleted_at===null),relationships});}return result;
 }
 export function sealPrivateWorkspace({projectRef,ownerId,rows,key,now=Date.now(),snapshotId=randomUUID()}){
  if(typeof projectRef!=='string'||!/^[a-z0-9]{10,32}$/.test(projectRef)||!uuid(snapshotId)||!Number.isFinite(now))throw Error('Verified development snapshot identity required.');const records=validatePrivateWorkspaceRows(rows,ownerId,key),snapshot={kind:'curated-private-workspace-v1',snapshotId,projectRef,ownerId,createdAt:new Date(now).toISOString(),records};
