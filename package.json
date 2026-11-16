@@ -14,7 +14,8 @@
     "check:privacy": "node tools/check-repository-privacy.mjs",
     "check:setup": "node tools/preflight.mjs",
     "start:connections": "node tools/connections-server.mjs",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "check:release": "node tools/verify-local-release.mjs"
   },
   "engines": {
     "node": ">=22"
