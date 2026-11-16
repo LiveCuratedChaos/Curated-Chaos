@@ -12,6 +12,7 @@ jobs:
     name: Overlapping project writes
     runs-on: ubuntu-24.04
     timeout-minutes: 8
+    container: node:24-bookworm
     services:
       postgres:
         image: postgres:17
@@ -19,8 +20,6 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: fictional_ci_only
           POSTGRES_DB: cc_disposable_qa
-        ports:
-          - 55432:5432
         options: >-
           --health-cmd "pg_isready -U postgres -d cc_disposable_qa"
           --health-interval 5s
@@ -35,8 +34,8 @@ jobs:
           node-version: '24'
       - name: Install PostgreSQL test client
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          apt-get update
+          apt-get install -y postgresql-client
       - name: Verify independent overlapping transactions
         env:
           CC_DISPOSABLE_POSTGRES: 'true'

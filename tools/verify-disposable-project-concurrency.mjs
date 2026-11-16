@@ -13,8 +13,8 @@ export function disposableConcurrencyMode(args,env={}){
  return 'run';
 }
 function connection(name){
- // Fixed loopback target and synthetic service password; PG environment overrides cannot redirect it.
- return spawn('stdbuf',['-oL','-eL','psql','-X','-qAt','-v','ON_ERROR_STOP=1','-h','127.0.0.1','-p','55432','-U','postgres','-d','cc_disposable_qa'],{env:{PATH:process.env.PATH,HOME:'/tmp',PGPASSWORD:'fictional_ci_only',PGAPPNAME:name,PGCONNECT_TIMEOUT:'5',PGSSLMODE:'disable',PGPASSFILE:'/dev/null',PSQLRC:'/dev/null'},stdio:['pipe','pipe','pipe']});
+ // Fixed service-network target and synthetic service password; PG environment overrides cannot redirect it.
+ return spawn('stdbuf',['-oL','-eL','psql','-X','-qAt','-v','ON_ERROR_STOP=1','-h','postgres','-p','5432','-U','postgres','-d','cc_disposable_qa'],{env:{PATH:process.env.PATH,HOME:'/tmp',PGPASSWORD:'fictional_ci_only',PGAPPNAME:name,PGCONNECT_TIMEOUT:'5',PGSSLMODE:'disable',PGPASSFILE:'/dev/null',PSQLRC:'/dev/null'},stdio:['pipe','pipe','pipe']});
 }
 function once(sql,name='cc-concurrency-observer'){
  return new Promise((resolveResult,reject)=>{const child=connection(name);let out='',err='';const timer=setTimeout(()=>{child.kill('SIGKILL');reject(Error('Disposable SQL deadline exceeded.'));},25000);
@@ -55,7 +55,7 @@ async function contend({n,directWrites=false,rollback=false,stale=false}){
 }
 export async function verifyDisposableProjectConcurrency(){
  disposableConcurrencyMode(['--disposable-ci-only'],process.env);
- // Refuse a pre-existing database even at the fixed test address. No cleanup touches unknown records.
+ // Refuse a pre-existing database even at the fixed service-network test address. No cleanup touches unknown records.
  const identityCheck=await sql("select current_database()||'|'||current_user||'|'||(select count(*) from information_schema.tables where table_schema in ('auth','public'));");
  assert.equal(identityCheck,'cc_disposable_qa|postgres|0');
  await sql(`create role anon;create role authenticated;create schema auth;grant usage on schema auth to anon,authenticated;create table auth.users(id uuid primary key);create table auth.sessions(id uuid primary key,user_id uuid not null references auth.users(id));create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;create function auth.uid() returns uuid language sql stable as $$select (auth.jwt()->>'sub')::uuid$$;`);
