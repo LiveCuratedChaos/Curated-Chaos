@@ -61,7 +61,7 @@ export function changeManualTask(record,patch,owner,projects=[]){
  return {...structuredClone(record.payload),...taskPayload({...record.payload,...patch},record.section,owner,projects,record.payload.subtasks)};
 }
 export function normalizeProjectWorkspace(rows,owner){
- ownerId(owner);if(!Array.isArray(rows))throw Error('Workspace record list required.');
+ ownerId(owner);if(!Array.isArray(rows)||rows.length>2000)throw Error('Complete bounded workspace record list required.');
  const ids=new Set(),candidates=rows.filter(r=>r?.origin===MANUAL_WORKSPACE_ORIGIN&&['project','task'].includes(r.item_type));
  for(const row of candidates){if(typeof row?.id!=='string'||ids.has(row.id.toLowerCase()))throw Error('Ambiguous workspace identity.');ids.add(row.id.toLowerCase());}
  const projects=candidates.filter(row=>row.item_type==='project').map(row=>structuredClone(projectRecord(row,owner))).sort((a,b)=>a.payload.title.localeCompare(b.payload.title)||a.id.localeCompare(b.id));

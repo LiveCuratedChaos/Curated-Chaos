@@ -11,7 +11,7 @@ The preflight distinguishes current reviewed development provenance from CC_MANU
 - Canonical many-project task links and several-parent hierarchy must replace neither engine's records with a single project_id interpretation.
 - Preserve recurrence series/history, successor memberships and per-project separate/include progress preferences, including explicit false values.
 - Preserve archive visibility and all relationships, without changing manually chosen status.
-- Current reviewed project descriptions support10,000 characters; the earlier manual form permits1,000. Do not truncate descriptions in a bridge.
+- At the original preflight checkpoint, reviewed project descriptions supported10,000 characters and the manual form permitted1,000. PR13 now aligns the manual limit and exact formatting. The longDescriptions counter remains a >1,000-unit inventory fact, not a claim that the current manual editor cannot accept it. Full-length text must still be preserved by any bridge.
 - Manual tasks have Waiting/In Progress/On Hold states beyond binary completion. Existing reviewed task edits must not erase them.
 - Unknown payload/subtask extensions require compatibility review; a whitelist cannot silently strip them.
 - Explicit identity/provenance mapping, version-preserving receipts/history, atomic preview and rollback remain prerequisites. This preflight does not authorize SQL draft009 or any hosted call.

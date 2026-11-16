@@ -22,7 +22,7 @@ export function planWorkspaceConvergence({records,ownerId,complete=false}={}){
  if(count.progressPreferences)required.push('per-project repeating-progress preference');
  if(count.recurringTasks)required.push('recurrence identity/history and successor membership');
  if(count.archivedProjects)required.push('archive visibility without deleting relationships');
- if(count.longDescriptions)required.push('preserve descriptions beyond the manual editor limit');
+ if(count.longDescriptions)required.push('preserve full-length descriptions and exact formatting');
  if(count.extendedTaskStatuses)required.push('retain task status beyond binary completion');
  if(count.extendedRecords)required.push('explicit extension compatibility without dropping unknown fields');
  if(count.unknownProvenance)required.push('review unsupported provenance without relabeling it as manual');
