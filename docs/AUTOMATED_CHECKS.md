@@ -102,3 +102,5 @@ Final project source1be01bbdaf920b5fc80a681f9934555394810a61 passed all three Gi
 ## November15 project membership acceptance
 
 All1,755 local checks and58 desktop/narrow-screen browser cases pass. New coverage includes private membership transport, one-use reviews, source preservation, target/owner/version checks, canonical pair restoration,50-project limit, atomic rollback on inheritance failure, both-project successor inheritance and backup/restore dependency guards. Hosted development rollback QA verified8 fictional records/two temporary sessions with none persisted. A separate helper-permission test proves automatic RLS remains active after removing client EXECUTE. Final source publication/CI is pending; run43804598198 covers the preceding project-basics checkpoint only.
+
+November16 final membership source818dfb7817bd4b8ead63a77324dc5d635f1dbd9b passed Tests/privacy, Browser workflows and Mac Calendar native checks in run43807165653: https://github.com/LiveCuratedChaos/Curated-Chaos/actions/runs/43807165653 . This supersedes the pending CI note above. Final local acceptance1,755 tests/58 browser cases; no additional code changes after verification.
