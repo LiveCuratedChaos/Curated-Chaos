@@ -72,6 +72,10 @@ Prepared and offline-verified a rollback-only hosted check. It used two temporar
 
 All1702 offline tests and40 browser cases pass; the final added tests cover launcher scope and the exact hosted verification script. Enabled the explicit recurring flag in the development launcher after successful hosted checks. No workspace listener existed on5312, so no open service/tab was restarted and no new user sign-in is claimed; activation occurs on the next usual launch. This supersedes the earlier pending plugin/migration/activation notes. Current code source checkpoint5f5ef5de16ba8e2f75cc9e3549e488c0269a84cb passed all three GitHub jobs in run43794779343; the final launcher/hosted-check follow-up requires publication separately. TASK_RECURRENCE.md records exact scope and acceptance.
 
+## November15 final recurring review polish
+
+Final narrow-screen inspection found the recurring review was counting the successor's reset steps rather than the current occurrence's open steps. Corrected the summary, clarified that approval completes and saves the next occurrence together, and replaced technical interval wording with ordinary repeat text. Added exact source-progress assertions to PostgreSQL/service and browser acceptance. All1702 offline and40 browser checks pass again. No SQL/function change was needed after hosted installation. The previous activation source06e640e60ff52a9629f5061cf25af67fa902f9db passed all three jobs in run43795588494 before this wording/count follow-up. Temporary visual fixture was cancelled, signed out and stopped; owner workspace stayed closed.
+
 ## Working agreement
 
 On November 12 the owner asked to continue without asking permission. Continue routine local development, fictional verification and idle private-preview maintenance without per-step approval prompts. Keep the live app, connected accounts and existing real saved records unchanged; this instruction does not enable provider writes, new account grants, deployment, purchases or credential changes. Preserve drafts and open private views.
