@@ -22,10 +22,17 @@ begin
  begin perform public.cc_complete_recurring_chore('${collisionSource}',1,rule,today+1,today,gen_random_uuid(),'${source}');raise exception using errcode='P9999',message='Successor collision accepted';exception when unique_violation then null;end;
  if not exists(select 1 from public.cc_records where id='${collisionSource}' and version=1 and payload=source_payload) then raise exception 'Failed insertion left completion saved';end if;
  select to_jsonb(r) into before_next from public.cc_records r where id='${next}';
+ update public.cc_records set payload=payload||'{"recurrenceStopped":true}'::jsonb where id='${next}' and version=1;
+ get diagnostics rows_changed=row_count;if rows_changed<>1 then raise exception 'Reviewed stop did not save exactly once';end if;
+ if not exists(select 1 from public.cc_records where id='${next}' and version=2 and payload=(before_next->'payload')||'{"recurrenceStopped":true}'::jsonb) then raise exception 'Stop changed chore details or series identity';end if;
+ update public.cc_records set payload=payload||'{"recurrenceStopped":true}'::jsonb where id='${next}' and version=1;
+ get diagnostics rows_changed=row_count;if rows_changed<>0 then raise exception 'Stale stop review wrote twice';end if;
+ select to_jsonb(r) into before_next from public.cc_records r where id='${next}';
  update public.cc_records set payload=payload||'{"done":false,"status":"Not Started"}'::jsonb where id='${source}';update public.cc_records set payload=payload||'{"done":true,"status":"Completed"}'::jsonb where id='${source}';
  if (select to_jsonb(r) from public.cc_records r where id='${next}') is distinct from before_next then raise exception 'Reopened history changed the successor';end if;
  perform set_config('request.jwt.claims',jsonb_build_object('sub',b::text,'session_id','${sessionB}')::text,true);perform set_config('request.jwt.claim.sub',b::text,true);
  if exists(select 1 from public.cc_records where id in ('${source}','${next}','${collisionSource}')) then raise exception 'Other account can read private QA chores';end if;
+ update public.cc_records set payload=payload||'{"recurrenceStopped":false}'::jsonb where id='${next}';get diagnostics rows_changed=row_count;if rows_changed<>0 then raise exception 'Other account can change stopped recurrence';end if;
  begin perform public.cc_complete_recurring_chore('${source}',1,rule,today+1,today,gen_random_uuid(),gen_random_uuid());raise exception using errcode='P9999',message='Other account can complete private chore';exception when sqlstate 'P0001' then null;end;
  perform set_config('request.jwt.claims',jsonb_build_object('sub',a::text,'session_id',gen_random_uuid()::text)::text,true);perform set_config('request.jwt.claim.sub',a::text,true);
  begin perform public.cc_complete_recurring_chore('${collisionSource}',1,rule,today+1,today,gen_random_uuid(),gen_random_uuid());raise exception using errcode='P9999',message='Missing session accepted';exception when sqlstate 'P0001' then null;end;

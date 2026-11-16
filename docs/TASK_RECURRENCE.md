@@ -30,8 +30,18 @@ Supabase is connected. Verified exact project fngauurauwvbawlfzbbe (curated-chao
 
 The explicit launch option --allow-private-recurring-chores-reviewed is now in Open-Private-Workspace.command after hosted verification. Its parser requires private dashboard/completion scope and rejects duplicate options; the API/factory default remains off for other callers. The owner workspace had no listener on5312, so no running service or browser tab was restarted/opened. The feature is enabled for the next ordinary private-workspace launch; no current sign-in or UI session is claimed.
 
-All1702 offline checks and the40-case browser suite pass. Hosted validation used the new connected Supabase service; production, provider connections, credentials and existing tasks were untouched. This does not imply a hosted public deployment or full hosted disaster recovery.
+All1709 offline checks and the44-case browser suite pass. Hosted validation used the new connected Supabase service; production, provider connections, credentials and existing tasks were untouched. This does not imply a hosted public deployment or full hosted disaster recovery.
 
 ## Remaining boundaries
 
-Shared household recurring writes, series rule edits, automatic background processing and production rollout remain outside this private-task increment. Existing scheduled dates stay anchored; ordinary date moves require a future series-edit workflow instead of silently changing the schedule.
+Shared household recurring writes, series rule edits, automatic background processing and production rollout remain outside this private-task increment. While repeating remains active, dates stay anchored and series changes require a separate future workflow. After an approved stop, the retained task can change its due date normally while its series identity/history remain intact.
+
+## Reviewed stop-repeat checkpoint
+
+A recurring completion review now offers Review stopping repeat. This prepares a new five-minute, owner/context-bound review and invalidates the previous completion approval. Approval keeps the selected occurrence open with its current date, title, instructions, checklist and series identity; it adds only recurrenceStopped:true. Cancellation/expiry saves nothing. It does not delete the chore or edit any earlier occurrence.
+
+The save reuses the existing owner/private/version-filtered task update. No schema, role/policy or function migration is needed. It verifies acknowledgement and rereads, consumes uncertain saves without retry, and rejects stale/competing approvals. The series/ordinal identity remains present, retaining the existing uniqueness slot. Completing or reopening the stopped task follows the ordinary reviewed status flow and creates no successor. This is a stop action; resuming or changing a whole series is not implemented.
+
+Active recurring checklist edits are validated against the existing successor-copy limits (20 single-line steps and supported instructions), preventing edits that would leave an active series unable to produce its next occurrence. Stopped chores retain ordinary editing limits and may change date. No limit was reduced for ordinary tasks.
+
+All1709 local tests and44 browser cases pass, including approval/cancel, lost acknowledgements, competing stop saves, unchanged payload/identity/date, stopped completion/reopening, and ordinary editing after stopping. The recurring SQL policy-check script additionally verifies the version-filtered stop update, duplicate/stale update rejection, retained payload/series metadata and cross-account denial. It passed offline and in the exact development project; all three QA records and two temporary session rows were rolled back. No existing records or production changed. No owner workspace was restarted; the controls appear at its next normal launch with the already enabled recurrence flag.

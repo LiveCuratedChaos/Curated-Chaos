@@ -1,6 +1,6 @@
 # Automated browser tests and GitHub checks
 
-Prepared November15,2026. Latest local acceptance:1,702 Node tests plus40 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
+Prepared November15,2026. Latest local acceptance:1,709 Node tests plus44 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
 
 ## Run locally
 
@@ -76,3 +76,9 @@ Supabase connection verified and migration007 installed only in the exact develo
 Final recurring review polish: source-progress assertions now distinguish the completed occurrence's remaining steps from the successor's fresh open steps. All1702 offline and40 browser checks pass after that correction. Activation source06e640e passed all three jobs in run43795588494 (https://github.com/LiveCuratedChaos/Curated-Chaos/actions/runs/43795588494); the final UI/count follow-up is published separately. No migration changed after hosted verification.
 
 Final recurring source024f3d7b11f91c9b7a8b5c619b9a85a9a4243d62 passed all three jobs in run43795931718: https://github.com/LiveCuratedChaos/Curated-Chaos/actions/runs/43795931718 . Local acceptance1702 offline/40 browser cases. Final narrow recurring review visually inspected, correctly shows current progress and fits horizontally. Hosted development rollback acceptance/cleanup passed; enabled on the next ordinary private-workspace launch, with no owner browser restart. No production change.
+
+## November15 reviewed stop-repeat follow-up
+
+All1709 offline checks and44 browser cases pass. Seven new model/service tests cover reviewed stop preservation, completion/reopening without a successor, stale/expired/wrong-owner and conflicting reviews, lost acknowledgement, competing stop saves and ordinary editing after stopping. Four desktop/narrow browser cases verify stop approval/cancel and the absence of another successor. Active-series editing is constrained to the existing next-copy limits to prevent breaking recurrence; stopped tasks keep ordinary limits.
+
+Extended rollback SQL verifies version-filtered stopping, stale-update rejection, exact retained payload/series identity and cross-account denial. It passed offline and in the exact development database, with no QA records/session rows left saved. No migration or existing-data change. Source privacy and launcher checks pass. Owner UI/service was not restarted; next ordinary launch picks up the new controls.
