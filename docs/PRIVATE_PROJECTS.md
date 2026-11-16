@@ -2,7 +2,7 @@
 
 The private Tasks workspace now includes an explicitly enabled Projects panel. View projects loads only private project titles, areas and status. Open project retrieves its details into an editable draft. Create and edit both require a server-verified review followed by explicit approval. Project statuses are Planned, Active, On hold and Completed; areas are Home, Personal Life, Work and School.
 
-This checkpoint organizes project information only. It does not link, complete, reschedule or share tasks. It does not add household access, deletion, providers, AI processing or a new database schema.
+The initial checkpoint organizes project information only; the subsequent task-linking checkpoint is described in PROJECT_TASK_LINKING.md. Project information edits do not complete, reschedule or share tasks. It does not add household access, deletion, providers, AI processing or a new database schema.
 
 ## Protection and acceptance
 
@@ -18,4 +18,4 @@ Local automated checks cover model/service, sparse API transport, protected HTTP
 
 ## Next checkpoint
 
-Link tasks to projects with reviewed changes and intact task history/checklists. Owner selected several projects per task. Use one shared task identity so editing/completion stays consistent across projects; do not clone tasks for membership. Shared projects, hierarchy, project progress and cross-app placement remain later blueprint work.
+Reviewed task linking is implemented; see PROJECT_TASK_LINKING.md for multi-project identity, recurring inheritance, development installation and recovery protections. Shared projects, hierarchy, project progress and cross-app placement remain later blueprint work.

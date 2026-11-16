@@ -7,6 +7,11 @@ export function previewPrivateWorkspaceRestore({bytes,key,projectRef,ownerId,exi
  const actions=snapshot.records.map(record=>{
   const prior=current.get(record.id),base={id:record.id,itemType:record.item_type};
   if(!prior){
+   if(record.item_type==='project_task_link'&&record.deleted_at==null){
+    const task=current.get(record.payload.taskId),project=current.get(record.payload.projectId);
+    if(!task||task.item_type!=='task'||task.deleted_at!=null||!project||project.item_type!=='project'||project.origin!=='PRIVATE_COOKIE_PROJECT'||project.deleted_at!=null)return{...base,action:'blocked-link-targets'};
+    if(currentRows.some(r=>r.item_type==='project_task_link'&&r.payload.taskId===record.payload.taskId&&r.payload.projectId===record.payload.projectId))return{...base,action:'blocked-unique-slot'};
+   }
    if(record.deleted_at!=null)return{...base,action:'archived-deleted'};
    const occupied=currentRows.some(row=>row.id!==record.id&&(singleton(record)&&singleton(row)&&row.item_type===record.item_type||approvalSource(record)&&approvalSource(record)===approvalSource(row)));
    if(occupied)return{...base,action:'blocked-unique-slot'};

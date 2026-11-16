@@ -367,3 +367,7 @@ body[data-density="spacious"] .cc-dashboard-root .metric{padding:19px 23px}
 #private-project-editor textarea, #private-project-copy { min-height: 130px; }
 #private-project-editor .btn { justify-self: start; }
 @media(max-width:590px) { .connected-card .item-main { flex-basis: 100%; } }
+#private-project-task-filter { display: grid; gap: 8px; margin: 12px 0; }
+#private-project-task-filter .field-label { margin: 0; }
+#private-project-task-query { width: 100%; box-sizing: border-box; }
+#private-project-task-filter .btn { justify-self: start; }
