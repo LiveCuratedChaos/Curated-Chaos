@@ -23,3 +23,10 @@ Reviewed task linking is implemented; see PROJECT_TASK_LINKING.md for multi-proj
 ## Progress and project filters
 
 PROJECT_PROGRESS.md records the optional saved repeating-chore progress mode, complete linked-task counts and title/area/status project browsing. Both modes preserve links and manual project status; default legacy/new-draft display is separate. No data or schema migration is needed.
+
+
+## Approved archive behavior — November 16, 2026
+
+The owner selected: archived subprojects keep contributing to their parent projects until explicitly unlinked. Archiving must preserve task memberships and project hierarchy relationships, shared-task deduplication, completion flags and the parent project's repeating-chore progress policy. It must not mark incomplete tasks complete or change other projects.
+
+Archive is separate from deletion, unlinking and completion status. Preserve the project's existing status so reopening can restore the same work state. Current project deletion guards remain intact. An archive implementation must provide a way to find and reopen archived projects, clearly explain retained progress contributions in review, retain drafts on unconfirmed writes, and require the existing reviewed save flow. This decision records intended behavior; archive controls and persistence are not yet implemented or activated.
