@@ -25,3 +25,13 @@ test('reviewed archive and reopen preserve status and support separate current/a
  await change(false);rows=await s.api.listPrivateProjects('a',i.a);assert.equal(rows[0].payload.archived,false);assert.deepEqual(await related(),before);assert.equal(rows[0].payload.status,'Active');assert.equal((await s.service.list('current',s.user,s.state.clock+300000,{status:'current'})).matchCount,1);
  for(const archived of [null,0,'true',{}])assert.throws(()=>projectFields({...fields,archived}));
 });
+
+test('optional project target dates validate before writes, preserve legacy edits and leave tasks untouched',async t=>{
+ const s=await setup(t),original=await s.create(),taskId='88888888-8888-4888-8888-888888888888';await s.db.query("insert into public.cc_records(id,owner_id,visibility,section,item_type,payload) values($1,$2,'private','Home','task',$3)",[taskId,i.a,JSON.stringify({fictional:true,title:'Fictional unchanged dated task',done:false,day:'2026-11-20'})]);await s.db.query('select public.cc_set_task_project_link($1,1,$2,1,0,true)',[taskId,original.id]);
+ const related=async()=> (await s.db.query("select * from public.cc_records where owner_id=$1 and item_type in ('task','project_task_link') order by id",[i.a])).rows,before=await related();
+ async function edit(values){const list=await s.list(),review=await s.service.prepare('ctx',s.user,{action:'edit',projectToken:list.projects[0].projectToken,fields:{...fields,...values}}),claim=s.service.claim('ctx',i.a,review.reviewId);assert.equal(await s.service.authorize(claim,s.user),true);await s.service.save(claim,s.user);return(await s.api.getPrivateProject('a',original.id,i.a))[0];}
+ let row=await edit({day:'2028-02-29'});assert.equal(row.payload.day,'2028-02-29');assert.equal((await s.list()).projects[0].day,'2028-02-29');assert.deepEqual(await related(),before);
+ row=await edit({description:'Fictional metadata-only legacy edit'});assert.equal(row.payload.day,'2028-02-29');
+ const list=await s.list(),writes=s.state.writes;for(const day of ['2027-02-29','2026-11-31','1999-12-31','2101-01-01','2026-1-01','2026-11-16T00:00:00Z',null,0,{}])await assert.rejects(s.service.prepare('ctx',s.user,{action:'edit',projectToken:list.projects[0].projectToken,fields:{...fields,day}}));assert.equal(s.state.writes,writes);
+ row=await edit({day:'',archived:true});assert.equal(row.payload.day,'');assert.equal(row.payload.status,'Active');assert.equal(row.payload.archived,true);assert.deepEqual(await related(),before);
+});
