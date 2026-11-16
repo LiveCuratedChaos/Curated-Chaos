@@ -1,6 +1,6 @@
 # Automated browser tests and GitHub checks
 
-Prepared November15,2026. Latest local acceptance:1,709 Node tests plus44 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
+Prepared November15,2026. Latest local acceptance:1,717 Node tests plus46 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
 
 ## Run locally
 
@@ -84,3 +84,7 @@ All1709 offline checks and44 browser cases pass. Seven new model/service tests c
 Extended rollback SQL verifies version-filtered stopping, stale-update rejection, exact retained payload/series identity and cross-account denial. It passed offline and in the exact development database, with no QA records/session rows left saved. No migration or existing-data change. Source privacy and launcher checks pass. Owner UI/service was not restarted; next ordinary launch picks up the new controls.
 
 Final stop-repeat source207c66d3d251f471d37ff822cad54a473f73a915: all1709 local checks and44 browser cases pass. The initial repeat setup has no Stop action until a recurring occurrence is saved. Mobile stop review visually inspected; no horizontal overflow. Temporary fixture cancelled/signed out/stopped. Hosted development rollback passed and cleaned up all QA rows/sessions. All three jobs passed in GitHub run43798044296: https://github.com/LiveCuratedChaos/Curated-Chaos/actions/runs/43798044296 . Draft PR1 remains unmerged.
+
+## November15 full-match Calendar month summaries
+
+All1717 offline and46 browser checks pass. Eight new tests verify paging-independent counts/two-title previews, no identifiers/details or hidden action handles, range/title filters, overnight/midnight/all-day semantics, malformed-summary rejection, leap/2100 boundaries, legacy partial fallback and fixture isolation. Two desktop/narrow browser cases seed120 fictional events, page50/50/20 results, verify invariant full month counts and accessible review/grid controls. The scenario is restricted to the fictional5316 factory/fixture, never real config or owner/staging ports. No database/provider/schema/dependency changes or owner service restart.
