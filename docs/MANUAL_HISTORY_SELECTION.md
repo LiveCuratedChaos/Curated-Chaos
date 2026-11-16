@@ -1,0 +1,11 @@
+# Manual history selection and recovery preparation
+
+Local continuation after approved PR14 merge and draft PR15 publication. No real records, schema, providers, checkouts or active runtime are changed.
+
+History requests now have a separate selection generation. Starting a newer history selection, draft, refresh, mutation, close or session clear retires prior responses. A response must still refer to the selected record at the displayed version; stale success/failure cannot replace newer context or typed drafts. History actions are unavailable while an editor/uncertain save owns the page. This preserves the existing selected read-only metadata scope and does not add another history body/detail endpoint.
+
+The view verifies at most100 bounded summary rows, selected record identity, operation IDs, supported change kind, positive version not newer than the displayed record, valid timestamp, optional/Undo target identity, and absence of extra payload fields. Wrong-record, oversized, duplicate-operation, future-version or payload-bearing responses fail without printing contents. No automatic retry or write is performed.
+
+The UI previously ignored the repository's kind field and displayed a generic label. It now names Created/Updated/Undid change and the result version, identifies the selected title using text nodes, reports displayed versus returned row counts (at most50 displayed/latest100 returned), and provides explicit Close history. Empty results are stated explicitly. IDs and old record bodies are never rendered.
+
+Synthetic regressions cover reversed response ordering, a newer typed draft during a pending read, malformed/foreign/over-limit summaries, refresh/session-clear retirement and count/close behavior without writes. Browser workflows use the actual fictional SQL-backed create→edit→history→Undo→history pipeline on desktop and narrow Chromium. Final local evidence:20 targeted controller tests passed; full Mac offline suite2,048 passed with zero failures/cancellations/skips and passing privacy/whitespace/launcher checks. All8 relevant desktop/narrow manual browser cases passed. The unchanged private workspace retains its earlier88-case evidence; a new full96-case local run is not claimed. This is not full version-content recovery, autosave, offline persistence, production activation or real-device acceptance.
