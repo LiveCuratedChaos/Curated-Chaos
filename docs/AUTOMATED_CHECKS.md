@@ -1,6 +1,6 @@
 # Automated browser tests and GitHub checks
 
-Prepared November15,2026. Latest local acceptance:1,662 Node tests plus32 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
+Prepared November15,2026. Latest local acceptance:1,666 Node tests plus32 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
 
 ## Run locally
 
@@ -50,3 +50,7 @@ Four additional desktop/narrow-screen cases verify full-workspace recovery navig
 ## November15 published review checks
 
 Published13 code/dependency files as remote53d76110888862fc5394bdb41e0c62f7ddf5ec30 on codex/release-readiness. Draft PR1 targets codex/browser-checks, not main: https://github.com/LiveCuratedChaos/Curated-Chaos/pull/1 . All three jobs passed in run43790161507: https://github.com/LiveCuratedChaos/Curated-Chaos/actions/runs/43790161507 . Tests and privacy, Browser workflows and Mac Calendar native checks each report success. The current source includes32 browser cases; local Mac acceptance remains1,662 offline tests. Documentation checkpoints remain local; no credentials/private files, merge, deployment, database change or pinned Cloud revision update. Local5397620 includes the same code plus documentation and was not rewritten to the service-created remote snapshot commit.
+
+## November15 household/recovery follow-up
+
+Four new offline checks apply every numbered migration and verify current household section rights, departure/private retention, session revocation and a full isolated-engine snapshot restored into a different engine. The restore tests actual RLS, grants, triggers, functions and unique protections, then invalidates restored old sessions before testing fresh access. No hosted database/configuration or real data is used. Offline total1,666; browser code remains the previously verified32 cases. These new checks are not yet included in the published review run recorded above. See DATABASE_RECOVERY_ACCEPTANCE.md for the remaining hosted recovery gate.
