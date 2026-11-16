@@ -1,6 +1,6 @@
 # Automated browser tests and GitHub checks
 
-Prepared November15,2026. Latest local acceptance:1,666 Node tests plus36 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
+Prepared November15,2026. Latest local acceptance:1,681 Node tests plus36 Playwright tests pass. The latest local follow-up is recorded below; the published GitHub run still reflects the earlier snapshot. The complete candidate source was copied into a clean temporary Git folder with no .env.local, .local directory, credentials or recovery files; npm ci --ignore-scripts, check:offline and test:browser passed there too. GitHub execution now passes; completed evidence is recorded below.
 
 ## Run locally
 
@@ -60,3 +60,7 @@ Four new offline checks apply every numbered migration and verify current househ
 All36 local browser cases pass. Four new desktop/narrow-screen cases verify keyboard focus/shortcuts, read-only Escape behavior, retained unsaved note text and cross-tab sign-out clearing an open private note. No application logic changes were required. Household/recovery source45ef99cf501f19f41d0a5c11aca089dfe707c978 passed all three GitHub jobs in run43791154499, before these four browser cases were added. Offline total remains1,666. No physical-device/screen-reader certification is implied.
 
 Latest review acceptance: remote7ed77da768f82c09fc127bc55ba06b41e9a53aed passed all three jobs in run43791968090 (https://github.com/LiveCuratedChaos/Curated-Chaos/actions/runs/43791968090), including the36-case browser suite and new household/full-engine recovery tests. Draft PR1 remains unmerged; no deployment.
+
+## November15 recurrence preparation
+
+Fifteen new pure-model/draft tests verify anchored schedule calculations and unchanged source views, including UTC/New York/Apia child-process checks for a civil date skipped by a historical local timezone. Offline total1,681. No UI imports/routes were added, so existing36-case browser evidence remains applicable without a new browser run for these dormant helpers. Recurrence activation still requires atomic database and browser acceptance; see TASK_RECURRENCE.md.
