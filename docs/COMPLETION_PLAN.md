@@ -88,6 +88,10 @@ All1709 local tests and44 browser checks pass, including accessible review contr
 
 Reviewed current Supabase changelog and documentation for the existing private filtered-update/RLS boundary; no client dependency or CLI upgrade, schema or policy change was introduced.
 
+## November15 stop-repeat final acceptance
+
+Final source207c66d3d251f471d37ff822cad54a473f73a915 limits stop-repeat controls to an already saved recurring schedule. An unapproved first-time repeat setup remains cancellable and does not offer stopping a schedule that does not exist yet. All1709 offline and44 browser checks pass after the follow-up, with explicit assertions for initial versus saved schedules. Narrow stop review screenshot /private/tmp/curated-stop-repeat-mobile.png was visually inspected and fits horizontally; temporary fixture was cancelled, signed out and stopped. Hosted rollback checks passed with no QA records or session rows left saved; no new migration, existing-data/provider/production change or owner workspace restart occurred. The existing enabled recurring scope picks up these controls at the next ordinary launch. Draft PR1 remains unmerged. All three GitHub jobs passed in run43798044296: https://github.com/LiveCuratedChaos/Curated-Chaos/actions/runs/43798044296 . The stop-repeat checkpoint is complete; no further decision or access is needed for this increment.
+
 ## Working agreement
 
 On November 12 the owner asked to continue without asking permission. Continue routine local development, fictional verification and idle private-preview maintenance without per-step approval prompts. Keep the live app, connected accounts and existing real saved records unchanged; this instruction does not enable provider writes, new account grants, deployment, purchases or credential changes. Preserve drafts and open private views.
