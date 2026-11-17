@@ -4,7 +4,7 @@ import {readFile,realpath} from 'node:fs/promises';
 import {resolve,dirname,extname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const assets=new Set(['/project-workspace.html','/src/project-workspace.css','/src/project-workspace-entry.mjs','/src/project-workspace-client.mjs','/src/project-workspace-controller.mjs','/src/project-workspace-model.mjs','/src/dev-organize-model.mjs','/src/dev-brief-model.mjs','/src/task-priorities.mjs','/src/core.mjs','/src/project-progress.mjs','/src/task-recurrence.mjs']);
+const assets=new Set(['/src/manual-routine-editor.mjs','/src/manual-autosave-session.mjs','/src/stable-json.mjs','/project-workspace.html','/src/project-workspace.css','/src/project-workspace-entry.mjs','/src/project-workspace-client.mjs','/src/project-workspace-controller.mjs','/src/project-workspace-model.mjs','/src/dev-organize-model.mjs','/src/dev-brief-model.mjs','/src/task-priorities.mjs','/src/core.mjs','/src/project-progress.mjs','/src/task-recurrence.mjs']);
 export function validateProjectPreviewArguments(args){
   if(!args.length)return null;
   if(args.length!==1||args[0]!=='--fixtures-only')throw Error('Only explicit fictional mode is supported.');return{fixtures:true};

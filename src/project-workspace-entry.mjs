@@ -12,7 +12,7 @@ try{
   const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(p=>[p.type,p.value]));
   const signOut=document.createElement('button');signOut.textContent='Sign out';signOut.addEventListener('click',()=>{signOut.disabled=true;bus?.postMessage('signout');void client.signOut().catch(ended);});shell.append(signOut);
   if(session.fixture===true){const notice=document.createElement('p');notice.textContent='Fictional preview — no accounts, providers or saved personal records. Demo changes reset when this preview stops.';shell.prepend(notice);}
-  workspace=await mountProjectWorkspace({root,client,ownerId:session.user.id,day:`${parts.year}-${parts.month}-${parts.day}`});
+  workspace=await mountProjectWorkspace({root,client,ownerId:session.user.id,allowRoutineAutosave:session.fixture===true,day:`${parts.year}-${parts.month}-${parts.day}`});
   if(sessionEnded)throw Error('Session ended.');
   let checking=false;async function check(){if(checking||sessionEnded||document.hidden)return;checking=true;try{const latest=await client.status();if(!sessionEnded)expireAt(latest.expiresAt);}catch{}finally{checking=false;}}
   window.addEventListener('focus',check);checkTimer=setInterval(check,30000);
