@@ -1,5 +1,7 @@
 > Current reconciliation: see [CONSOLIDATED_BASELINE.md](CONSOLIDATED_BASELINE.md), November 16, 2026. Historical counts and pending entries below are dated evidence, not present status.
 
+November 16 follow-up: the isolated offline relationship check reuses both engines’ validators to reject lossy/dangling/cyclic convergence inputs and count several-parent/multiple-project requirements. It performs no conversion or writes; autosave, full payload/history compatibility and migration remain open. See [WORKSPACE_RELATIONSHIP_ACCEPTANCE.md](WORKSPACE_RELATIONSHIP_ACCEPTANCE.md).
+
 # Curated Chaos product scope and evidence ledger
 
 November 12 daily-use priority: projects/tasks first; Apple Calendar viewing is sufficient initially, with finance and all other commitments retained. CC-TASK-01/CC-ADD-01/CC-HIST-01 now have a new local manual project/task/Undo implementation tested through embedded SQL and HTTP, preserving old records and fictional guards. Browser control was unavailable, SQL009 is unapplied and full autosave/offline/cross-app production integration remains open. See `PROJECT_TASK_PROGRESS.md` for 1,671-test evidence and exact remaining gates; no row is promoted to production-complete.
