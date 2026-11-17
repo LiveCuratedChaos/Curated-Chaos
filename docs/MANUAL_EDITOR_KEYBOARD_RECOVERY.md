@@ -1,0 +1,11 @@
+# Manual editor keyboard recovery preparation
+
+Local continuation after approved PR16 merge and draft PR17 publication. The running candidate, original/integration checkouts, schema and provider state remain unchanged. Apple Calendar refresh stays off.
+
+New/Edit draft actions focus the title field. Adding a checklist step focuses its title; removing a step focuses the next/previous surviving step by stable subtask identity, or Add subtask when none remain. Discard returns to the matching New task/project control. Explicit draft actions reveal their target in short viewports; background restoration prevents scroll jumps.
+
+Same-draft redraws preserve the focused input and text selection. A pending read can carry that focus snapshot through disabled rendering, but it is discarded if the owner moves focus elsewhere, the draft changes or the session clears. It cannot restore a cleared private editor or steal newer outside focus. Checklist identity uses existing subtask IDs, not mutable display indices. Date/select controls keep focus without forcing unsupported text selection. No browser-global keyboard setting is changed.
+
+This is temporary in-page editing only. It does not create a persistent/offline draft, autosave, new record, retry, API scope, schema or provider connection. Existing explicit saves, uncertain-write locks, history retirement and server/version boundaries remain intact.
+
+Synthetic controller tests cover first-field/checklist/discard focus, validation selection retention without writes, refresh cursor preservation, newer outside focus and session clearing. Desktop/narrow browser cases cover keyboard submit failure, checklist removal identity, delayed read completion, newer Sign out button focus without activating it, and a220-pixel-height viewport. Final local evidence:27 targeted controller tests passed; full Mac offline suite2,055 passed with zero failures/cancellations/skips and passing privacy/whitespace/launcher checks. All16 relevant desktop/narrow manual browser cases passed, including short-viewport reveal. The initial14-case keyboard run also passed before the additional viewport coverage. A new full104-case local run is not claimed. The earlier private workspace's untouched browser evidence remains separate; no physical Safari/provider acceptance is inferred.

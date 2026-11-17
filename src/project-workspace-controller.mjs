@@ -4,8 +4,14 @@ import {ORG_SECTIONS,PROJECT_STATUSES,TASK_STATUSES,TASK_PRIORITIES} from './dev
 export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
  if(!root?.ownerDocument||!client||['list','create','update','undo','history'].some(key=>typeof client[key]!=='function'))throw Error('Workspace dependencies required.');
  model ||= await import('./project-workspace-model.mjs');
- const doc=root.ownerDocument;let rows=[],view='all',projectId='',draft=null,busy=false,uncertain=false,receipt=null,message='',history=[],historyRecord=null,historyRequest=0,disposed=false,epoch=0;
+ const doc=root.ownerDocument;let rows=[],view='all',projectId='',draft=null,busy=false,uncertain=false,receipt=null,message='',history=[],historyRecord=null,historyRequest=0,disposed=false,epoch=0,deferredFocus=null;
  const uuid=()=>globalThis.crypto.randomUUID();
+ const attr=(node,name)=>node?.getAttribute?.(name);
+ const controls=()=>Array.from(root.querySelectorAll?.('input,textarea,select')||[]);
+ function focusField(saved,{reveal=false}={}){if(!saved||draft!==saved.draft||busy||disposed)return;const node=controls().find(n=>saved.subtaskId?attr(n,'data-subtask-id')===saved.subtaskId:attr(n,'name')===saved.name);if(!node||node.disabled)return;node.focus?.({preventScroll:!reveal});if(Number.isInteger(saved.start)&&Number.isInteger(saved.end))try{node.setSelectionRange(saved.start,saved.end);}catch{/* Date/select controls do not expose text selection. */}}
+ function focusButton(label){const node=Array.from(root.querySelectorAll?.('button')||[]).find(n=>n.textContent===label&&!n.disabled);node?.focus?.({preventScroll:false});}
+ function focusedField(){const node=doc.activeElement;if(!draft||!node||!root.contains?.(node))return null;const name=attr(node,'name'),subtaskId=attr(node,'data-subtask-id');return name||subtaskId?{draft,node,name,subtaskId,start:node.selectionStart,end:node.selectionEnd}:null;}
+
  const el=(tag,text,attributes={})=>{const node=doc.createElement(tag);if(text!==undefined)node.textContent=text;for(const [key,value]of Object.entries(attributes))node.setAttribute(key,value);return node;};
  const button=(text,action,disabled=false)=>{const node=el('button',text,{type:'button'});node.disabled=disabled;node.addEventListener('click',action);return node;};
  const field=(form,label,key,value,options)=>{
@@ -17,9 +23,9 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
  };
  function start(kind,record){
   if(busy||uncertain||disposed||draft)return;
-  historyRequest++;history=[];historyRecord=null;
+  historyRequest++;history=[];historyRecord=null;deferredFocus=null;
   const payload=record?.payload||{};
-  draft={kind,record,form:{title:payload.title||'',section:record?.section||'Personal Life',status:payload.status||(kind==='project'?'Planned':'Not Started'),...(kind==='project'?{summary:payload.summary||''}:{description:payload.description||'',day:payload.day||'',priority:payload.priority||'Normal',project_id:payload.project_id||'',subtasks:(payload.subtasks||[]).map(task=>({...task}))})}};message='Draft kept only on this page. Save explicitly; offline saving is not available.';render();
+  draft={kind,record,form:{title:payload.title||'',section:record?.section||'Personal Life',status:payload.status||(kind==='project'?'Planned':'Not Started'),...(kind==='project'?{summary:payload.summary||''}:{description:payload.description||'',day:payload.day||'',priority:payload.priority||'Normal',project_id:payload.project_id||'',subtasks:(payload.subtasks||[]).map(task=>({...task}))})}};message='Draft kept only on this page. Save explicitly; offline saving is not available.';render();focusField({draft,name:'title'},{reveal:true});
  }
  function checkedRows(value){if(!Array.isArray(value))throw Error();const normalized=model.normalizeProjectWorkspace(value,ownerId);if(normalized.projects.length+normalized.tasks.length!==value.length)throw Error();return value;}
  async function reload(){
@@ -68,7 +74,7 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
   }catch{if(current()){history=[];historyRecord=null;message='History unavailable. Refresh before reopening.';render();}}
  }
  function render(){
-  if(disposed)return;root.replaceChildren();root.append(el('h1','Projects and tasks'));
+  if(disposed)return;const active=doc.activeElement,saved=focusedField();if(saved)deferredFocus=saved;else if(active&&active!==doc.body&&active!==deferredFocus?.node)deferredFocus=null;root.replaceChildren();root.append(el('h1','Projects and tasks'));
   const status=el('p',message,{role:'status','aria-live':'polite'});root.append(status);
   const actions=el('nav',undefined,{'aria-label':'Workspace actions'});actions.append(button('New project',()=>start('project'),busy||uncertain||Boolean(draft)),button('New task',()=>start('task'),busy||uncertain||Boolean(draft)),button('Refresh',reload,busy));
   if(receipt)actions.append(button('Undo last save',()=>mutate(operationId=>client.undo({operationId,targetOperationId:receipt.operationId})),busy||uncertain||Boolean(draft)));root.append(actions);
@@ -82,12 +88,13 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
   if(draft){const form=el('form');form.append(el('h2',(draft.record?'Edit ':'New ')+draft.kind));field(form,'Title','title',draft.form.title);if(!draft.record){const section=field(form,'Section','section',draft.form.section,ORG_SECTIONS);section.addEventListener('change',()=>{draft.form.project_id='';render();});}else form.append(el('p','Section: '+draft.record.section));
    field(form,'Status','status',draft.form.status,draft.kind==='project'?PROJECT_STATUSES:TASK_STATUSES);
    if(draft.kind==='project')field(form,'Summary','summary',draft.form.summary);else{field(form,'Description','description',draft.form.description);field(form,'Due date','day',draft.form.day);field(form,'Priority','priority',draft.form.priority,TASK_PRIORITIES);field(form,'Assigned project','project_id',draft.form.project_id,[['','No project'],...normalized.projects.filter(project=>project.section===draft.form.section).map(project=>[project.id,project.payload.title])]);
-    const list=el('fieldset');list.append(el('legend','Subtasks'));draft.form.subtasks.forEach((task,index)=>{const label=el('label');const check=el('input',undefined,{type:'checkbox','aria-label':'Subtask complete '+(index+1)});check.checked=task.done;check.disabled=busy;check.addEventListener('change',()=>{task.done=check.checked;});const title=el('input',undefined,{'aria-label':'Subtask title '+(index+1)});title.value=task.title;title.disabled=busy;title.maxLength=140;title.addEventListener('input',()=>{task.title=title.value;});label.append(check,title,button('Remove subtask',()=>{draft.form.subtasks.splice(index,1);render();},busy));list.append(label);});list.append(button('Add subtask',()=>{draft.form.subtasks.push({id:uuid(),title:'',done:false});render();},busy||draft.form.subtasks.length>=40));form.append(list);
+    const list=el('fieldset');list.append(el('legend','Subtasks'));draft.form.subtasks.forEach((task,index)=>{const label=el('label');const check=el('input',undefined,{type:'checkbox','aria-label':'Subtask complete '+(index+1)});check.checked=task.done;check.disabled=busy;check.addEventListener('change',()=>{task.done=check.checked;});const title=el('input',undefined,{'aria-label':'Subtask title '+(index+1),'data-subtask-id':task.id});title.value=task.title;title.disabled=busy;title.maxLength=140;title.addEventListener('input',()=>{task.title=title.value;});label.append(check,title,button('Remove subtask',()=>{const next=draft.form.subtasks[index+1]?.id||draft.form.subtasks[index-1]?.id;draft.form.subtasks.splice(index,1);render();if(next)focusField({draft,subtaskId:next},{reveal:true});else focusButton('Add subtask');},busy));list.append(label);});list.append(button('Add subtask',()=>{const id=uuid();draft.form.subtasks.push({id,title:'',done:false});render();focusField({draft,subtaskId:id},{reveal:true});},busy||draft.form.subtasks.length>=40));form.append(list);
    }
-   const submit=el('button','Save',{type:'submit'});submit.disabled=busy||uncertain;form.append(submit,button('Discard draft',()=>{draft=null;render();},busy||uncertain));form.addEventListener('submit',event=>{event.preventDefault();save();});root.append(form);
+   const submit=el('button','Save',{type:'submit'});submit.disabled=busy||uncertain;form.append(submit,button('Discard draft',()=>{const kind=draft.kind;draft=null;deferredFocus=null;render();focusButton('New '+kind);},busy||uncertain));form.addEventListener('submit',event=>{event.preventDefault();save();});root.append(form);
   }
   if(historyRecord){const section=el('section',undefined,{'aria-label':'Change history'});section.append(el('h2','Change history: '+historyRecord.title));if(history.length){section.append(el('p',`Showing ${Math.min(50,history.length)} of ${history.length} returned changes (latest 100 maximum).`));for(const item of history.slice(0,50))section.append(el('p',`${({create:'Created',update:'Updated',undo:'Undid change'})[item.kind]} · Version ${item.resultVersion} · ${item.createdAt}`));}else if(message==='Saved change history')section.append(el('p','No change history returned.'));section.append(button('Close history',()=>{historyRequest++;history=[];historyRecord=null;message='';render();}));root.append(section);}
+  if(!busy){const target=saved||deferredFocus;deferredFocus=null;focusField(target);}
  }
- function clear(){disposed=true;epoch++;historyRequest++;rows=[];draft=null;receipt=null;history=[];historyRecord=null;busy=false;uncertain=false;message='';root.replaceChildren();}
+ function clear(){disposed=true;deferredFocus=null;epoch++;historyRequest++;rows=[];draft=null;receipt=null;history=[];historyRecord=null;busy=false;uncertain=false;message='';root.replaceChildren();}
  render();await reload();return {refresh:reload,clear,dispose(){clear();disposed=true;}};
 }
