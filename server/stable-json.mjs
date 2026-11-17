@@ -1,2 +1,2 @@
-// Compare JSON data independently of object-key order (including PostgreSQL jsonb output).
-export const stableStringify=value=>JSON.stringify(value,(_key,item)=>item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
+// Shared browser-safe canonical JSON comparison, including PostgreSQL jsonb output.
+export {stableStringify} from '../src/stable-json.mjs';
