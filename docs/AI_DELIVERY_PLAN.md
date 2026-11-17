@@ -1,5 +1,7 @@
 > Current reconciliation: see [CONSOLIDATED_BASELINE.md](CONSOLIDATED_BASELINE.md), November 16, 2026. Historical counts and pending entries below are dated evidence, not present status.
 
+November 16 follow-up: the isolated offline relationship check reuses both engines’ validators to reject lossy/dangling/cyclic convergence inputs and count several-parent/multiple-project requirements. It performs no conversion or writes; autosave, full payload/history compatibility and migration remain open. See [WORKSPACE_RELATIONSHIP_ACCEPTANCE.md](WORKSPACE_RELATIONSHIP_ACCEPTANCE.md).
+
 # Full-scope AI delivery plan
 
 November 12 priority update: owner chose projects/tasks first and read-only Apple Calendar viewing for initial daily use. Local implementation and 1,671-test evidence are in `PROJECT_TASK_PROGRESS.md`; browser control/access and hosted gates remain open. Source checkpoint `c021ce6` and merge `6ecc004` supersede the older main-source snapshot for this branch. The next step is browser acceptance, not a purchase or live deployment. Full retained scope is unchanged.
