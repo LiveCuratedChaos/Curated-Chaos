@@ -1,5 +1,7 @@
 > Current reconciliation: see [CONSOLIDATED_BASELINE.md](CONSOLIDATED_BASELINE.md), November 16, 2026. Historical counts and pending entries below are dated evidence, not present status.
 
+November 16 editor follow-up: the existing fictional projects/tasks screen now integrates the routine autosave/history/Undo/recovery panel. It is gated by literal fictional-session identity; non-fictional sessions retain explicit Save. Real-app activation, full routine fields, provenance/schema convergence, offline and physical-device gates remain open. See [FICTIONAL_ROUTINE_EDITOR.md](FICTIONAL_ROUTINE_EDITOR.md).
+
 November 16 autosave-recovery follow-up: the isolated coordinator can inspect uncertain-operation history/current state without writes, preserve newer typing and require a fresh explicit review before version-guarded editing resumes. It remains unmounted; no app, database, provider or offline-readiness promotion. See [MANUAL_AUTOSAVE_RECOVERY.md](MANUAL_AUTOSAVE_RECOVERY.md).
 
 November 16 routine-edit foundation: the isolated manual autosave coordinator now exercises debounced text/date/priority edits, versioned acknowledgements, atomic history and guarded Undo through the existing fictional SQL/HTTP harness. It remains unmounted; current app behavior, reviewed-engine convergence, full autosave UX and protected offline support remain open. See [MANUAL_AUTOSAVE_COORDINATOR.md](MANUAL_AUTOSAVE_COORDINATOR.md).
