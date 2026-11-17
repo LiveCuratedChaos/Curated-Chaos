@@ -21,10 +21,11 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
   const payload=record?.payload||{};
   draft={kind,record,form:{title:payload.title||'',section:record?.section||'Personal Life',status:payload.status||(kind==='project'?'Planned':'Not Started'),...(kind==='project'?{summary:payload.summary||''}:{description:payload.description||'',day:payload.day||'',priority:payload.priority||'Normal',project_id:payload.project_id||'',subtasks:(payload.subtasks||[]).map(task=>({...task}))})}};message='Draft kept only on this page. Save explicitly; offline saving is not available.';render();
  }
+ function checkedRows(value){if(!Array.isArray(value))throw Error();const normalized=model.normalizeProjectWorkspace(value,ownerId);if(normalized.projects.length+normalized.tasks.length!==value.length)throw Error();return value;}
  async function reload(){
   if(busy||disposed)return;historyRequest++;history=[];historyRecord=null;busy=true;const ticket=epoch;render();
-  try{const result=await client.list();if(disposed||ticket!==epoch)return;rows=result;message=uncertain?'Save outcome unknown. Check the refreshed records before leaving; this page will not retry.':'Up to date.';}
-  catch{if(ticket===epoch&&!disposed)message='Could not load. Try Refresh when connected.';}
+  try{const result=await client.list();if(disposed||ticket!==epoch)return;rows=checkedRows(result);message=uncertain?'Save outcome unknown. Check the refreshed records before leaving; this page will not retry.':'Up to date.';}
+  catch{if(ticket===epoch&&!disposed)message=uncertain?'Could not load a verified list. Save outcome remains unknown; no changes were retried.':'Could not load a verified list. Your draft was not sent. The previous view may be out of date; try Refresh when connected.';}
   finally{if(ticket===epoch&&!disposed){busy=false;render();}}
  }
  async function mutate(action){
@@ -35,14 +36,14 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
     // An immutable receipt can describe a version that was subsequently changed or removed.
     // Validate its actor envelope, then use only a fresh coherent list as live state.
     if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(record.id)||record.owner_id!==ownerId||record.visibility!=='private'||record.household_id!==null||record.origin!=='CC_MANUAL_WORKSPACE'||!['project','task'].includes(record.item_type)||!ORG_SECTIONS.includes(record.section)||record.payload?.schemaVersion!==1||record.payload.source!=='manual'||record.payload.fictional!==false||record.deleted_at!==null&&(typeof record.deleted_at!=='string'||!Number.isFinite(Date.parse(record.deleted_at))))throw Error();
-    next=await client.list();if(disposed||ticket!==epoch)return;model.normalizeProjectWorkspace(next,ownerId);
+    next=await client.list();if(disposed||ticket!==epoch)return;checkedRows(next);
    }else{
    const previous=rows.find(row=>row.id===record.id);
    if(previous&&record.version<=previous.version)throw Error();
    const remaining=rows.filter(row=>row.id!==record.id);
    if(record.deleted_at!==null){if(!previous||typeof record.deleted_at!=='string'||!Number.isFinite(Date.parse(record.deleted_at)))throw Error();model.normalizeProjectWorkspace([{...record,deleted_at:null},...remaining],ownerId);}
    next=record.deleted_at===null?[...remaining,record]:remaining;
-   model.normalizeProjectWorkspace(next,ownerId);
+   checkedRows(next);
    }
    rows=next;
    if(projectId&&!next.some(row=>row.item_type==='project'&&row.id===projectId))projectId='';receipt=result;draft=null;history=[];message='Saved. You can Undo while this version is current.';}
