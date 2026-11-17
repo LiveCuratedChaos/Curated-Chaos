@@ -1,5 +1,7 @@
 > Current reconciliation: see [CONSOLIDATED_BASELINE.md](CONSOLIDATED_BASELINE.md), November 16, 2026. Historical counts and pending entries below are dated evidence, not present status.
 
+November 16 routine-edit foundation: the isolated manual autosave coordinator now exercises debounced text/date/priority edits, versioned acknowledgements, atomic history and guarded Undo through the existing fictional SQL/HTTP harness. It remains unmounted; current app behavior, reviewed-engine convergence, full autosave UX and protected offline support remain open. See [MANUAL_AUTOSAVE_COORDINATOR.md](MANUAL_AUTOSAVE_COORDINATOR.md).
+
 November 16 follow-up: the isolated offline relationship check reuses both engines’ validators to reject lossy/dangling/cyclic convergence inputs and count several-parent/multiple-project requirements. It performs no conversion or writes; autosave, full payload/history compatibility and migration remain open. See [WORKSPACE_RELATIONSHIP_ACCEPTANCE.md](WORKSPACE_RELATIONSHIP_ACCEPTANCE.md).
 
 # Full-scope AI delivery plan
