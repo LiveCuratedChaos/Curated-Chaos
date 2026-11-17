@@ -4,7 +4,7 @@ import {ORG_SECTIONS,PROJECT_STATUSES,TASK_STATUSES,TASK_PRIORITIES} from './dev
 export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
  if(!root?.ownerDocument||!client||['list','create','update','undo','history'].some(key=>typeof client[key]!=='function'))throw Error('Workspace dependencies required.');
  model ||= await import('./project-workspace-model.mjs');
- const doc=root.ownerDocument;let rows=[],view='all',projectId='',draft=null,busy=false,uncertain=false,receipt=null,message='',history=[],disposed=false,epoch=0;
+ const doc=root.ownerDocument;let rows=[],view='all',projectId='',draft=null,busy=false,uncertain=false,receipt=null,message='',history=[],historyRecord=null,historyRequest=0,disposed=false,epoch=0;
  const uuid=()=>globalThis.crypto.randomUUID();
  const el=(tag,text,attributes={})=>{const node=doc.createElement(tag);if(text!==undefined)node.textContent=text;for(const [key,value]of Object.entries(attributes))node.setAttribute(key,value);return node;};
  const button=(text,action,disabled=false)=>{const node=el('button',text,{type:'button'});node.disabled=disabled;node.addEventListener('click',action);return node;};
@@ -17,17 +17,18 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
  };
  function start(kind,record){
   if(busy||uncertain||disposed||draft)return;
+  historyRequest++;history=[];historyRecord=null;
   const payload=record?.payload||{};
   draft={kind,record,form:{title:payload.title||'',section:record?.section||'Personal Life',status:payload.status||(kind==='project'?'Planned':'Not Started'),...(kind==='project'?{summary:payload.summary||''}:{description:payload.description||'',day:payload.day||'',priority:payload.priority||'Normal',project_id:payload.project_id||'',subtasks:(payload.subtasks||[]).map(task=>({...task}))})}};message='Draft kept only on this page. Save explicitly; offline saving is not available.';render();
  }
  async function reload(){
-  if(busy||disposed)return;busy=true;const ticket=epoch;render();
+  if(busy||disposed)return;historyRequest++;history=[];historyRecord=null;busy=true;const ticket=epoch;render();
   try{const result=await client.list();if(disposed||ticket!==epoch)return;rows=result;message=uncertain?'Save outcome unknown. Check the refreshed records before leaving; this page will not retry.':'Up to date.';}
   catch{if(ticket===epoch&&!disposed)message='Could not load. Try Refresh when connected.';}
   finally{if(ticket===epoch&&!disposed){busy=false;render();}}
  }
  async function mutate(action){
-  if(busy||uncertain||disposed)return;busy=true;message='Saving…';const ticket=epoch;render();
+  if(busy||uncertain||disposed)return;historyRequest++;history=[];historyRecord=null;busy=true;message='Saving…';const ticket=epoch;render();
   try{const result=await action(uuid());if(disposed||ticket!==epoch)return;if(!result?.record||typeof result.operationId!=='string'||!result.operationId||typeof result.record.id!=='string'||!Number.isSafeInteger(result.record.version)||result.record.version<1)throw Error();
    const record=result.record;let next;
    if(result.replayed===true){
@@ -56,7 +57,15 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
   }catch{message='Check the title, date, section and project selection. Draft has not been sent.';render();return;}
   return mutate(operationId=>record?client.update({operationId,id:record.id,expectedVersion:record.version,payload:value}):client.create({operationId,record:value}));
  }
- async function showHistory(record){const ticket=epoch;try{const result=await client.history({id:record.id});if(disposed||ticket!==epoch)return;history=Array.isArray(result)?result:[];message='Saved change history';render();}catch{if(!disposed&&ticket===epoch){message='History unavailable.';render();}}}
+ async function showHistory(record){
+  if(disposed||busy||uncertain||draft)return;const ticket=epoch,request=++historyRequest;history=[];historyRecord={id:record.id,title:record.payload.title,version:record.version};message='Loading change history…';render();
+  const current=()=>!disposed&&ticket===epoch&&request===historyRequest&&!draft&&rows.some(row=>row.id===record.id&&row.version===record.version);
+  try{const result=await client.history({id:record.id});if(!current())return;const ids=new Set(),uuid=v=>typeof v==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(v);
+   if(!Array.isArray(result)||result.length>100)throw Error();
+   for(const item of result){if(!item||typeof item!=='object'||Object.keys(item).some(k=>!['operationId','recordId','kind','resultVersion','createdAt','targetOperationId'].includes(k))||!uuid(item.operationId)||ids.has(item.operationId.toLowerCase())||item.recordId!==record.id||!['create','update','undo'].includes(item.kind)||!Number.isSafeInteger(item.resultVersion)||item.resultVersion<1||item.resultVersion>record.version||typeof item.createdAt!=='string'||!Number.isFinite(Date.parse(item.createdAt))||item.targetOperationId!=null&&!uuid(item.targetOperationId)||item.kind==='undo'&&!uuid(item.targetOperationId))throw Error();ids.add(item.operationId.toLowerCase());}
+   history=result;message='Saved change history';render();
+  }catch{if(current()){history=[];historyRecord=null;message='History unavailable. Refresh before reopening.';render();}}
+ }
  function render(){
   if(disposed)return;root.replaceChildren();root.append(el('h1','Projects and tasks'));
   const status=el('p',message,{role:'status','aria-live':'polite'});root.append(status);
@@ -66,9 +75,9 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
   const filters=el('nav',undefined,{'aria-label':'Task filters'});for(const [value,label]of [['today','Today'],['upcoming','Upcoming'],['undated','Undated'],['completed','Completed'],['all','All']]){const node=button(label,()=>{view=value;render();});node.setAttribute('aria-pressed',String(view===value));filters.append(node);}root.append(filters);
   const scope=el('label','Project filter');const select=el('select',undefined,{'aria-label':'Project filter'});select.append(el('option','All projects',{value:''}));for(const project of normalized.projects)select.append(el('option',project.payload.title,{value:project.id}));select.value=projectId;select.addEventListener('change',()=>{projectId=select.value;render();});scope.append(select);root.append(scope);
   const projects=el('section',undefined,{'aria-label':'Projects'});projects.append(el('h2','Projects'));
-  for(const project of data.projects){const card=el('article');const tasks=normalized.tasks.filter(task=>task.payload.project_id===project.id);const progress=data.counts?.projectCounts?.find(row=>row.project.id===project.id)?.progress||{completed:tasks.filter(task=>task.payload.status==='Completed').length,total:tasks.length};card.append(el('h3',project.payload.title),el('p',`${progress.completed} of ${progress.total} tasks complete`),el('p',project.payload.summary||''),button('Edit project',()=>start('project',project),busy||uncertain||Boolean(draft)),button('Project history',()=>showHistory(project),busy));if(progress.recurringTotal)card.append(el('p',`${progress.recurringCompleted} of ${progress.recurringTotal} repeating occurrences complete · ${progress.separateRecurring?'shown separately; kept linked':'included in completion'}`));projects.append(card);}root.append(projects);
+  for(const project of data.projects){const card=el('article');const tasks=normalized.tasks.filter(task=>task.payload.project_id===project.id);const progress=data.counts?.projectCounts?.find(row=>row.project.id===project.id)?.progress||{completed:tasks.filter(task=>task.payload.status==='Completed').length,total:tasks.length};card.append(el('h3',project.payload.title),el('p',`${progress.completed} of ${progress.total} tasks complete`),el('p',project.payload.summary||''),button('Edit project',()=>start('project',project),busy||uncertain||Boolean(draft)),button('Project history',()=>showHistory(project),busy||uncertain||Boolean(draft)));if(progress.recurringTotal)card.append(el('p',`${progress.recurringCompleted} of ${progress.recurringTotal} repeating occurrences complete · ${progress.separateRecurring?'shown separately; kept linked':'included in completion'}`));projects.append(card);}root.append(projects);
   const tasks=el('section',undefined,{'aria-label':'Tasks'});tasks.append(el('h2','Tasks'));if(Number.isInteger(data.counts?.total))tasks.append(el('p',`${data.counts.total} tasks in this view · ${data.counts.completed} complete`));if(!data.tasks.length)tasks.append(el('p','No tasks in this view.'));
-  for(const task of data.tasks){const card=el('article');card.append(el('h3',task.payload.title),el('p',`${task.payload.status} · ${task.payload.day||'Undated'} · ${task.payload.priority}`),button('Edit task',()=>start('task',task),busy||uncertain||Boolean(draft)),button(task.payload.status==='Completed'?'Reopen':'Complete',()=>{let payload;try{payload=model.changeManualTask(task,{status:task.payload.status==='Completed'?'Not Started':'Completed'},ownerId,model.normalizeProjectWorkspace(rows,ownerId).projects);}catch{message='Task could not be changed.';render();return;}return mutate(operationId=>client.update({operationId,id:task.id,expectedVersion:task.version,payload}));},busy||uncertain||Boolean(draft)),button('Task history',()=>showHistory(task),busy));tasks.append(card);}root.append(tasks);
+  for(const task of data.tasks){const card=el('article');card.append(el('h3',task.payload.title),el('p',`${task.payload.status} · ${task.payload.day||'Undated'} · ${task.payload.priority}`),button('Edit task',()=>start('task',task),busy||uncertain||Boolean(draft)),button(task.payload.status==='Completed'?'Reopen':'Complete',()=>{let payload;try{payload=model.changeManualTask(task,{status:task.payload.status==='Completed'?'Not Started':'Completed'},ownerId,model.normalizeProjectWorkspace(rows,ownerId).projects);}catch{message='Task could not be changed.';render();return;}return mutate(operationId=>client.update({operationId,id:task.id,expectedVersion:task.version,payload}));},busy||uncertain||Boolean(draft)),button('Task history',()=>showHistory(task),busy||uncertain||Boolean(draft)));tasks.append(card);}root.append(tasks);
   if(draft){const form=el('form');form.append(el('h2',(draft.record?'Edit ':'New ')+draft.kind));field(form,'Title','title',draft.form.title);if(!draft.record){const section=field(form,'Section','section',draft.form.section,ORG_SECTIONS);section.addEventListener('change',()=>{draft.form.project_id='';render();});}else form.append(el('p','Section: '+draft.record.section));
    field(form,'Status','status',draft.form.status,draft.kind==='project'?PROJECT_STATUSES:TASK_STATUSES);
    if(draft.kind==='project')field(form,'Summary','summary',draft.form.summary);else{field(form,'Description','description',draft.form.description);field(form,'Due date','day',draft.form.day);field(form,'Priority','priority',draft.form.priority,TASK_PRIORITIES);field(form,'Assigned project','project_id',draft.form.project_id,[['','No project'],...normalized.projects.filter(project=>project.section===draft.form.section).map(project=>[project.id,project.payload.title])]);
@@ -76,8 +85,8 @@ export async function mountProjectWorkspace({root,client,ownerId,day,model}={}){
    }
    const submit=el('button','Save',{type:'submit'});submit.disabled=busy||uncertain;form.append(submit,button('Discard draft',()=>{draft=null;render();},busy||uncertain));form.addEventListener('submit',event=>{event.preventDefault();save();});root.append(form);
   }
-  if(history.length){const section=el('section',undefined,{'aria-label':'Change history'});section.append(el('h2','Change history'));for(const item of history.slice(0,50))section.append(el('p',[item.operation||item.action||'Saved change',item.created_at||item.createdAt||''].join(' · ')));root.append(section);}
+  if(historyRecord){const section=el('section',undefined,{'aria-label':'Change history'});section.append(el('h2','Change history: '+historyRecord.title));if(history.length){section.append(el('p',`Showing ${Math.min(50,history.length)} of ${history.length} returned changes (latest 100 maximum).`));for(const item of history.slice(0,50))section.append(el('p',`${({create:'Created',update:'Updated',undo:'Undid change'})[item.kind]} · Version ${item.resultVersion} · ${item.createdAt}`));}else if(message==='Saved change history')section.append(el('p','No change history returned.'));section.append(button('Close history',()=>{historyRequest++;history=[];historyRecord=null;message='';render();}));root.append(section);}
  }
- function clear(){disposed=true;epoch++;rows=[];draft=null;receipt=null;history=[];busy=false;uncertain=false;message='';root.replaceChildren();}
+ function clear(){disposed=true;epoch++;historyRequest++;rows=[];draft=null;receipt=null;history=[];historyRecord=null;busy=false;uncertain=false;message='';root.replaceChildren();}
  render();await reload();return {refresh:reload,clear,dispose(){clear();disposed=true;}};
 }
