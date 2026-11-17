@@ -1,0 +1,22 @@
+# Read-only recovery of uncertain manual autosaves
+
+This extends the unmounted coordinator from `MANUAL_AUTOSAVE_COORDINATOR.md`; it does not enable autosave or recovery in the owner's editor. Only the fictional Playwright workbench exposes the new buttons. No database/schema/provider/deployment/configuration changes are made.
+
+## Workflow
+
+1. A save or Undo with an unconfirmed result remains frozen. Newer routine typing is retained in memory. Nothing is retried, and merely calling `flush()` cannot restart writes.
+2. Explicit `checkOutcome()` reads summary history for the attempted record and a fresh complete manual workspace list. It sends no mutation. Existing normalizers validate the list's owner/private/provenance scope and relationships. History is bounded to 100 summary entries and must contain valid unique operation identities, record identity, kind, version, time and Undo target, without payload fields.
+3. Only a matching operation/kind/result version/target plus the exact current record/version/intended payload yields `confirmed-current`. It returns that selected record for review and a fresh review identity. Other project contents are kept out of the public recovery result.
+4. A matching operation followed by a newer or absent active record yields `confirmed-changed` and stays frozen. Missing history yields `unconfirmed`: it is not proof the write failed. Invalid data or read failures yield `unavailable`. None permits an automatic retry, rebase, overwrite or resume.
+5. `resumeAfterReview(reviewId)` requires the current confirmed-current review. It adopts that verified version, retains any newer typing and resumes ordinary validated autosave only after that explicit action. A following edit gets a new operation identity and expected version; it does not replay the uncertain command. The fictional workbench shows the confirmed saved title/version and explains that resuming saves newer valid text shown in the editor.
+6. Typing, another check, another write or clearing retires the old review. Late checks cannot repopulate data after newer typing/checks or session clearing. A record changed by another writer after review still fails the server's version guard; the coordinator freezes again and retains the draft.
+
+Confirmed recovery of a lost update can retain guarded Undo; confirmed recovery of a lost Undo does not offer a second Undo of that same operation. Recovery snapshots are cloned so callers cannot modify the accepted baseline. Client/server session checks remain authoritative. Future UI integration must retain existing session/account lifecycle clearing; a review identity is a stale-UI guard, not an authentication or authorization credential. A dispatched request cannot be unsent by clearing.
+
+## Evidence and remaining gates
+
+Twenty-seven focused autosave/recovery unit and ephemeral SQL/HTTP tests pass. New coverage includes confirmed-current versus missing/changed proof, full payload/version matching, malformed/duplicate history, forged scope, stale/mutated review snapshots, racing checks, session clearing, actual SQL commit/Undo recovery, distinct operation IDs and a competing writer after review. The existing fixture closes after each SQL test; no hosted Supabase access or SQL changes are introduced.
+
+Browser cases add explicit recovery/resume and unconfirmed-result journeys on desktop and narrow Chromium to the prior autosave/history/Undo/delayed-save/lost-response journeys. Final integrated results: all 2,088 Mac offline tests passed, zero failures/cancellations/skips or platform exclusions; privacy/content, whitespace and launcher checks passed. All 114 desktop/narrow Chromium cases passed in one run, including the ten autosave/recovery workbench cases. These are fictional acceptance results, not physical-device or hosted/real-data acceptance. The tests run against disposable fictional records through the real coordinator and cookie/CSRF client, not the owner's preview.
+
+The current app is unchanged. Full routine editor integration, autosave grouping/Undo UX, remaining routine fields and separately approved sensitive/provider workflows, reviewed-engine convergence, prior-version viewing, persistent offline/conflict recovery, migration and physical Safari/iPhone acceptance remain open. A missing operation outside the bounded latest-history window cannot be declared absent or safely replayed. No complete disaster-recovery or offline-support claim is made. Both existing checkouts stay untouched and Apple Calendar refresh remains off.
