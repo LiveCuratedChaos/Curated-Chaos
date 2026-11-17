@@ -1,20 +1,21 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fictional autosave workbench</title>
 <h1>Fictional autosave workbench</h1><p>This test page uses disposable fictional SQL records. It is not the app editor.</p>
 <label>Task title <input id="title" disabled></label><label>Task details <textarea id="details" disabled></textarea></label>
-<p role="status" id="status">loading</p><button id="undo" disabled>Undo autosave</button><button id="history" disabled>Read change kinds</button><button id="close">Close editor</button><p id="changes"></p>
+<p role="status" id="status">loading</p><button id="undo" disabled>Undo autosave</button><button id="history" disabled>Read change kinds</button><button id="close">Close editor</button><p id="changes"></p><button id="check" disabled>Check save outcome</button><button id="resume" disabled>Resume reviewed editing</button><section aria-label="Save recovery" id="recovery"></section>
 <script type="module">
 import {createProjectWorkspaceClient} from '/src/project-workspace-client.mjs';
 import {createManualAutosaveSession} from '/src/manual-autosave-session.mjs';
 import {makeManualTask} from '/src/project-workspace-model.mjs';
-const title=document.querySelector('#title'),details=document.querySelector('#details'),status=document.querySelector('#status'),undo=document.querySelector('#undo'),history=document.querySelector('#history'),changes=document.querySelector('#changes');
+const title=document.querySelector('#title'),details=document.querySelector('#details'),status=document.querySelector('#status'),undo=document.querySelector('#undo'),history=document.querySelector('#history'),changes=document.querySelector('#changes'),check=document.querySelector('#check'),resume=document.querySelector('#resume'),recovery=document.querySelector('#recovery');
 const client=createProjectWorkspaceClient();let session,timer,closed=false;
-function render(){if(closed)return;const state=session.state();status.textContent=state.status;undo.disabled=!state.undoAvailable;}
-function clear(){closed=true;clearInterval(timer);session?.clear();client.clear();title.value='';details.value='';title.disabled=true;details.disabled=true;undo.disabled=true;history.disabled=true;changes.textContent='';status.textContent='closed';}
+function render(){if(closed)return;const state=session.state();status.textContent=state.status;undo.disabled=!state.undoAvailable;check.disabled=state.status!=='uncertain';resume.disabled=state.recovery?.outcome!=='confirmed-current';const report=state.recovery;recovery.textContent=report?.outcome==='confirmed-current'?'Confirmed saved version '+report.record.version+': '+report.record.payload.title+'. Resuming saves any newer valid text shown in this editor.':report?.outcome||'';}
+function clear(){closed=true;clearInterval(timer);session?.clear();client.clear();title.value='';details.value='';title.disabled=true;details.disabled=true;undo.disabled=true;history.disabled=true;changes.textContent='';check.disabled=true;resume.disabled=true;recovery.textContent='';status.textContent='closed';}
 document.querySelector('#close').onclick=clear;addEventListener('pagehide',clear);
 try{const identity=await client.status(),saved=await client.create({operationId:crypto.randomUUID(),record:makeManualTask({title:'Fictional starting task'},identity.user.id)});if(closed)throw Error();session=createManualAutosaveSession({record:saved.record,ownerId:identity.user.id,client,delayMs:120});title.value=saved.record.payload.title;title.disabled=false;details.disabled=false;history.disabled=false;
  title.oninput=()=>{session.edit({title:title.value});render();};details.oninput=()=>{session.edit({description:details.value});render();};
  undo.onclick=async()=>{const state=await session.undo();if(closed)return;if(state.status==='saved'){title.value=state.lastReceipt.record.payload.title;details.value=state.lastReceipt.record.payload.description;}render();};
  history.onclick=async()=>{try{const rows=await client.history({id:saved.record.id});if(!closed)changes.textContent=rows.map(r=>r.kind).join(',');}catch{if(!closed)changes.textContent='unavailable';}};
+ check.onclick=async()=>{await session.checkOutcome();render();};resume.onclick=()=>{try{session.resumeAfterReview(session.state().recovery?.reviewId);}catch{}render();};
  timer=setInterval(render,40);render();
 }catch{if(!closed)status.textContent='unavailable';}
 </script></html>
