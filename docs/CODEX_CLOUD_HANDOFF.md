@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R19** extended the new Calendar event title action with an explicit date phrase. It accepts today, tomorrow in New York, or an exact calendar date before the optional category. Invalid dates keep the draft intact. All 323 focused checks passed.
+
 - **R19** added explicit event title category interpretation in the new event editor. A trailing category phrase fills the editable Calendar category and leaves the date and time fields intact. The existing review and approval still apply. All 323 focused checks passed.
 
 - **R19** Quick Add recognizes explicit category phrases for Home, Personal Life, Work and School as existing task areas. The parsed choice appears in the original reviewed editor. Unknown or duplicate phrases are rejected, and ordinary title text is preserved. All 322 focused checks passed.
