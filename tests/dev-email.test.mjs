@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import { EMAIL_EXAMPLES, makeFictionalEmail, normalizeFictionalEmails, emailSuggestions, isEmailFixtureSuggestion } from '../src/dev-email-model.mjs';
-import { isDuplicateTask, normalizedDismissals, makeSuggestionDismissal, validateSuggestedTask } from '../src/dev-intelligence-model.mjs';
+import { isDuplicateTask, currentFictionalSuggestion, normalizedDismissals, makeSuggestionDismissal, validateSuggestedTask } from '../src/dev-intelligence-model.mjs';
 import { allowedPublicPath, makeHandler } from '../tools/local-server.mjs';
 import { renderConnectedShell } from '../src/dev-cloud-shell.mjs';
 const owner='bb8f4c56-a302-48d3-8c40-dc2838a97221',other='aa8f4c56-a302-48d3-8c40-dc2838a97222',id='1f3ab922-5969-421d-9741-ad4fcab22359';
@@ -70,4 +70,14 @@ test('email test screen, sources and shell are allowlisted; credentials are not'
 });
 test('removed sample email never returns to inbox or suggestions and cannot hide a replacement',()=>{
  const removed={...sample(),deleted_at:'2026-11-08T12:00:00Z'},replacement={...sample(),id:'2f3ab922-5969-421d-9741-ad4fcab22359',created_at:'2026-11-08T13:00:00Z'};assert.deepEqual(normalizeFictionalEmails([null,removed,replacement],owner),[replacement]);assert.deepEqual(emailSuggestions([removed]),[]);
+});
+
+test('reviewed email suggestions lose eligibility when their source disappears or changes revision',()=>{
+ const row={...sample(),version:1};
+ const [suggestion]=emailSuggestions(normalizeFictionalEmails([row],owner));
+ assert.deepEqual(currentFictionalSuggestion([row],owner,suggestion),suggestion);
+ for(const changed of [
+  [],[{...row,version:2}],[{...row,deleted_at:'2026-10-31T12:00:00Z'}],
+  [{...row,owner_id:other}],[{...row,visibility:'household'}],[row,row]
+ ])assert.equal(currentFictionalSuggestion(changed,owner,suggestion),null);
 });

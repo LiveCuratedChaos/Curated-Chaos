@@ -7,7 +7,7 @@ import { createDevSessionManager } from './dev-session.mjs';
 import { renderConnectedShell, renderDevelopmentConnectionsLink } from './dev-cloud-shell.mjs';
 import { escapeHtml as e, formatDate, dayString } from './core.mjs';
 import { TASK_SECTIONS, makeFictionalTask, normalizeCloudRecords, briefForDate, toggledTaskPayload } from './dev-brief-model.mjs';
-import { INTEGRATION_SOURCES, SOURCE_LABELS, isDuplicateTask, validateSuggestedTask, makeSuggestionDismissal } from './dev-intelligence-model.mjs';
+import { INTEGRATION_SOURCES, SOURCE_LABELS, isDuplicateTask, currentFictionalSuggestion, validateSuggestedTask, makeSuggestionDismissal } from './dev-intelligence-model.mjs';
 import { makeApprovalDecision, makeRestoreDecision, getDecisionState, decisionPreventsApproval } from './dev-decision-model.mjs';
 import { normalizeBriefPreferences, readOwnerBriefPreferences, maySuggest } from './dev-preferences-model.mjs';
 import { cloudFreshness, safeSnapshotAge, verifiedSnapshotCounts } from './dev-sync-model.mjs';
@@ -173,7 +173,21 @@ root.addEventListener('submit',async ev=>{
     busy=true;render();const n=generation;
     try{
       const token=await auth.getAccessToken();if(n!==generation)return;
-      if(config?.atomicFictionalApprovals===true){
+      const viewer=user.id,atomic=config?.atomicFictionalApprovals===true;
+      const [currentSourceRows,currentPreferencesRows,legacyState]=await Promise.all([
+        suggestion.source==='email'?api.listFictionalEmails(token):api.listFictionalLife(token),
+        api.listBriefPreferences(token,viewer),
+        atomic?null:Promise.all([api.listBriefRecords(token),api.listSuggestionDecisions(token,viewer)])
+      ]);
+      if(n!==generation||user?.id!==viewer)return;
+      const currentSuggestion=currentFictionalSuggestion(currentSourceRows,viewer,suggestion);
+      const currentPreferences=readOwnerBriefPreferences(currentPreferencesRows,viewer);
+      if(!Array.isArray(currentPreferencesRows)||!currentSuggestion||currentPreferences.duplicateCount||!maySuggest(currentSuggestion,currentPreferences.preferences)){
+        reviewId=null;reviewDraft=null;
+        if(await load())message('The suggestion or its source settings changed. Review the current suggestions before approving.');
+        return;
+      }
+      if(atomic){
         const receipt=await api.approveFictionalSuggestion(token,{sourceId:suggestion.emailId||suggestion.recordId,expectedVersion:suggestion.sourceVersion,...draft});
         if(n!==generation)return;
         if(!receipt||typeof receipt.already_saved!=='boolean'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(receipt.task_id||''))throw Error('Approval result uncertain. Check Tasks and decision history before retrying.');
@@ -181,8 +195,7 @@ root.addEventListener('submit',async ev=>{
       }
       // Recheck the remote state immediately before saving. This narrows (but cannot eliminate)
       // simultaneous-tab races without a database uniqueness constraint/transaction.
-      const [freshTasks,freshDecisions]=await Promise.all([api.listBriefRecords(token),api.listSuggestionDecisions(token,user.id)]);
-      if(n!==generation)return;
+      const [freshTasks,freshDecisions]=legacyState;
       const remote=normalizeCloudRecords(freshTasks,user.id);
       const decisions=getDecisionState(freshDecisions,user.id,allSuggestions());
       if(decisionPreventsApproval(decisions,suggestion.id)||isDuplicateTask(remote.tasks,{...draft,id:suggestion.id})){

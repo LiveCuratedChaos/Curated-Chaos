@@ -2,8 +2,8 @@
 // NEVER read email/calendar/finance providers or write fixture values to the cloud.
 import { addDays, dayString, safeAutomationMode } from './core.mjs';
 import { validDay, TASK_SECTIONS } from './dev-brief-model.mjs';
-import { isEmailFixtureSuggestion } from './dev-email-model.mjs';
-import { isLifeFixtureSuggestion } from './dev-life-model.mjs';
+import { emailSuggestions, normalizeFictionalEmails, isEmailFixtureSuggestion } from './dev-email-model.mjs';
+import { lifeSuggestions, normalizeFictionalLife, isLifeFixtureSuggestion } from './dev-life-model.mjs';
 export const INTEGRATION_SOURCES=['calendar','email','school','finances','household'];
 export const SOURCE_LABELS={calendar:'Calendar',email:'Email',school:'School',finances:'Finances',household:'Household'};
 export function fictionalSources(today=dayString()){
@@ -44,6 +44,14 @@ export function visibleFixtures(fixtures,selections){
 export function isDuplicateTask(tasks,draft){
   const norm=x=>String(x||'').trim().toLocaleLowerCase('en-US').replace(/\s+/g,' ');
   return tasks.some(t=>t?.item_type==='task' && t.payload?.fictional===true && ((draft.id && t.payload?.source==='M1A_APPROVED_'+draft.id) || (norm(t.payload?.title)===norm(draft.title) && t.payload?.day===draft.day)));
+}
+export function currentFictionalSuggestion(rows,owner,suggestion){
+ const sourceId=suggestion?.emailId??suggestion?.recordId;
+ if(typeof sourceId!=='string'||!Array.isArray(rows)||rows.filter(row=>row?.id===sourceId).length!==1)return null;
+ const current=suggestion.source==='email'?emailSuggestions(normalizeFictionalEmails(rows,owner)):
+  lifeSuggestions(normalizeFictionalLife(rows,owner));
+ const matches=current.filter(candidate=>candidate.id===suggestion.id);
+ return matches.length===1&&JSON.stringify(matches[0])===JSON.stringify(suggestion)?matches[0]:null;
 }
 export function validateSuggestedTask(fixture,draft){
   if(!fixture || fixture.rule!=='email_to_task' && !['school_to_task','household_to_task'].includes(fixture.rule))throw Error('Suggestion unavailable.');
