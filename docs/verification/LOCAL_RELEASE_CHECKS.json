@@ -836,6 +836,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Inclusive task/event ranges, overlapping events, New York date boundaries, explicit saved-search approval and rerun with fixed dates."
+    },
+    "taskHistoricalDueDate": {
+      "passed": 364,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Current editor, standalone earlier due date, undated scope, current fields, review and approval, recurring chore refusal and PostgreSQL history capture."
     }
   },
   "widgetSourceAssociations": {
