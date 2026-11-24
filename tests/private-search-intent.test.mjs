@@ -86,3 +86,16 @@ test('one-sided dates compile strict and inclusive cutoffs to fixed civil days',
  for(const phrase of ['tasks before 2000-01-01','tasks after 2100-12-31','events by 2026-02-29','notes by tomorrow','overdue tasks after yesterday','tasks after yesterday before tomorrow','tasks by tomorrow without a due date'])assert.throws(()=>parse(phrase));
  assert.throws(()=>parse('tasks due by today',{allowDates:false}));
 });
+
+
+test('previous calendar periods use the configured week start and preserve month boundaries',()=>{
+ assert.deepEqual(parse('completed work tasks due last week',{weekStart:1}).fields,
+  fields({section:'Work',status:'completed',dateFrom:'2026-11-09',dateTo:'2026-11-15'}));
+ assert.deepEqual(parse('events last week',{weekStart:0}).fields,
+  fields({type:'event',section:'Calendar',dateFrom:'2026-11-08',dateTo:'2026-11-14'}));
+ assert.deepEqual(parse('tasks about "last month" due last month',{now:Date.parse('2028-03-01T12:00:00Z')}).fields,
+  fields({query:'last month',dateFrom:'2028-02-01',dateTo:'2028-02-29'}));
+ assert.equal(parse('tasks last month',{now:Date.parse('2027-01-01T12:00:00Z')}).fields.dateFrom,'2026-12-01');
+ assert.throws(()=>parse('tasks last month',{allowDates:false}));
+ assert.throws(()=>parse('tasks last week',{now:Date.parse('2000-01-02T12:00:00Z')}));
+});

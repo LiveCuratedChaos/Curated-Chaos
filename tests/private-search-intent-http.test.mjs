@@ -69,3 +69,18 @@ test('deadline searches exclude undated tasks and use inclusive event overlap at
  assert.deepEqual(afterToday.data.results.map(item=>item.title),[spans.payload.title]);
  assert.equal(s.state.writes,0);
 });
+
+
+test('the signed-in search uses the exact previous-week filters without touching saved records',async t=>{
+ const s=await setup(t);
+ s.state.rows=[task(1,'Last week',{day:'2026-11-14',done:true}),
+  task(2,'Still open last week',{day:'2026-11-14'}),task(3,'This week',{done:true})];
+ const proposed=compile('completed Work tasks due last week');
+ assert.equal(s.state.reads,0);
+ const result=await s.call('search',proposed);
+ assert.equal(result.status,200);
+ assert.equal(result.data.dateFrom,'2026-11-08');
+ assert.equal(result.data.dateTo,'2026-11-14');
+ assert.deepEqual(result.data.results.map(item=>item.title),['Last week']);
+ assert.equal(s.state.writes,0);
+});

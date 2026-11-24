@@ -12,7 +12,9 @@ const intervalPattern=new RegExp('^'+intervalPhrase+'$','i');
 const boundOperator='(?:on\\s+or\\s+before|on\\s+or\\s+after|before|after|by)';
 const boundPhrase=boundOperator+'\\s+'+singleDay;
 const boundPattern=new RegExp('^('+boundOperator+')\\s+('+singleDay+')$','i');
-const datePhrase='(?:'+singleDay+'|this\\s+week|next\\s+week|this\\s+month|next\\s+month|'+intervalPhrase+'|'+boundPhrase+')';
+const calendarPeriod='(?:this|next|last)\\s+(?:week|month)';
+const calendarPeriodPattern=new RegExp('^'+calendarPeriod+'$');
+const datePhrase='(?:'+singleDay+'|'+calendarPeriod+'|'+intervalPhrase+'|'+boundPhrase+')';
 const completeDate=new RegExp('^(?:(?:due|on)\\s+)?('+datePhrase+')$','i');
 const trailingDate=new RegExp('(?:^|\\s)(?:(due|on)\\s+)?('+datePhrase+')$','i');
 // Reserved filter language in an unquoted title would have two meanings. A
@@ -38,8 +40,21 @@ function dates(phrase,anchor,weekStart){
  }
  if(day(normalized)){from=normalized;to=normalized;}
  else if(['today','tomorrow','yesterday'].includes(normalized)){from=format(timestamp+({today:0,tomorrow:1,yesterday:-1}[normalized])*millisecondsPerDay);to=from;}
- else if(['this week','next week'].includes(normalized)){const first=timestamp-((new Date(timestamp).getUTCDay()-weekStart+7)%7)*millisecondsPerDay+(normalized==='next week'?7*millisecondsPerDay:0);from=format(first);to=format(first+6*millisecondsPerDay);}
- else if(['this month','next month'].includes(normalized)){const first=new Date(anchor.slice(0,7)+'-01T00:00:00Z');if(normalized==='next month')first.setUTCMonth(first.getUTCMonth()+1);from=format(first.getTime());first.setUTCMonth(first.getUTCMonth()+1);to=format(first.getTime()-millisecondsPerDay);}
+ else if(calendarPeriodPattern.test(normalized)){
+  const [direction,unit]=normalized.split(' ');
+  const offset={last:-1,this:0,next:1}[direction];
+  if(unit==='week'){
+   const weekdayOffset=(new Date(timestamp).getUTCDay()-weekStart+7)%7;
+   const first=timestamp+(7*offset-weekdayOffset)*millisecondsPerDay;
+   from=format(first);to=format(first+6*millisecondsPerDay);
+  }else{
+   const first=new Date(anchor.slice(0,7)+'-01T00:00:00Z');
+   first.setUTCMonth(first.getUTCMonth()+offset);
+   from=format(first.getTime());
+   first.setUTCMonth(first.getUTCMonth()+1);
+   to=format(first.getTime()-millisecondsPerDay);
+  }
+ }
  else fail();
  if(!day(from)||!day(to))fail();return{dateFrom:from,dateTo:to};
 }
