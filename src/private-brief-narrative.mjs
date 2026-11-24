@@ -1,3 +1,4 @@
+import {validBriefRoutines} from './dev-brief-model.mjs';
 // A local presentation of verified current-record counts and optional titles.
 // Returns plain text, never HTML, actions, record identities or provider content.
 import {verifyPrivateSchoolOverview} from './private-school-read.mjs';
@@ -54,12 +55,8 @@ export function generateBriefNarrative(brief,layout,options={}){
    }else if(section.id==='routines'){
     const routines=brief.routines;
     if(routines==null)continue;
-    const {count:total,completed,rows}=routines;
-    if(!count(total)||total>brief.counts.supportedRecords||!count(completed)||completed>total||
-       !Array.isArray(rows)||rows.length!==Math.min(20,total)||
-       rows.some(row=>!row||!title(row.title)||typeof row.done!=='boolean'))fail();
-    const shownComplete=rows.filter(row=>row.done).length;
-    if(shownComplete>completed||rows.length-shownComplete>total-completed)fail();
+    if(!validBriefRoutines(routines,brief.counts.supportedRecords))fail();
+    const {count:total,completed}=routines;
     // These are also task records. The breakdown does not add to the task totals.
     facts.push({text:`${total} saved ${noun(total,'routine')} scheduled for ${brief.day}: ${total-completed} due and ${completed} complete.`,titles:[]});
    }else if(section.id==='projects'){

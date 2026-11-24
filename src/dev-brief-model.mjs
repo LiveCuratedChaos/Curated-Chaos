@@ -13,6 +13,26 @@ export function validDay(value){
   const candidate=new Date(y,m-1,d,12);
   return y>=2000 && y<=2100 && candidate.getFullYear()===y && candidate.getMonth()+1===m && candidate.getDate()===d;
 }
+export function validBriefRoutines(value,supportedRecords){
+  if(!value||Object.keys(value).sort().join(',')!=='completed,count,rows')return false;
+  const {count,completed,rows}=value;
+  if(!Number.isInteger(count)||count<0||count>2000||!Number.isInteger(supportedRecords)||count>supportedRecords||
+     !Number.isInteger(completed)||completed<0||completed>count||
+     !Array.isArray(rows)||rows.length!==Math.min(20,count))return false;
+  let shownComplete=0;
+  const tokens=new Set();
+  for(const row of rows){
+    if(!row||Object.keys(row).sort().join(',')!==(Object.hasOwn(row,'taskReadToken')?'done,section,taskReadToken,title':'done,section,title')||
+       typeof row.title!=='string'||!row.title.trim()||row.title.length>200||/[\u0000-\u001f\u007f]/.test(row.title)||
+       !TASK_SECTIONS.includes(row.section)||typeof row.done!=='boolean')return false;
+    if(Object.hasOwn(row,'taskReadToken')){
+      if(typeof row.taskReadToken!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(row.taskReadToken)||tokens.has(row.taskReadToken))return false;
+      tokens.add(row.taskReadToken);
+    }
+    if(row.done)shownComplete++;
+  }
+  return shownComplete<=completed&&rows.length-shownComplete<=count-completed;
+}
 export const isUndatedTaskDay=value=>value===undefined||value===null||value==='';
 export function makeFictionalTask({title,day=dayString(),section='Personal Life'},ownerId,{allowUndated=false}={}){
   if(typeof allowUndated!=='boolean')throw Error('Explicit undated-task scope required.');

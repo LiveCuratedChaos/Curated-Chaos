@@ -69,12 +69,15 @@ test('expanded routines contribute a verified count and keep unrelated summary f
  const brief=fixture();
  const preferences=only('routines','notes');
  assert.match(text(generateBriefNarrative(brief,preferences,{now})),/2 saved notes/);
- brief.routines={count:2,completed:1,rows:[{title:'Fictional routine',done:true},{title:'Fictional second routine',done:false}]};
+ brief.routines={count:2,completed:1,rows:[{title:'Fictional routine',section:'Home',done:true},{title:'Fictional second routine',section:'Home',done:false}]};
  const result=generateBriefNarrative(brief,preferences,{now});
  assert.match(text(result),/2 saved routines scheduled for 2026-11-17: 1 due and 1 complete/);
  assert.match(text(result),/2 saved notes/);
  assert.doesNotMatch(text(result),/Fictional routine/);
  assert.doesNotMatch(text(generateBriefNarrative(brief,only('notes'),{now})),/routines/);
+ const withExtraField=structuredClone(brief);
+ withExtraField.routines.rows[0].description='Details outside the routine summary';
+ assert.deepEqual(generateBriefNarrative(withExtraField,preferences,{now}),{available:false});
  brief.routines.completed=0;
  assert.deepEqual(generateBriefNarrative(brief,preferences,{now}),{available:false});
 });

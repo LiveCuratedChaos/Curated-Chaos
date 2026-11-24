@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R16 / R17** the Daily Brief verifies routine totals, completion status, allowed fields and original-task selections before displaying them. The same validation applies to the narrative. All 367 related checks passed.
+
 - **R16** verified the live transport’s owner filter and recurrence projection, plus the signed-in week response after a reviewed completion. The original date showed one completed routine and the successor date showed one due. All 46 related checks passed.
 
 - **R16 / R17** prepared a signed-in desktop and phone browser case for enabling Routines, opening its original task, completing it, and following the next saved occurrence. Playwright discovered both cases. Execution stopped before either case because the fictional fixture could not start.

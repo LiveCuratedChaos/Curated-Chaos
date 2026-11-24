@@ -1,4 +1,4 @@
-import {validDay} from './dev-brief-model.mjs';
+import {validDay,validBriefRoutines} from './dev-brief-model.mjs';
 import {createBriefBills} from './private-brief-bills.mjs';
 import {SCHOOL_SEARCH_LABELS,isSchoolSearchType,matchesSchoolSearchType} from './private-school-search-types.mjs';
 import {createFavoritesPanel,createFavoriteWidgetSource} from './private-favorites-panel.mjs';
@@ -323,7 +323,7 @@ export function mountPrivateBrief(root,{client=createPrivateWorkspaceClient(),cl
  function renderBriefSections(){const definitions={dueTasks:['Due and overdue tasks',row=>[row.day||'No due date',row.section].join(' · ')],upcomingTasks:['Upcoming tasks',row=>[row.day||'No due date',row.section].join(' · ')],undatedTasks:['No due date tasks',row=>row.section],completedTasks:['Completed tasks',row=>[row.day||'No due date',row.section].join(' · ')],eventsToday:[selectedBriefDay?'Workspace events on '+selectedBriefDay:'Today’s workspace events',row=>[row.day&&row.day!==data.day?row.day:'',eventTime(row)].filter(Boolean).join(' · ')],upcomingEvents:['Upcoming workspace events',row=>[row.day,eventTime(row)].filter(Boolean).join(' · ')],notes:['Recent note titles',()=> 'Private saved note · title only']};let html='';for(const section of (allowBriefLayout?briefLayout:defaultBriefLayout()).sections){const key=section.id;if(section.display==='hidden'||key==='undatedTasks'&&!allowUndatedTasks)continue;if(key==='routines'){
    if(!allowBriefLayout||!allowRecurringChores)continue;
    const routines=data.routines;
-   const body=routines&&Array.isArray(routines.rows)&&Number.isInteger(routines.count)&&routines.count>=routines.rows.length
+   const body=validBriefRoutines(routines,data.counts?.supportedRecords)
     ?routines.count?list(routines.rows,routines.count,row=>[row.section,row.done?'Complete':'Due'].join(' · ')):'<p>No saved routines are due on this date.</p>'
     :'<p role="status">Saved routines are unavailable.</p>';
    html+=section.display==='collapsed'?'<details class="panel" id="private-brief-section-routines" '+(sectionOpen.routines?'open':'')+'><summary>Routines</summary>'+body+'</details>':'<section class="panel" data-private-brief-section="routines"><h2>Routines</h2>'+body+'</section>';
