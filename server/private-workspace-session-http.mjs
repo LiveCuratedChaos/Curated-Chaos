@@ -679,6 +679,9 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
       if(options?.viewId!==v.viewId||!slot)throw Error();
       const course=await schoolReader.selectedRecord(c.id,actor,v.schoolReadToken);
       if(!current()||course.payload.kind!=='course'||course.payload.status==='Completed'||course.payload.studySessions.length>=50)throw Error();
+      const rows=await api.listPrivateStudySchedule(actor.accessToken,actor.ownerId);
+      const available=availableStudyWindows({rows,owner:actor.ownerId,...options.request,notBefore:newYorkTaskDay(now())});
+      if(!current()||!available.some(w=>stableStringify(w)===stableStringify(slot)))throw Error();
       const session={title:'Study session',day:slot.day,time:slot.start,endTime:slot.end,...(course.payload.academicIdentityVersion===1?{academicId:randomUUID()}:{})};
       const expiresAt=Math.min(c.expiresAt,now()+300000),id=random();
       c.studyReview={id,expiresAt,viewId:v.viewId,owner:actor.ownerId,schoolReadToken:v.schoolReadToken,courseId:course.id,version:course.version,slot,request:options.request,session};

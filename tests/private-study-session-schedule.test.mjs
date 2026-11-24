@@ -88,3 +88,26 @@ test('study transport reads only private Calendar timing and course sessions and
  await adapter.appendPrivateStudySession('fictional',courseId,1,manifest,session);
  assert.deepEqual(JSON.parse(calls[2].options.body),{p_course:courseId,p_version:1,p_schedule:manifest,p_session:session});
 });
+
+test('a Calendar event approved in another tab invalidates an overlapping study review',async t=>{
+ const app=privateWorkspaceFixture(t,access),school=app.tab().client,calendar=app.tab().client;
+ await school.signIn('demo@example.test','fictional-only');
+ await calendar.signIn('demo@example.test','fictional-only');
+ const view=await school.schoolOverview(),course=view.courses.find(c=>c.status==='In Progress');
+ assert.ok(course);
+ const {windows:[slot]}=await school.studyAvailability(view.viewId,range,45);
+ assert.deepEqual(slot,{day,start:'12:00',end:'12:45'});
+ const review=await school.studySessionReview({viewId:view.viewId,schoolReadToken:course.schoolReadToken,...slot});
+ const eventFields={title:'Fictional appointment',day,time:'12:20',end_time:'13:00',
+  location:'',description:'',calendarCategory:'Uncategorized'};
+ const proposedEvent=await calendar.reviewNewEvent(eventFields);
+ await calendar.createEvent(proposedEvent.reviewId);
+ await assert.rejects(school.studySessionSave(review.reviewId),/could not be confirmed/);
+ await assert.rejects(school.studySessionReview({viewId:view.viewId,schoolReadToken:course.schoolReadToken,...slot}),/Check availability again/);
+ const refreshed=await school.schoolOverview();
+ const current=refreshed.courses.find(c=>c.status==='In Progress');
+ const detail=await school.schoolRead({schoolReadToken:current.schoolReadToken});
+ assert.equal(detail.studySessions.some(s=>s.day===day),false);
+ const {windows}=await school.studyAvailability(refreshed.viewId,range,45);
+ assert.deepEqual(windows,[{day,start:'13:00',end:'13:45'}]);
+});

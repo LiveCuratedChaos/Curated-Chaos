@@ -4,7 +4,9 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
-- **R27** Completed-credit milestones group by original program selection, so programs with the same display title no longer share a credit total. All 50 School read, outline and milestone checks passed. The next checklist row is R28.
+- **R28** Study Planner rechecks saved availability before showing approval. In a signed-in two-tab test, a newly approved Calendar event blocked the old study proposal and save. The course agenda stayed unchanged, and checking again offered the next free time. All 18 related checks passed.
+
+- **R27** Completed-credit milestones group by original program selection, so programs with the same display title no longer share a credit total. All 50 School read, outline and milestone checks passed.
 
 - **R26** Fictional School and household suggestions now retain their source identity and show the uncertainty to confirm in the review. The open review is hidden if suggestions are disabled. All 56 related checks passed. Live cross-app automation and audit acceptance remain pending.
 
