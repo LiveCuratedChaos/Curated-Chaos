@@ -32,3 +32,13 @@ test('saved School panel renders escaped, display-only course, term, and credit 
  assert.doesNotMatch(html,/<Spring course>/);assert.match(html,/&lt;Spring course&gt;/);
  assert.doesNotMatch(html,/Fall \(2 saved courses\)/);
 });
+
+
+test('completed credits stay separate for original programs with the same title',()=>{
+ const courses=[course(1,'First completed course','Fall','Completed',3),
+  {...course(2,'Second completed course','Fall','Completed',4),programReadToken:token(7)}];
+ const result=deriveSchoolMilestones({programs:[],courses});
+ assert.deepEqual(result.completedCredits,[{programTitle:'Saved program',credits:3},{programTitle:'Saved program',credits:4}]);
+ assert.deepEqual(result.completedTerms,[{programTitle:'Saved program',term:'Fall',count:1},{programTitle:'Saved program',term:'Fall',count:1}]);
+ assert.doesNotMatch(JSON.stringify(result),new RegExp(token(7)+'|'+token(9)));
+});
