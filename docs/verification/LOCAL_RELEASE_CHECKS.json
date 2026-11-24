@@ -874,6 +874,13 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "oneSidedSearchDates": {
+      "date": "2026-11-24",
+      "node": "24.22.3",
+      "passed": 39,
+      "failed": 0,
+      "scope": "Interpreted date bounds, scoped search, event overlap, dated task results and a signed-in shortcut's saved cutoff."
+    },
     "signedInRecoveredShortcutHistory": {
       "date": "2026-11-24",
       "node": "24.22.3",

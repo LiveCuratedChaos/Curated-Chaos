@@ -41,27 +41,32 @@ test('the full workspace Calendar can save and rerun its exact date, category, s
  assert.equal(validSavedSearchFilters({...narrowed,eventKind:'unsupported'}),false);
 });
 
-test('saving an interpreted interval retains the original dates when the relative phrase would move', async t => {
- const {parsePrivateSearchIntent}=await import('../src/private-search-intent.mjs');
- const session=await setup(t);
- const phrase='open Work tasks due between today and tomorrow';
- const interpret=now=>parsePrivateSearchIntent(phrase,{now:Date.parse(now),allowDates:true,allowUndated:true,allowPriority:true}).fields;
- const original=interpret('2026-11-17T12:00:00Z');
- const result=await session.call('/auth/workspace/search',original);
- assert.equal(result.status,200);
- const review=await session.send('review',{action:'create',name:'Two planning days',saveSearchToken:result.data.saveSearchToken});
- assert.equal(review.status,200);
- assert.equal((await session.send('save',{reviewId:review.data.reviewId,approved:true})).status,200);
- const list=await session.send('list');
- const shortcut=list.data.records.find(row=>row.name==='Two planning days');
- const loaded=await session.send('load',{savedSearchToken:shortcut.savedSearchToken});
- assert.deepEqual(loaded.data.filters,original);
- assert.notDeepEqual(loaded.data.filters,interpret('2026-11-19T12:00:00Z'));
- const rerun=await session.call('/auth/workspace/search',loaded.data.filters);
- assert.equal(rerun.status,200);
- assert.equal(rerun.data.dateFrom,'2026-11-17');
- assert.equal(rerun.data.dateTo,'2026-11-18');
-});
+for(const {phrase,name,dateFrom,dateTo} of [
+ {phrase:'open Work tasks due between today and tomorrow',name:'Two planning days',dateFrom:'2026-11-17',dateTo:'2026-11-18'},
+ {phrase:'open Work tasks due by tomorrow',name:'Upcoming deadlines',dateFrom:'',dateTo:'2026-11-18'},
+ {phrase:'events after today',name:'Later events',dateFrom:'2026-11-18',dateTo:''}
+]){
+ test('saved shortcut keeps the original dates for '+phrase,async t=>{
+  const {parsePrivateSearchIntent}=await import('../src/private-search-intent.mjs');
+  const session=await setup(t);
+  const interpret=now=>parsePrivateSearchIntent(phrase,{now:Date.parse(now),allowDates:true,allowUndated:true,allowPriority:true}).fields;
+  const original=interpret('2026-11-17T12:00:00Z');
+  const result=await session.call('/auth/workspace/search',original);
+  assert.equal(result.status,200);
+  const review=await session.send('review',{action:'create',name,saveSearchToken:result.data.saveSearchToken});
+  assert.equal(review.status,200);
+  assert.equal((await session.send('save',{reviewId:review.data.reviewId,approved:true})).status,200);
+  const list=await session.send('list');
+  const shortcut=list.data.records.find(row=>row.name===name);
+  const loaded=await session.send('load',{savedSearchToken:shortcut.savedSearchToken});
+  assert.deepEqual(loaded.data.filters,original);
+  assert.notDeepEqual(loaded.data.filters,interpret('2026-11-19T12:00:00Z'));
+  const rerun=await session.call('/auth/workspace/search',loaded.data.filters);
+  assert.equal(rerun.status,200);
+  assert.equal(rerun.data.dateFrom,dateFrom);
+  assert.equal(rerun.data.dateTo,dateTo);
+ });
+}
 
 test('named School course and program searches preserve their type through review, load and rerun',async t=>{
  const {privateWorkspaceFixture}=await import('./support/private-workspace-fixture.mjs');

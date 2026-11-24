@@ -32,7 +32,7 @@ test('supported-range boundaries reject out-of-range dates and weeks without sil
  const lower=Date.parse('2000-01-01T12:00:00Z'),upper=Date.parse('2100-12-31T12:00:00Z');for(const text of ['tasks yesterday','overdue tasks','events this week'])assert.throws(()=>parse(text,{now:lower}));for(const text of ['tasks tomorrow','tasks next month','events this week','events next week'])assert.throws(()=>parse(text,{now:upper}));assert.equal(parse('events this week',{now:lower,weekStart:6}).fields.dateFrom,'2000-01-01');assert.equal(parse('events this week',{now:upper,weekStart:6}).fields.dateTo,'2100-12-31');for(const text of ['tasks on 1999-12-31','tasks on 2101-01-01','tasks on 2100-02-29','tasks on 2026-02-30','tasks 2026/11/17','tasks 2026-11-17T12:00:00Z'])assert.throws(()=>parse(text));
 });
 test('competing modifiers, dates, negation and unsupported grammar never silently widen the search',()=>{
- for(const text of ['open completed tasks','all open tasks','work home tasks','urgent high priority tasks','tasks due today on tomorrow','tasks today tomorrow','overdue tasks due today','overdue tasks without a due date','tasks without a due date without a due date','tasks not completed','tasks except school','tasks due soon','tasks next Friday','tasks by Monday','tasks before tomorrow','tasks about Call Mom tomorrow','tasks about open ledger','tasks and notes','find show tasks','buy milk','show everything','all','find','tasks about','tasks "literal"','notes about "unfinished','notes about "foo" extra','notes about "foo" on today'])assert.throws(()=>parse(text));
+ for(const text of ['open completed tasks','all open tasks','work home tasks','urgent high priority tasks','tasks due today on tomorrow','tasks today tomorrow','overdue tasks due today','overdue tasks without a due date','tasks without a due date without a due date','tasks not completed','tasks except school','tasks due soon','tasks next Friday','tasks by Monday','tasks before next month','tasks about Call Mom tomorrow','tasks about open ledger','tasks and notes','find show tasks','buy milk','show everything','all','find','tasks about','tasks "literal"','notes about "unfinished','notes about "foo" extra','notes about "foo" on today'])assert.throws(()=>parse(text));
 });
 test('non-task status, priority or undated constraints and unsupported area mappings are rejected',()=>{
  for(const text of ['open events','completed notes','completed projects','urgent events','normal notes','low priority projects','events without a due date','notes without a due date','projects without a due date','home events','school notes','work notes','notes today','projects next month'])assert.throws(()=>parse(text));assert.deepEqual(parse('all events').fields,fields({type:'event',section:'Calendar'}));
@@ -68,4 +68,21 @@ test('specific course and program phrases require authorized School reads',()=>{
  assert.deepEqual(parse('find School programs about "work"',opts).fields,fields({query:'work',type:'school-program',section:'School'}));
  for(const phrase of ['School courses due tomorrow','open programs','home courses','programs without a due date'])assert.throws(()=>parse(phrase,opts));
  for(const phrase of ['courses','school courses','school programs','programs'])assert.throws(()=>parse(phrase));
+});
+
+test('one-sided dates compile strict and inclusive cutoffs to fixed civil days',()=>{
+ for(const [phrase,bounds] of [
+  ['open work tasks about payroll due by tomorrow',{dateTo:'2026-11-18'}],
+  ['events about "on or after" on or after today',{dateFrom:'2026-11-17'}],
+  ['tasks about payroll on or before yesterday',{dateTo:'2026-11-16'}],
+  ['events before 2028-03-01',{dateTo:'2028-02-29'}],
+  ['tasks after 2026-12-31',{dateFrom:'2027-01-01'}]
+ ]){
+  const parsed=parse(phrase).fields;
+  assert.equal(parsed.dateFrom,bounds.dateFrom??'');
+  assert.equal(parsed.dateTo,bounds.dateTo??'');
+ }
+ assert.equal(parse('tasks about "by tomorrow"').fields.query,'by tomorrow');
+ for(const phrase of ['tasks before 2000-01-01','tasks after 2100-12-31','events by 2026-02-29','notes by tomorrow','overdue tasks after yesterday','tasks after yesterday before tomorrow','tasks by tomorrow without a due date'])assert.throws(()=>parse(phrase));
+ assert.throws(()=>parse('tasks due by today',{allowDates:false}));
 });

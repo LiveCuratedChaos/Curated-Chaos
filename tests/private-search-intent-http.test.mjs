@@ -52,3 +52,20 @@ test('interpreted date ranges include overlapping saved events and exclude event
  assert.equal(result.status,200);assert.equal(result.data.dateFrom,'2026-11-17');assert.equal(result.data.dateTo,'2026-11-18');
  assert.deepEqual(result.data.results.map(match=>match.title).sort(),[multi.payload.title,row(12).payload.title].sort());
 });
+
+test('deadline searches exclude undated tasks and use inclusive event overlap at the lower bound',async t=>{
+ const s=await setup(t);
+ s.state.rows=[
+  task(1,'Deadline today'),task(2,'Tomorrow',{day:'2026-11-18'}),task(3,'No deadline',{day:null}),
+  task(4,'Completed today',{done:true})
+ ];
+ const byToday=await s.call('search',compile('open work tasks due by today'));
+ assert.equal(byToday.status,200);
+ assert.deepEqual(byToday.data.results.map(item=>item.title),['Deadline today']);
+ const spans=row(5);Object.assign(spans.payload,{day:'2026-11-16',end_day:'2026-11-18',end_time:'10:00'});
+ s.state.rows=[row(6),spans];
+ const afterToday=await s.call('search',compile('events after today'));
+ assert.equal(afterToday.status,200);
+ assert.deepEqual(afterToday.data.results.map(item=>item.title),[spans.payload.title]);
+ assert.equal(s.state.writes,0);
+});

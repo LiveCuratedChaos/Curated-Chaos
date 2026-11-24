@@ -9,7 +9,10 @@ const format=value=>new Date(value).toISOString().slice(0,10);
 const singleDay='(?:today|tomorrow|yesterday|\\d{4}-\\d{2}-\\d{2})';
 const intervalPhrase='(?:between\\s+'+singleDay+'\\s+and\\s+'+singleDay+'|from\\s+'+singleDay+'\\s+(?:through|to)\\s+'+singleDay+')';
 const intervalPattern=new RegExp('^'+intervalPhrase+'$','i');
-const datePhrase='(?:'+singleDay+'|this\\s+week|next\\s+week|this\\s+month|next\\s+month|'+intervalPhrase+')';
+const boundOperator='(?:on\\s+or\\s+before|on\\s+or\\s+after|before|after|by)';
+const boundPhrase=boundOperator+'\\s+'+singleDay;
+const boundPattern=new RegExp('^('+boundOperator+')\\s+('+singleDay+')$','i');
+const datePhrase='(?:'+singleDay+'|this\\s+week|next\\s+week|this\\s+month|next\\s+month|'+intervalPhrase+'|'+boundPhrase+')';
 const completeDate=new RegExp('^(?:(?:due|on)\\s+)?('+datePhrase+')$','i');
 const trailingDate=new RegExp('(?:^|\\s)(?:(due|on)\\s+)?('+datePhrase+')$','i');
 // Reserved filter language in an unquoted title would have two meanings. A
@@ -17,6 +20,16 @@ const trailingDate=new RegExp('(?:^|\\s)(?:(due|on)\\s+)?('+datePhrase+')$','i')
 const reserved=/\b(?:show|find|open|completed|all|overdue|home|personal\s+life|work|school|low|normal|high|urgent|priority|tasks?|events?|notes?|projects?|today|tomorrow|yesterday|this|next|last|days?|weeks?|months?|years?|date|dated|due|on|by|before|after|between|until|since|in|without|not|except|excluding|but|and|or|active|done|finished|unfinished|sunday|monday|tuesday|wednesday|thursday|friday|saturday|january|february|march|april|may|june|july|august|september|october|november|december)\b/i;
 function dates(phrase,anchor,weekStart){
  const normalized=phrase.toLowerCase().replace(/\s+/g,' '),timestamp=Date.parse(anchor+'T00:00:00Z');let from,to;
+ const bound=normalized.match(boundPattern);
+ if(bound){
+  const [,operator,endpoint]=bound;
+  const cutoff=dates(endpoint,anchor,weekStart).dateFrom;
+  const offset=operator==='before'?-1:operator==='after'?1:0;
+  const boundary=format(Date.parse(cutoff+'T00:00:00Z')+offset*millisecondsPerDay);
+  if(!day(boundary))fail();
+  const lower=operator==='after'||operator==='on or after';
+  return {dateFrom:lower?boundary:'',dateTo:lower?'':boundary};
+ }
  if(intervalPattern.test(normalized)){
   const [,first,,last]=normalized.split(' ');
   const from=dates(first,anchor,weekStart).dateFrom,to=dates(last,anchor,weekStart).dateTo;
@@ -66,7 +79,7 @@ export function parsePrivateSearchIntent(text,options={}){
    else{
     const complete=remaining.match(completeDate),trailing=remaining.match(trailingDate);
     if(complete){dateCondition=complete[1];titleText='';}
-    else if(trailing){if(!trailing[1]&&!intervalPattern.test(trailing[2]))fail();dateCondition=trailing[2];titleText=remaining.slice(0,trailing.index).trim();}
+    else if(trailing){if(!trailing[1]&&!intervalPattern.test(trailing[2])&&!boundPattern.test(trailing[2]))fail();dateCondition=trailing[2];titleText=remaining.slice(0,trailing.index).trim();}
    }
    if(titleText){titleText=titleText.replace(/^about\b\s*/i,'');if(!titleText.trim()||reserved.test(titleText)||/\d{1,4}[-/]\d{1,2}/.test(titleText))fail();fields.query=titleText.trim();}
   }
