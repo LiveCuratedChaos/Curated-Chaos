@@ -65,3 +65,21 @@ test('signed-in Finance reviews the brokerage selection, hides amounts on reopen
  assert.deepEqual(await disconnected.source.open('tab',actor,now+300000),{connected:false});
  assert.throws(()=>validatePrivatePreviewArguments(['--start-private-session-preview','--fictional-brokerage-holdings']));
 });
+
+test('an expired investment selection hides financial metadata and cannot start a stale read',async t=>{
+ let now=100,reads=0;
+ const choice='c'.repeat(43),panel=createBrokeragePanel({clock:()=>now,client:{
+  brokerageOpen:async()=>({connected:true,institution:'Fictional Brokerage',expiresAt:10000,accounts:[{choice,name:'Fictional account'}]}),
+  brokerageRead:async()=>{reads++;throw Error();}
+ }});
+ t.after(()=>panel.reset());
+ const click=action=>panel.click({target:{closest:()=>({dataset:{brokerageAction:action}})}});
+ click('open');await new Promise(resolve=>setImmediate(resolve));
+ assert.match(panel.render(),/Fictional account/);
+ panel.input({type:'change',target:{checked:true,dataset:{brokerageAccount:choice}}});
+ now=10000;
+ assert.doesNotMatch(panel.render(),/Fictional account|Fictional Brokerage/);
+ assert.match(panel.render(),/investment view expired/);
+ click('read');
+ assert.equal(reads,0);
+});

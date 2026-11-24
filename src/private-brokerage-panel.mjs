@@ -17,6 +17,12 @@ const money=(value,currency,price=false)=>value===null?'Unavailable':new Intl.Nu
 export function createBrokeragePanel({client,clock=Date.now,canOpen=()=>true,onChange=()=>{}}){
  let seq=0,view,offer,link,selected,result,busy,shown,status,timer;
  function reset(){seq++;clearTimeout(timer);view=offer=link=result=null;selected=new Set();busy=shown=false;status='';}reset();
+ function expire(){
+  const deadline=link?.expiresAt??view?.expiresAt??Infinity;
+  if(deadline>clock())return false;
+  const message=link?'Authorization expired. Reopen linked investment accounts.':messages['session-ended'];
+  reset();status=message;return true;
+ }
  function validExpiry(v){return Number.isFinite(v)&&v>clock()&&v<=clock()+300000;}
  async function open(){
   reset();const n=seq;busy=true;onChange();
@@ -66,6 +72,7 @@ export function createBrokeragePanel({client,clock=Date.now,canOpen=()=>true,onC
   finally{if(n===seq){busy=false;onChange();}}
  }
  function render(){
+  expire();
   let html='<h2>Connected investments</h2>'+(status?'<p role="status">'+e(status)+'</p>':'');
   if(busy)html+='<p role="status">Checking the brokerage connection…</p>';
   if(link)return html+'<p>Choose the investment accounts to share at '+e(offer)+'. Then return here to check authorization.</p>'+
@@ -94,11 +101,13 @@ export function createBrokeragePanel({client,clock=Date.now,canOpen=()=>true,onC
  return {render,reset,input(event){
   const choice=event.target.dataset?.brokerageAccount;
   if(!choice)return false;
+  if(expire()){onChange();return true;}
   if(event.type==='input'||!view||result||busy||!view.accounts.some(a=>a.choice===choice))return true;
   if(event.target.checked)selected.add(choice);else selected.delete(choice);onChange();return true;
  },click(event){
   const action=event.target.closest('[data-brokerage-action]')?.dataset?.brokerageAction;
   if(!action)return false;
+  if(expire())onChange();
   if(busy||!canOpen())return true;
   if(action==='open')void open();
   else if(action==='begin'&&offer&&!link)void authorize(false);
