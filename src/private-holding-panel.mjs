@@ -109,7 +109,7 @@ export function createHoldingPanel({client,clock=Date.now,canOpen=()=>true,onCha
   }else body=view.holdings.map(h=>button('select-'+h.holdingToken,h.label)).join('')+button('add','Add holding')+button('close','Close holdings');
   return heading+'<fieldset '+(busy?'disabled':'')+'>'+body+'</fieldset>';
  }
- return {render,reset,blocked:()=>Boolean(draft||review||busy),input(event){
+ return {render,reset,blocked:()=>busy||fresh()&&Boolean(draft||review),input(event){
   const el=event.target;if(el.form?.id!=='holding-edit')return false;
   if(draft&&!busy&&!review&&Object.hasOwn(draft,el.name)&&!['index','type'].includes(el.name)){draft[el.name]=el.value;if(el.name==='kind')onChange();}
   return true;

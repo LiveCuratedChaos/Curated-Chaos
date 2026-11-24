@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R34** Expired manual holding drafts no longer block Finance navigation in a resumed tab. The expired form stays hidden, and reopening starts a fresh read. All 331 holding, budget planner, widget and Finance privacy checks passed. Real brokerage and physical-device acceptance remain pending.
+
 - **R32 / R33** Expired budget and bill drafts no longer block reopening Finance controls before their timers run. A current draft or in-flight request still holds its guard. All 342 related checks passed.
 
 - **R32** The budget period chooser now works immediately after the previous budget or directory expires, even if a background timer is delayed. It preserves the visible date controls and clears old amounts, drafts and approvals. All 343 related checks passed.

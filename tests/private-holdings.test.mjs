@@ -49,3 +49,26 @@ test('signed-in holdings support reviewed manual price, purchase, dividend, rein
  assert.equal((await(await a.fetcher('/dev-config.json')).json()).privateManualHoldings,true);
  assert.equal(validatePrivatePreviewArguments(['--fixtures-only','--serve-private-dashboard','--allow-private-brief-read','--allow-private-manual-finance-reviewed','--allow-private-manual-holdings-reviewed']).allowHoldings,true);
 });
+
+test('an expired holding draft releases navigation without exposing or saving the draft',async t=>{
+ const {createHoldingPanel}=await import('../src/private-holding-panel.mjs');
+ let now=Date.parse('2026-11-18T12:00:00Z'),reads=0;
+ const panel=createHoldingPanel({client:{manualHoldingList:async()=>{reads++;return {holdings:[],expiresAt:now+1000};}},
+  clock:()=>now,canOpen:()=>!panel.blocked()});
+ t.after(()=>panel.reset());
+ const click=async holdingAction=>{
+  panel.click({target:{closest:()=>({dataset:{holdingAction}})}});
+  await new Promise(resolve=>setImmediate(resolve));
+ };
+ await click('load');
+ await click('add');
+ panel.input({target:{name:'label',value:'Fictional private holding draft',form:{id:'holding-edit'}}});
+ assert.equal(panel.blocked(),true);
+ assert.match(panel.render(),/Fictional private holding draft/);
+ now+=1001;
+ assert.equal(panel.blocked(),false);
+ assert.doesNotMatch(panel.render(),/Fictional private holding draft/);
+ await click('load');
+ assert.equal(reads,2);
+ assert.match(panel.render(),/Add holding/);
+});
