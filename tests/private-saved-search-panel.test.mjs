@@ -114,3 +114,51 @@ test('an earlier shortcut name enters the current rename draft and every write r
   x.click('#private-saved-search-approve');await turn();assert.equal(x.s.writes,1);assert.equal(x.s.row.name,expected);assert.deepEqual(x.s.runs,[]);
  }
 });
+
+test('a confirmed removal offers a single Undo that opens the ordinary restore review',async t=>{
+ const x=setup(t),originalSave=x.client.saveSavedSearch;
+ x.client.saveSavedSearch=async(id,options)=>{
+  const result=await originalSave(id);
+  if(result.action!=='remove')return result;
+  assert.equal(options.offerUndo,true);
+  return {...result,undo:{savedSearchToken:'U'.repeat(43),expiresAt:x.s.clock+10000}};
+ };
+ await x.create();await x.show();x.button('remove');await turn();
+ x.click('#private-saved-search-approve');await turn();
+ assert.match(x.panel.render(),/Undo shortcut removal/);
+ x.click('#private-saved-search-undo');x.click('#private-saved-search-undo');await turn();
+ assert.equal(x.s.review.savedSearchToken,'U'.repeat(43));
+ assert.equal(x.s.row.removed,true);assert.equal(x.s.reviews,3);
+ assert.match(x.panel.render(),/Approve shortcut restoration/);
+ x.click('#private-saved-search-approve');await turn();
+ assert.equal(x.s.row.removed,false);
+ assert.doesNotMatch(x.panel.render(),/Undo shortcut removal/);
+});
+
+test('expired, invalid and unconfirmed shortcut removal offers never start a restore',async t=>{
+ for(const when of ['expired','suspended-review','invalid','lost','offline','reset']){
+  const x=setup(t),saved=x.client.saveSavedSearch,end=x.s.clock+10000;
+  x.client.saveSavedSearch=async id=>{
+   const result=await saved(id);if(result.action!=='remove')return result;
+   if(when==='lost')throw Error('Lost response');
+   return {...result,undo:{savedSearchToken:when==='invalid'?'invalid':'U'.repeat(43),expiresAt:end}};
+  };
+  await x.create();await x.show();x.button('remove');await turn();
+  x.click('#private-saved-search-approve');await turn();
+  if(when==='suspended-review'){
+   x.click('#private-saved-search-undo');await turn();
+   assert.match(x.panel.render(),/Approve shortcut restoration/);
+   x.s.clock=end;x.click('#private-saved-search-approve');
+  }else{
+   if(when==='expired')x.s.clock=end;
+   if(when==='offline')x.panel.offline();
+   if(when==='reset')x.panel.reset();
+   x.click('#private-saved-search-undo');
+  }
+  await turn();
+  assert.equal(x.s.row.removed,true);
+  assert.equal(x.s.writes,2);
+  assert.equal(x.s.reviews,when==='suspended-review'?3:2);
+  assert.doesNotMatch(x.panel.render(),/Undo shortcut removal|Approve shortcut restoration/);
+ }
+});

@@ -88,7 +88,8 @@ export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUI
   else{r.authorized=same(await get(actor,r.record.id),r.record);}
   r.authorized=Boolean(r.authorized&&alive(s)&&s.review===r);return r.authorized;
  }
- async function save({state:s,review:r},actor){
+ async function save({state:s,review:r},actor,{offerUndo=false}={}){
+  if(typeof offerUndo!=='boolean'||offerUndo&&r.action!=='remove')throw Error('Undo requires a reviewed removal.');
   if(!alive(s)||s.review!==r||!r.claimed||!r.authorized||r.started||actor.ownerId!==s.ownerId)throw Error('Saved-search review ended.');if(r.action!=='create')eligible(r.record);r.started=true;r.authorized=false;
   let rows,deletedAt=r.record.deleted_at??null;
   if(r.action==='create')rows=await api.addPrivateSavedSearch(actor.accessToken,structuredClone(r.record));
@@ -96,7 +97,14 @@ export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUI
   else{deletedAt=r.action==='remove'?new Date(now()).toISOString():null;rows=await api.setPrivateSavedSearchDeletedAt(actor.accessToken,r.record,actor.ownerId,deletedAt);}
   if(!Array.isArray(rows)||rows.length!==1)throw Error('Saved-search acknowledgement unverified.');const ack=privateSavedSearchState(rows[0],actor.ownerId);
   if(ack.id!==r.record.id||!equal(ack.payload,r.payload)||!sameStamp(ack.deleted_at,deletedAt)||(r.action==='create'?ack.version!==1:ack.version!==r.record.version+1||stamp(ack.created_at)!==stamp(r.record.created_at)))throw Error('Saved-search acknowledgement unverified.');
-  const latest=await get(actor,r.record.id);if(!alive(s)||s.review!==r||!same(ack,latest))throw Error('Saved-search reread unverified.');clear(s.contextId);return{saved:true,action:r.action};
+  const latest=await get(actor,r.record.id);if(!alive(s)||s.review!==r||!same(ack,latest))throw Error('Saved-search reread unverified.');
+  if(offerUndo){
+   const selection=begin(s.contextId,s.ownerId,s.expiresAt);
+   const savedSearchToken=token();
+   selection.actions.set(savedSearchToken,latest);
+   return {saved:true,action:'remove',undo:{savedSearchToken,expiresAt:selection.expiresAt}};
+  }
+  clear(s.contextId);return{saved:true,action:r.action};
  }
  return{...(history?{
   listVersions:(id,actor,key,offset)=>history.list(id,actor,key,contexts.get(id)?.expiresAt,{offset}),

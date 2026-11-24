@@ -3,7 +3,7 @@
   "timezone": "America/New_York",
   "command": "npm run check:offline",
   "latestAttempt": {
-    "date": "2026-11-23",
+    "date": "2026-11-24",
     "platform": "darwin",
     "node": "24.22.3",
     "command": "CC_TEST_HTTP_TRANSPORT=handler npm run check:offline",
@@ -11,8 +11,8 @@
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3530,
-        "passed": 3506,
+        "total": 3543,
+        "passed": 3519,
         "failed": 24,
         "cancelled": 0,
         "skipped": 0
@@ -35,7 +35,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "Full gate through named shortcut history capture and encrypted recovery. All 24 failures are classified listener denials. The additional failure seen in the earlier Undo run did not recur."
+    "note": "Full gate through named-shortcut Undo and both corrected School scope checks. All 24 failures require a loopback listener."
   },
   "result": {
     "platformExclusions": [],
@@ -873,6 +873,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "namedShortcutRemovalUndo": {
+      "date": "2026-11-24",
+      "scope": "Confirmed removal offers an expiring same-tab selection for a separate restore review. Duplicate names, subsequent deletion, delayed click, loss of acknowledgment and concealment are covered.",
+      "focusedTestsPassed": 29,
+      "schoolScopeTestsPassed": 22
     },
     "oneSidedSearchDates": {
       "date": "2026-11-24",

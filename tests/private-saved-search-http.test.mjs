@@ -109,3 +109,44 @@ test('explicit shortcut history uses the selected saved source and one-use versi
  const off=privateWorkspaceFixture(t,{...features,allowSavedSearches:true}).tab();await off.login();
  await assert.rejects(off.client.shortcutHistoryList({savedSearchToken:current.savedSearchToken,offset:0}));
 });
+
+test('Undo reviews the exact removed shortcut across duplicate names and a later removal replaces the old revision',async t=>{
+ const {privateWorkspaceFixture}=await import('./support/private-workspace-fixture.mjs');
+ const fixture=privateWorkspaceFixture(t,{...features,allowSavedSearches:true});
+ const a=fixture.tab(),b=fixture.tab();await a.login();await b.login();
+ const original={...filters,query:'original'},other={...filters,query:'another'};
+ async function createNamed(fields){
+  const result=await a.client.search(fields);
+  const review=await a.client.reviewSavedSearch({action:'create',name:'Work plan',saveSearchToken:result.saveSearchToken});
+  await a.client.saveSavedSearch(review.reviewId);
+ }
+ const list=(tab,removed=false)=>tab.client.savedSearches({removed,offset:0});
+ const propose=(tab,action,savedSearchToken)=>tab.client.reviewSavedSearch({action,savedSearchToken});
+ async function removeOriginal(tab){
+  const current=(await list(tab)).records.find(row=>row.filters.query==='original');
+  const review=await propose(tab,'remove',current.savedSearchToken);
+  const ack=await tab.client.saveSavedSearch(review.reviewId,{offerUndo:true});
+  assert.deepEqual(Object.keys(ack.undo).sort(),['expiresAt','savedSearchToken']);
+  assert.ok(ack.undo.expiresAt<=review.expiresAt);
+  return ack.undo.savedSearchToken;
+ }
+ await createNamed(original);await createNamed(other);
+ const first=await removeOriginal(a);
+ await assert.rejects(propose(b,'restore',first));
+ let selected=await propose(a,'restore',first);
+ assert.equal(selected.name,'Work plan');assert.deepEqual(selected.filters,original);
+ assert.deepEqual((await list(b)).records.map(row=>row.filters),[other]);
+ await a.client.saveSavedSearch(selected.reviewId);
+ await assert.rejects(a.client.saveSavedSearch(selected.reviewId));
+ assert.equal((await list(b)).matchCount,2);
+
+ const earlier=await removeOriginal(a);
+ const removed=(await list(b,true)).records[0];
+ selected=await propose(b,'restore',removed.savedSearchToken);
+ await b.client.saveSavedSearch(selected.reviewId);
+ const newer=await removeOriginal(b);
+ await assert.rejects(propose(a,'restore',earlier));
+ selected=await propose(b,'restore',newer);
+ await b.client.saveSavedSearch(selected.reviewId);
+ assert.equal((await list(a,true)).matchCount,0);
+});

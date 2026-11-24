@@ -59,9 +59,21 @@ test('School search issues at most the displayed fifty capabilities and invalida
 test('an older slow search cannot invalidate a newer displayed School capability',async t=>{
  const s=await setup(t),read=s.api.listPrivateSchoolSummaries;let release,first=true;s.api.listPrivateSchoolSummaries=(...args)=>{if(first){first=false;return new Promise(resolve=>release=async()=>resolve(await read(...args)));}return read(...args);};const old=s.list({query:'First course'});while(!release)await new Promise(resolve=>setImmediate(resolve));const newer=await s.list({query:'Second course'});assert.equal(newer.status,200);const token=newer.data.results[0].schoolReadToken;await release();const stale=await old;assert.equal(stale.status,409);const details=await s.read(token);assert.equal(details.status,200);assert.equal(details.data.title,'Second course');
 });
-test('saved School shortcut cannot be loaded or run when School source scope is disabled',async t=>{
+test('disabled School scope omits named shortcuts and refuses previously issued selections',async t=>{
  for(const type of ['school','school-course','school-program']){
- const s=await setup(t,{school:false,saved:true});s.state.savedRows=[{id:id(300),owner_id:owner,household_id:null,visibility:'private',section:'Personal Life',item_type:'saved_search',origin:'PRIVATE_COOKIE_SAVED_SEARCH',version:1,created_at:stamp,updated_at:stamp,deleted_at:null,payload:{fictional:true,source:'PRIVATE_SAVED_SEARCH_V1',schemaVersion:1,title:'Fictional School shortcut',filters:{query:'course',type,section:'School',status:'all',priority:'all',dateFrom:'',dateTo:'',dateStatus:'all'}}}];const list=await s.call('saved-searches/list',{});assert.equal(list.status,200);assert.equal(list.data.records.length,1);const denied=await s.call('saved-searches/load',{savedSearchToken:list.data.records[0].savedSearchToken});assert.equal(denied.status,409);assert.equal((await s.call('search',s.state.savedRows[0].payload.filters)).status,409);assert.equal(s.state.reads,0);assert.equal(s.state.selected,0);assert.equal(s.state.writes,0);
+  const on=await setup(t,{school:true,saved:true}),off=await setup(t,{school:false,saved:true});
+  const filters={query:'course',type,section:'School',status:'all',priority:'all',dateFrom:'',dateTo:'',dateStatus:'all'};
+  const row={id:id(300),owner_id:owner,household_id:null,visibility:'private',section:'Personal Life',item_type:'saved_search',origin:'PRIVATE_COOKIE_SAVED_SEARCH',version:1,created_at:stamp,updated_at:stamp,deleted_at:null,payload:{fictional:true,source:'PRIVATE_SAVED_SEARCH_V1',schemaVersion:1,title:'Fictional School shortcut',filters}};
+  on.state.savedRows=[row];off.state.savedRows=[structuredClone(row)];
+  const visible=await on.call('saved-searches/list',{});
+  assert.equal(visible.status,200);assert.equal(visible.data.matchCount,1);
+  const savedSearchToken=visible.data.records[0].savedSearchToken;
+  assert.deepEqual((await on.call('saved-searches/load',{savedSearchToken})).data.filters,filters);
+  const hidden=await off.call('saved-searches/list',{});
+  assert.equal(hidden.status,200);assert.equal(hidden.data.matchCount,0);assert.deepEqual(hidden.data.records,[]);
+  assert.equal((await off.call('saved-searches/load',{savedSearchToken})).status,409);
+  assert.equal((await off.call('search',filters)).status,409);
+  assert.equal(off.state.reads,0);assert.equal(off.state.selected,0);assert.equal(off.state.writes,0);
  }
 });
 test('a Brief refresh supersedes pending School search before new capabilities are issued',async t=>{

@@ -158,6 +158,14 @@ test('saved task shortcuts retain create rename remove restore and run workflows
  await page.getByRole('button',{name:'Saved searches',exact:true}).click();
  await expect(shortcuts.getByText('Fictional renamed shortcut',{exact:true})).toBeVisible();
  await page.locator('[aria-labelledby="private-saved-searches-title"]').getByRole('button',{name:'Review removal',exact:true}).click();await page.getByRole('button',{name:'Approve shortcut removal',exact:true}).click();
+ await page.getByRole('button',{name:'Undo shortcut removal',exact:true}).click();
+ const restore=page.locator('[aria-labelledby="private-saved-search-review-title"]');
+ await expect(restore).toContainText('Fictional renamed shortcut');
+ await restore.getByRole('button',{name:'Approve shortcut restoration',exact:true}).click();
+ await page.getByRole('button',{name:'Saved searches',exact:true}).click();
+ await expect(shortcuts.getByText('Fictional renamed shortcut',{exact:true})).toBeVisible();
+ await shortcuts.getByRole('button',{name:'Review removal',exact:true}).click();
+ await page.getByRole('button',{name:'Approve shortcut removal',exact:true}).click();
  await page.getByRole('button',{name:'Saved searches',exact:true}).click();await page.getByRole('button',{name:'Removed saved searches',exact:true}).click();await page.getByRole('button',{name:'Review restoration',exact:true}).click();await page.getByRole('button',{name:'Approve shortcut restoration',exact:true}).click();await page.getByRole('button',{name:'Saved searches',exact:true}).click();await expect(page.getByText('Fictional renamed shortcut',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Run search',exact:true}).click();await expect(page.getByText('Fictional plan for today',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Name this search',exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
 test('universal project search keeps details on demand and clears them on empty search and sign-out',async({page})=>{

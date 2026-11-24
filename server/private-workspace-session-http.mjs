@@ -781,7 +781,7 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
    if(c.recordChanging||c.taskSaving||c.noteSaving||c.taskCreating||c.eventCreating||c.taskEditing||c.eventEditing||c.noteCreating||c.saving){send(res,409,{error:'A saved change is still being checked.'});return true;}
    const n=c.sequence;let attempted=false,marker=null;
    try{
-    const action=path.split('/').at(-1),keys={'history-list':['savedSearchToken','offset'],'history-read':['historyReadToken'],'work-lists':['offset','expiresAt'],list:['removed','offset'],load:['savedSearchToken'],review:['action','name','saveSearchToken','savedSearchToken'],save:['reviewId','approved'],cancel:[]},values=await body(req,keys[action]);
+    const action=path.split('/').at(-1),keys={'history-list':['savedSearchToken','offset'],'history-read':['historyReadToken'],'work-lists':['offset','expiresAt'],list:['removed','offset'],load:['savedSearchToken'],review:['action','name','saveSearchToken','savedSearchToken'],save:['reviewId','approved','offerUndo'],cancel:[]},values=await body(req,keys[action]);
     if(!live(c)||c.sequence!==n||c.recordChanging)throw Error();
     if(action==='history-list'||action==='history-read'){
      const result=await sessions.readWithAccess(c.sessionId,actor=>action==='history-list'?savedSearches.listVersions(c.id,actor,values.savedSearchToken,values.offset??0):savedSearches.readVersion(c.id,actor,values.historyReadToken));
@@ -790,8 +790,17 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
     }
     if(action==='cancel'){savedSearches.clear(c.id);send(res,200,{cancelled:true});return true;}
     if(action==='save'){
-     if(values.approved!==true||Object.keys(values).length!==2)throw Error();c.recordChanging=marker={};let claim;
-     const result=await sessions.writeWithAccess(c.sessionId,async actor=>{if(!live(c)||c.sequence!==n)return false;claim=savedSearches.claim(c.id,actor.ownerId,values.reviewId);return savedSearches.authorize(claim,actor);},async actor=>{if(!live(c)||c.sequence!==n)throw Error();attempted=true;return savedSearches.save(claim,actor);});
+     if(values.approved!==true||!Object.hasOwn(values,'reviewId')||Object.hasOwn(values,'offerUndo')&&typeof values.offerUndo!=='boolean')throw Error();
+     c.recordChanging=marker={};let claim;
+     const result=await sessions.writeWithAccess(c.sessionId,async actor=>{
+      if(!live(c)||c.sequence!==n)return false;
+      claim=savedSearches.claim(c.id,actor.ownerId,values.reviewId);
+      if(values.offerUndo&&claim.review.action!=='remove')return false;
+      return savedSearches.authorize(claim,actor);
+     },async actor=>{
+      if(!live(c)||c.sequence!==n)throw Error();
+      attempted=true;return savedSearches.save(claim,actor,{offerUndo:values.offerUndo});
+     });
      if(!live(c)||c.sequence!==n)throw Error();send(res,200,result);return true;
     }
     const result=await sessions.readWithAccess(c.sessionId,actor=>action==='work-lists'?workTaskLists.list(c.id,actor,c.expiresAt,values):action==='list'?savedSearches.list(c.id,actor,c.expiresAt,values):action==='load'?savedSearches.load(c.id,actor,values.savedSearchToken):savedSearches.prepare(c.id,actor,values));

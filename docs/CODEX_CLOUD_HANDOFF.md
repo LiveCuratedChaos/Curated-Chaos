@@ -4,10 +4,12 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 search and recovery
 
+- **R12 / R13** added Undo for a confirmed saved-search removal. It selects the exact removed revision in the same tab and opens an ordinary restore review. A newer removal, a lost acknowledgment or an expired selection cannot be used. All 29 panel and HTTP checks passed.
+- **R01 / R13** corrected two stale School tests. With School access disabled, active and removed shortcut counts omit School shortcuts, and an earlier selection cannot run. All 22 School search checks passed.
+
 - **R13** supports “open Work tasks due by tomorrow” and other one-sided task and event searches. The preview shows an exact cutoff. A named shortcut retains that date when reopened later. All 28 interpretation and protected search checks and 11 signed-in shortcut checks passed.
 
-
-A signed-in owner reopened the original shortcut after an encrypted restore, read its earlier name, filters, capture time and recovery time, and used the ordinary approval to rename it. The restored archive had started at revision 8. The rename created one native history entry and preserved all three imported entries. Replaying the old archive offered no write. All 92 related service, history and recovery tests passed on Node 24.22.3.
+- **R03 / R12** A signed-in owner reopened the original shortcut after an encrypted restore, read its earlier name, filters, capture time and recovery time, and used the ordinary approval to rename it. The restored archive had started at revision 8. The rename created one native history entry and preserved all three imported entries. Replaying the old archive offered no write. All 92 related service, history and recovery tests passed on Node 24.22.3.
 
 ## Completed November 23
 
@@ -65,14 +67,14 @@ A signed-in owner reopened the original shortcut after an encrypted restore, rea
 
 ## Verification and blockers
 
-The latest full macOS check through named-shortcut history passed 3,506 of 3,530 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Sixteen failures directly reported denied local listeners and eight assertions received the same denial. There were zero unclassified failures. Privacy, whitespace and launcher checks passed. The earlier 3,502/3,527 run through Undo had one additional failure that did not recur in a two-group diagnostic or this full run.
+The November 24 full macOS check passed 3,519 of 3,543 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Of the 24 listener-related failures, 16 directly reported a binding denial and eight received the same denial inside an assertion. Privacy, whitespace and launcher checks passed. Two obsolete School shortcut expectations had failed on the first run and passed after correction.
 
 Playwright 1.65.1 discovered 238 cases. Eighteen selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, selective earlier note text, Undo removal and named shortcut history. All local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12 with Undo for a confirmed named-shortcut removal, using the existing reviewed restoration.
+2. Continue R16/R17 with paid and unpaid bill counts in the detailed Brief week, using the configured date range and original daily schedule.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
