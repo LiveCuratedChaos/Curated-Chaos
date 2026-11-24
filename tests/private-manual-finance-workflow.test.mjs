@@ -89,3 +89,27 @@ test('concurrent manual-account creation cannot reserve different identities for
  assert.equal((await b.client.manualAccountsList()).accounts.length,100);
  await assert.rejects(b.client.manualAccountsReview({account}));
 });
+
+test('expired manual-account views discard drafts and pending approvals before the timer fires',async t=>{
+ let now=1, resolveReview;
+ const client={
+  manualAccountsList:async()=>({accounts:[],expiresAt:now+300000,limit:100}),
+  manualAccountsReview:()=>new Promise(resolve=>{resolveReview=resolve;}),
+  manualAccountsSave:async()=>assert.fail('Expired accounts must not be saved'),
+ };
+ const panel=createManualFinancePanel({client,clock:()=>now});
+ t.after(()=>panel.reset());
+ const click=action=>panel.click({target:{closest:()=>({dataset:{manualAccount:action}})}});
+ click('load');await turn();click('add');
+ for(const [name,value] of [['label','Fictional account'],['balance','20']]){
+  panel.input({target:{form:{id:'manual-account-edit'},name,value,type:'text'}});
+ }
+ panel.submit({target:{id:'manual-account-edit'},preventDefault(){}});
+ now=300001;
+ assert.equal(panel.blocked(),false);
+ click('load');await turn();
+ resolveReview({account,action:'create',expiresAt:300001,reviewId:'r'.repeat(43)});await turn();
+ click('save');
+ assert.match(panel.render(),/Add account/);
+ assert.doesNotMatch(panel.render(),/Review account|Fictional account/);
+});

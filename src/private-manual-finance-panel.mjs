@@ -27,9 +27,11 @@ export function createManualFinancePanel({client,clock=Date.now,onChange=()=>{},
  }
  function fresh(){return view && view.expiresAt>clock();}
  function redraw(){onChange();}
+ function expire(){reset();notice='Your account view expired. Open it again to continue.';}
+ function discardExpired(){if(view&&!fresh())expire();}
  function arm(){
   clearTimeout(timer);
-  timer=setTimeout(()=>{reset();notice='Your account view expired. Open it again to continue.';redraw();},Math.max(1,view.expiresAt-clock()));
+  timer=setTimeout(()=>{expire();redraw();},Math.max(1,view.expiresAt-clock()));
   timer.unref?.();
  }
  async function load(){
@@ -70,6 +72,7 @@ export function createManualFinancePanel({client,clock=Date.now,onChange=()=>{},
   try {
    const result=await client.manualAccountsSave(review.reviewId);
    if(run!==sequence)return;
+   if(!fresh()){expire();redraw();return;}
    if(result?.saved!==true || JSON.stringify(normalizeManualFinanceAccount(result.account))!==JSON.stringify(review.account))throw Error();
    await load();
   } catch {
@@ -78,6 +81,7 @@ export function createManualFinancePanel({client,clock=Date.now,onChange=()=>{},
   }
  }
  function render(){
+  discardExpired();
   const status='<p role="status">'+escape(busy?'Checking manual accounts…':notice)+'</p>';
   let html='<h2>Manual accounts</h2>';
   if(!fresh())return html+button('load','Open manual accounts',busy)+status;
@@ -102,18 +106,21 @@ export function createManualFinancePanel({client,clock=Date.now,onChange=()=>{},
    (a.showInAccountList?'':' · Hidden')+(shown?' · '+escape(savedAccountAmount(a.balanceMinor)):'')+' '+button('edit-'+accountToken,'Edit '+a.label)+'</li>').join('')+'</ul>':'<p>No accounts to display.</p>';
   return html+button('add','Add account',view.accounts.length>=100)+button('close','Close manual accounts');
  }
- return {render,reset,blocked:()=>Boolean(draft||busy),input(event){
+ return {render,reset,blocked(){discardExpired();return Boolean(draft||busy);},input(event){
   const el=event.target;
   if(el.form?.id!=='manual-account-edit')return false;
+  discardExpired();
   if(draft&&!busy&&!review && ['label','balance','type','includeInBudget','showInAccountList'].includes(el.name))
    draft[el.name]=el.type==='checkbox'?el.checked:el.value;
   return true;
  },submit(event){
   if(event.target.id!=='manual-account-edit')return false;
+  discardExpired();
   event.preventDefault();if(draft&&fresh()&&!review&&!busy)void prepare();return true;
  },click(event){
   const action=event.target.closest('[data-manual-account]')?.dataset.manualAccount;
   if(!action)return false;
+  discardExpired();
   if(busy)return true;
   if(action==='load'){if(canOpen())void load();return true;}
   if(!fresh())return true;
