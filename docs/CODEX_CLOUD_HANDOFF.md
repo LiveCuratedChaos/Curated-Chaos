@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R12** bounded School assessment and step restore approvals to their original removal times. The original course history still shows expired entries, with restoration unavailable. All 149 academic recovery and editing checks passed.
+
 - **R12 / R13** aligned removed saved searches with the inclusive 90-day deadline. An expiring shortcut on another page retires its old total and selections. A suspended panel drops an expired restore approval before it can send a write. All 61 related checks passed.
 
 - **R03 / R12** aligned Recently Deleted, widget selections and encrypted recovery on the inclusive 90-day boundary. Removed titles and counts expire with their earliest source. A selected widget action cannot extend its original deadline through approval. All 185 focused checks passed, including exact-anniversary encrypted restoration in isolated PostgreSQL.
@@ -39,7 +41,7 @@ Playwright 1.65.1 discovered 236 cases. Twelve selected desktop and phone-size c
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12 by bounding School assessment and step restore approvals to the original removal deadline. Expired snapshots must remain available in the approved history view. Verify both types and expiry during approval.
+2. Continue R12 by enforcing the same elapsed 90-day rule inside PostgreSQL for ordinary private tasks, notes, events, projects and saved shortcuts. Prepare and test a reversible database change with fictional records. Keep hosted installation pending.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

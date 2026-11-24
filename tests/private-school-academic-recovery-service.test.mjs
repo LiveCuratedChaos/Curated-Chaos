@@ -7,3 +7,17 @@ async function setup(t,{boundary=false}={}){const db=await createIsolatedDevelop
 test('complete reviewed step removal and restoration survives exact source acknowledgement under database guards',async t=>{const s=await setup(t),before=await s.get();let{edit,view}=await s.open(),r=await s.review(edit,view,{action:'remove-step',assessmentToken:view.assessments[0].assessmentToken,stepToken:view.assessments[0].tasks[0].stepToken}),claim=s.claim(r);assert.equal(await s.service.authorize(claim,who),true);assert.deepEqual(await s.service.save(claim,who),{saved:true});let current=await s.get();assert.equal(current.version,8);assert.deepEqual(current.payload.removedAcademicRecords[0].record,before.payload.assessments[0].tasks[0]);({edit,view}=await s.open());r=await s.review(edit,view,{action:'restore',recoveryToken:view.removed[0].recoveryToken});claim=s.claim(r);await s.service.authorize(claim,who);await s.service.save(claim,who);current=await s.get();assert.equal(current.version,9);assert.equal(current.created_at,before.created_at);assert.deepEqual(current.payload,{...before.payload,academicRecoveryVersion:1,removedAcademicRecords:[]});assert.equal(s.state.writes,2);await assert.rejects(s.service.save(claim,who));});
 test('restore timing is checked again after authorization immediately before any transport write',async t=>{const s=await setup(t,{boundary:true}),before=await s.get(),{edit,view}=await s.open(),r=await s.review(edit,view,{action:'restore',recoveryToken:view.removed[0].recoveryToken}),claim=s.claim(r);assert.equal(await s.service.authorize(claim,who),true);s.state.clock++;await assert.rejects(s.service.save(claim,who));assert.equal(s.state.writes,0);assert.deepEqual(await s.get(),before);});
 test('readiness drift after authorization and lost acknowledgement retain the existing inventory without automatic retry',async t=>{for(const mode of ['drift','lost-ack']){const s=await setup(t),{edit,view}=await s.open(),r=await s.review(edit,view,{action:'remove-assessment',assessmentToken:view.assessments[0].assessmentToken}),claim=s.claim(r),before=await s.get();await s.service.authorize(claim,who);if(mode==='drift')s.state.ready=false;else{const original=s.api.updatePrivateSchoolAcademicRecovery;s.api.updatePrivateSchoolAcademicRecovery=async(...args)=>{await original(...args);throw Error('Fictional lost acknowledgement');};}await assert.rejects(s.service.save(claim,who));await assert.rejects(s.service.save(claim,who));if(mode==='drift'){assert.equal(s.state.writes,0);assert.deepEqual(await s.get(),before);}else{assert.equal(s.state.writes,1);assert.equal((await s.get()).payload.removedAcademicRecords.length,1);}assert.throws(()=>s.claim(r));}});
+test('a step approval expires independently while its course history remains readable',async t=>{
+ const s=await setup(t,{boundary:true}),{edit,view}=await s.open();
+ const removed=view.removed[0],review=await s.review(edit,view,{action:'restore',recoveryToken:removed.recoveryToken});
+ assert.equal(review.expiresAt,s.state.clock+1);
+ assert.equal(s.service.current('context',review.reviewId),true);
+ s.state.clock++;
+ assert.equal(s.service.current('context',review.reviewId),false);
+ assert.throws(()=>s.claim(review));
+ const later=await s.service.readAcademicRecovery('context',who,{editToken:edit.editToken});
+ assert.equal(later.removed[0].title,removed.title);
+ assert.equal(later.removed[0].canRestore,false);
+ assert.equal(later.removed[0].blockedReason,'expired');
+ assert.equal(s.state.writes,0);
+});

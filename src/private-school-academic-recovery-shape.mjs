@@ -2,7 +2,7 @@
 import {ASSESSMENT_TYPES,SCHOOL_STATUSES} from './dev-school-model.mjs';
 const plain=v=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.getPrototypeOf(v)===Object.prototype,uuid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v),text=(v,n)=>typeof v==='string'&&v.trim().length>0&&v.length<=n&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(v),fail=()=>{throw Error('Saved academic recovery records could not be verified.');};
 export const SCHOOL_ACADEMIC_RECOVERY_LIMIT=100;
-export const SCHOOL_ACADEMIC_RECOVERY_DAYS=90;
+export {PRIVATE_RECOVERY_DAYS as SCHOOL_ACADEMIC_RECOVERY_DAYS} from './private-record-retention.mjs';
 export function schoolAcademicRecoveryEntries(payload,{summary=false}={}){
  if(!plain(payload)||typeof summary!=='boolean')fail();const marked=Object.hasOwn(payload,'academicRecoveryVersion'),stored=Object.hasOwn(payload,'removedAcademicRecords');
  if(!marked){if(stored)fail();return[];}

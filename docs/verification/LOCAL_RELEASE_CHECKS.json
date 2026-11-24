@@ -874,6 +874,12 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "schoolRecoveryDeadline": {
+      "passed": 149,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Assessment and step approval expiration, retained course history, embedded PostgreSQL and original School edit protections."
+    },
     "removedSavedSearchDeadline": {
       "passed": 61,
       "failed": 0,

@@ -1,3 +1,4 @@
+import {privateRecoveryDeadline} from './private-record-retention.mjs';
 import {verifySchoolAcademicView} from './private-school-academic-content.mjs';
 // Exact nested snapshots and one reviewed recovery operation; no pruning or record copies.
 import {schoolProgramProposal} from './private-school-records.mjs';
@@ -33,7 +34,12 @@ export function validateSchoolAcademicRecoveryProposal(before,after,{now=Date.no
 }
 export function verifySchoolAcademicRecoveryReview(v,{now=Date.now()}={}){
  clock(now);if(!exact(v,['reviewId','expiresAt','kind','recoveryChange'])||typeof v.reviewId!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(v.reviewId)||v.kind!=='course'||!Number.isFinite(v.expiresAt)||v.expiresAt<=now||v.expiresAt>now+300000)fail();const c=v.recoveryChange,keys={ 'remove-assessment':['action','title','assessmentPosition','stepCount','removedAt'],'remove-step':['action','title','assessmentTitle','assessmentPosition','stepPosition','removedAt'],'restore-assessment':['action','title','position','originalPosition','stepCount','removedAt'],'restore-step':['action','title','assessmentTitle','assessmentPosition','position','originalPosition','removedAt']};if(!plain(c)||!Object.hasOwn(keys,c.action)||!exact(c,keys[c.action]))fail();const step=c.action.endsWith('step'),text=(s,n)=>typeof s==='string'&&s.length<=n&&s.trim().length>0&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(s),pos=(n,max)=>Number.isInteger(n)&&n>=1&&n<=max;
- if(!text(c.title,step?160:120)||step&&!text(c.assessmentTitle,120)||Object.hasOwn(c,'assessmentPosition')&&!pos(c.assessmentPosition,25)||Object.hasOwn(c,'stepPosition')&&!pos(c.stepPosition,20)||Object.hasOwn(c,'position')&&!pos(c.position,step?20:25)||Object.hasOwn(c,'originalPosition')&&!pos(c.originalPosition,step?20:25)||Object.hasOwn(c,'stepCount')&&(!Number.isInteger(c.stepCount)||c.stepCount<0||c.stepCount>20))fail();if(Object.hasOwn(c,'originalPosition')&&c.position>c.originalPosition)fail();const age=now-stamp(c.removedAt);if(age<0||age>(c.action.startsWith('remove-')?300000:retention))fail();return v;
+ if(!text(c.title,step?160:120)||step&&!text(c.assessmentTitle,120)||Object.hasOwn(c,'assessmentPosition')&&!pos(c.assessmentPosition,25)||Object.hasOwn(c,'stepPosition')&&!pos(c.stepPosition,20)||Object.hasOwn(c,'position')&&!pos(c.position,step?20:25)||Object.hasOwn(c,'originalPosition')&&!pos(c.originalPosition,step?20:25)||Object.hasOwn(c,'stepCount')&&(!Number.isInteger(c.stepCount)||c.stepCount<0||c.stepCount>20))fail();if(Object.hasOwn(c,'originalPosition')&&c.position>c.originalPosition)fail();const age=now-stamp(c.removedAt);if(age<0||age>(c.action.startsWith('remove-')?300000:retention))fail();
+ if(c.action.startsWith('restore-')){
+  const expiresAt=Math.min(v.expiresAt,privateRecoveryDeadline(c.removedAt));
+  if(expiresAt!==v.expiresAt)return {...v,expiresAt};
+ }
+ return v;
 }
 
 export function verifySchoolAcademicRecoveryView(v,{now=Date.now()}={}){

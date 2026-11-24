@@ -15,3 +15,17 @@ test('late permission read cannot revive a view and missing identities stays gua
 test('pending uncertain save retains human copy without retries and stale success cannot invoke saved',async t=>{const f=fixture(t);await f.open();f.input('action','remove-step');await f.submit();let release;f.client.schoolEditSave=()=>new Promise(r=>release=r);void f.click('approve');assert.equal(f.panel.blocked(),true);await f.click('approve');release({saved:false});await turn();assert.match(f.panel.render(),/uncertain/);assert.match(f.panel.render(),/Step: 1\.1\. Same step/);assert.doesNotMatch(f.panel.render().split('<textarea')[1],/ssssssss|assessmentToken/);const g=fixture(t);await g.open();await g.submit();g.client.schoolEditSave=()=>new Promise(r=>release=r);void g.click('approve');g.panel.offline();release({saved:true});await turn();assert.deepEqual(g.saved,[]);assert.match(g.panel.render(),/Retained academic recovery draft/);});
 
 test('selecting a restorable record after an expired default refreshes the rendered approval controls',async t=>{const f=fixture(t),eligible=structuredClone(f.removed[0]);eligible.recoveryToken=token('i');f.removed[0].removedAt=new Date(f.now()-91*86400000).toISOString();f.removed[0].canRestore=false;f.removed[0].blockedReason='expired';f.removed.push(eligible);await f.open();f.input('action','restore');assert.match(f.panel.render(),/type="submit" disabled/);const before=f.changes.length;f.input('recovery',token('i'));assert.ok(f.changes.length>before);assert.doesNotMatch(f.panel.render(),/type="submit" disabled/);await f.submit();assert.equal(f.calls[0].operation.recoveryToken,token('i'));});
+test('an open assessment approval retires at the cutoff and retains its history title',async t=>{
+ const f=fixture(t),boundary=f.now()+5000;
+ f.removed[0].removedAt=new Date(boundary-90*86400000).toISOString();
+ await f.open();f.input('action','restore');await f.submit();
+ f.time(boundary);
+ assert.match(f.panel.render(),/Approve academic recovery change/);
+ f.time(boundary+1);
+ const html=f.panel.render();
+ assert.doesNotMatch(html,/Approve academic recovery change/);
+ assert.match(html,/approval expired/);
+ assert.match(html,/Archived assessment/);
+ await f.click('approve');
+ assert.equal(f.calls.filter(x=>typeof x==='string').length,0);
+});
