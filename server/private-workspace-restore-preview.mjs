@@ -1,9 +1,9 @@
-import {withinArchivedDeletedRetention,supportsArchivedDeletedWorkspaceRestore} from './private-workspace-restore-contract.mjs';
+import {withinArchivedDeletedRetention,supportsArchivedDeletedWorkspaceRestore,privateRestoreTimestamp} from './private-workspace-restore-contract.mjs';
 import {commonTaskMembershipKey} from './private-common-task-memberships.mjs';
 import {resolveCommonTaskSource,resolveCommonProjectTarget} from './private-common-task-targets.mjs';
 import {validateHierarchyChange,validateProjectHierarchy} from '../src/project-hierarchy.mjs';
 // Comparison only: no database client, file writes, insertion payloads or restore executor.
-import {inspectPrivateWorkspace,validatePrivateWorkspaceRows} from './private-workspace-backup.mjs';import {stableStringify} from './stable-json.mjs';import {safeSavedAt} from './snapshot-freshness.mjs';
+import {inspectPrivateWorkspace,validatePrivateWorkspaceRows} from './private-workspace-backup.mjs';import {stableStringify} from './stable-json.mjs';
 const singleton=row=>['brief_preferences','dashboard_layout'].includes(row.item_type)&&row.deleted_at==null;
 const approvalSource=row=>row.item_type==='task'&&row.payload?.fictional===true&&/^M1A_APPROVED_/.test(row.payload?.source||'')?row.payload.source:null;
 export function previewPrivateWorkspaceRestore({bytes,key,projectRef,ownerId,existing=[],allowNewTaskGraphTargets=false,allowFreshHierarchy=false,allowArchivedDeletedRestore=false,now=Date.now()}){
@@ -54,8 +54,8 @@ export function previewPrivateWorkspaceRestore({bytes,key,projectRef,ownerId,exi
   if(prior.section!==record.section||prior.item_type!==record.item_type||prior.origin!==record.origin)return{...base,action:'blocked-scope'};
   if((prior.deleted_at==null)!==(record.deleted_at==null))return{...base,action:'blocked-deletion-state'};
   if(prior.version<record.version)return{...base,action:'blocked-version'};
-  if(safeSavedAt(prior.created_at)!==safeSavedAt(record.created_at))return{...base,action:'blocked-created-time'};
-  const sameDeletion=prior.deleted_at==null||safeSavedAt(prior.deleted_at)===safeSavedAt(record.deleted_at),samePayload=stableStringify(prior.payload)===stableStringify(record.payload);
+  if(privateRestoreTimestamp(prior.created_at)!==privateRestoreTimestamp(record.created_at))return{...base,action:'blocked-created-time'};
+  const sameDeletion=prior.deleted_at==null||privateRestoreTimestamp(prior.deleted_at)===privateRestoreTimestamp(record.deleted_at),samePayload=stableStringify(prior.payload)===stableStringify(record.payload);
   return{...base,action:sameDeletion&&samePayload?'unchanged':'conflict',newerRevision:prior.version>record.version};
  });
  // A set of individually valid missing edges may still form a cycle when

@@ -185,7 +185,7 @@ function supportsTaskFields(row,p){
 }
 
 // PostgreSQL supports six fractional digits. Date.parse alone would lose the last three.
-function instant(value){
+export function privateRestoreTimestamp(value){
  if(typeof value!=='string')throw Error('Exact string timestamps required.');
  const match=value.match(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.(\d{1,6}))?(?:Z|[+-]\d\d:\d\d)$/);
  if(!match||!Number.isFinite(Date.parse(value)))throw Error('Exact PostgreSQL timestamp required.');
@@ -194,7 +194,7 @@ function instant(value){
 export function privateWorkspaceRestoreDigest(rows){
  const canonical=rows.map(row=>{
   if(Object.keys(row).sort().join(',')!=='created_at,deleted_at,household_id,id,item_type,origin,owner_id,payload,section,updated_at,version,visibility')throw Error('Complete archived metadata required.');
-  return{...row,created_at:instant(row.created_at),updated_at:instant(row.updated_at),deleted_at:row.deleted_at===null?null:instant(row.deleted_at)};
+  return{...row,created_at:privateRestoreTimestamp(row.created_at),updated_at:privateRestoreTimestamp(row.updated_at),deleted_at:row.deleted_at===null?null:privateRestoreTimestamp(row.deleted_at)};
  }).sort((a,b)=>a.id.localeCompare(b.id));
  return createHash('sha256').update(stableStringify(canonical)).digest('hex');
 }

@@ -19,6 +19,24 @@ test('reviewed insertion preserves exact microseconds and every newer/current-on
  const saved=await s.executor.execute({},{reviewId:review.reviewId,approved:true});assert.equal(saved.restored,1);assert.equal(saved.skippedArchivedDeleted,1);assert.equal(saved.preservedTombstones,undefined);assert.equal(digest(s.rows),digest([newer,currentOnly,archived]));assert.equal(s.inserts,1);
  await assert.rejects(s.executor.execute({},{reviewId:review.reviewId,approved:true}),/expired or used/);assert.equal(s.inserts,1);
 });
+test('restore review detects same-millisecond changes to original creation and removal times',async t=>{
+ const archived=note(),deleted=note({deleted_at:'2026-11-03T12:00:00.000121Z'}),missing=note();
+ const s=setup(t,{archive:[archived,deleted,missing],existing:[
+  {...archived,created_at:'2026-11-01T07:00:00.000124-05:00'},
+  {...deleted,deleted_at:'2026-11-03T07:00:00.000122-05:00'}
+ ]});
+ const review=await s.executor.prepare({},s);
+ assert.equal(review.blockedCount,1);
+ assert.equal(review.conflictCount,1);
+ assert.equal(review.canRestore,false);
+ assert.equal(review.reviewId,undefined);
+ assert.equal(s.inserts,0);
+ s.rows=[{...archived,created_at:'2026-11-01T07:00:00.000123-05:00'},
+  {...deleted,deleted_at:'2026-11-03T07:00:00.000121-05:00'}];
+ const equivalent=await s.executor.prepare({},s);
+ assert.equal(equivalent.unchangedCount,2);
+ assert.equal((await s.executor.execute({},{reviewId:equivalent.reviewId,approved:true})).restored,1);
+});
 test('approval binds exact inventory including microseconds and unrelated records',async t=>{
  const existing=note(),s=setup(t,{existing:[existing]});const r=await s.executor.prepare({},s);s.rows=[{...existing,updated_at:'2026-11-02T12:00:00.000457Z'}];
  await assert.rejects(s.executor.execute({},{reviewId:r.reviewId,approved:true}),/stopped before insertion/);assert.equal(s.inserts,0);
