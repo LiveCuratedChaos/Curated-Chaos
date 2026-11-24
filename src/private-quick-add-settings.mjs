@@ -5,7 +5,7 @@ const token=value=>typeof value==='string'&&/^[A-Za-z0-9_-]{43}$/.test(value);
 const equal=(a,b)=>JSON.stringify(validateQuickAddLayout(a))===JSON.stringify(validateQuickAddLayout(b));
 const destination=value=>value==='context'?'Current page or personal default':value;
 
-export function createQuickAddSettings({client,clock,canUse,onChange,enabledKinds}){
+export function createQuickAddSettings({client,clock,canUse,onChange,enabledKinds,allowCalendarCategory=false}){
  let generation=0,opened=false,busy=false,locked=false,view=null,draft=null,review=null,error='',notice='';
  const fresh=value=>Number.isFinite(value)&&value>clock()&&value<=clock()+300000;
  const current=n=>n===generation&&canUse();
@@ -25,10 +25,13 @@ export function createQuickAddSettings({client,clock,canUse,onChange,enabledKind
  }
  async function prepare(){
   if(!opened||busy||locked||review||!draft||!canUse())return;
+  let layout;
+  try{layout=validateQuickAddLayout(draft);}
+  catch{error='Choose valid Quick Add settings. Calendar categories use up to 48 characters.';onChange();return;}
   const n=++generation;busy=true;notice=error='';onChange();
   try{
    if(!view||!fresh(view.expiresAt))throw Error();
-   const value=await client.quickAddLayoutReview({baseTag:view.baseTag,layout:validateQuickAddLayout(draft)});
+   const value=await client.quickAddLayoutReview({baseTag:view.baseTag,layout});
    if(!current(n))return;
    if(value?.noChanges===true){notice='These are your current Quick Add settings.';return;}
    if(!token(value?.reviewId)||!fresh(value.expiresAt)||value.expiresAt>view.expiresAt||!equal(value.layout,draft))throw Error();
@@ -64,10 +67,11 @@ export function createQuickAddSettings({client,clock,canUse,onChange,enabledKind
    for(const kind of enabledKinds()){
     const choice=draft[kind],options=QUICK_ADD_DESTINATIONS[kind],label=QUICK_ADD_LABELS[kind];
     html+='<fieldset><legend>'+label+'</legend>';
-    if(review)html+='<p>'+e(destination(choice.destination))+' · Details '+(choice.expanded?'expanded':'collapsed')+'</p>';
+    if(review)html+='<p>'+e(destination(choice.destination))+' · Details '+(choice.expanded?'expanded':'collapsed')+(kind==='event'&&allowCalendarCategory?' · Category: '+e(choice.calendarCategory??'None'):'')+'</p>';
     else{
      const disabled=busy||locked?'disabled':'';
      html+=options.length===1?'<p>Private destination · '+e(options[0])+'</p>':'<label class="field-label">'+label+' destination<select name="quick-destination-'+kind+'" '+disabled+'>'+options.map(v=>'<option value="'+e(v)+'" '+(choice.destination===v?'selected':'')+'>'+e(destination(v))+'</option>').join('')+'</select></label>';
+     if(kind==='event'&&allowCalendarCategory)html+='<label class="field-label">Default Calendar category<input name="quick-category-event" maxlength="48" value="'+e(choice.calendarCategory??'')+'" '+disabled+'></label>';
      html+='<label><input type="checkbox" name="quick-expanded-'+kind+'" '+(choice.expanded?'checked':'')+' '+disabled+'>Open '+label.toLowerCase()+' details by default</label>';
     }
     html+='</fieldset>';
@@ -80,6 +84,14 @@ export function createQuickAddSettings({client,clock,canUse,onChange,enabledKind
  }
  return{reset,render,choice:read,blocked:()=>opened||busy,
   input(event){
+   if(event.target.name==='quick-category-event'){
+    if(allowCalendarCategory&&draft&&!busy&&!locked&&!review&&opened&&canUse()&&enabledKinds().includes('event')){
+     const category=String(event.target.value??'').trim();
+     if(category)draft.event.calendarCategory=category;
+     else delete draft.event.calendarCategory;
+    }
+    return true;
+   }
    const match=/^quick-(destination|expanded)-(task|event|note|grocery|project|routine)$/.exec(event.target.name??'');
    if(!match)return false;
    if(draft&&!busy&&!locked&&!review&&opened&&canUse()&&enabledKinds().includes(match[2])){

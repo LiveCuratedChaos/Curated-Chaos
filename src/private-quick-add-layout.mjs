@@ -9,13 +9,17 @@ function exact(value,names){
 export function defaultQuickAddLayout(){
  return Object.fromEntries(keys.map(kind=>[kind,{destination:QUICK_ADD_DESTINATIONS[kind][0],expanded:false}]));
 }
+export function validQuickAddEventCategory(value){
+ return typeof value==='string'&&value===value.trim()&&value.length>0&&value.length<=48&&value.toLowerCase()!=='all'&&!/[\u0000-\u001f\u007f]/.test(value);
+}
 export function validateQuickAddLayout(value){
  if(!exact(value,keys))throw Error('Choose Quick Add settings for each record type.');
  const layout={};
  for(const kind of keys){
   const choice=value[kind];
-  if(!exact(choice,['destination','expanded'])||!QUICK_ADD_DESTINATIONS[kind].includes(choice.destination)||typeof choice.expanded!=='boolean')throw Error('Choose a supported private destination and field layout.');
-  layout[kind]={destination:choice.destination,expanded:choice.expanded};
+  const category=kind==='event'&&Object.hasOwn(choice??{},'calendarCategory');
+  if(category&&!validQuickAddEventCategory(choice.calendarCategory)||!exact(choice,['destination','expanded',...(category?['calendarCategory']:[])])||!QUICK_ADD_DESTINATIONS[kind].includes(choice.destination)||typeof choice.expanded!=='boolean')throw Error('Choose a supported private destination and field layout.');
+  layout[kind]={destination:choice.destination,expanded:choice.expanded,...(category?{calendarCategory:choice.calendarCategory}:{})};
  }
  return layout;
 }

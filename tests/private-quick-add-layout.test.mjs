@@ -29,3 +29,23 @@ test('a cancelled or reset settings panel cannot publish a late choice and never
  const read=panel.choice('task');panel.reset();finishRead({readOnly:false,layout,baseTag:'a'.repeat(43),viewId:'b'.repeat(43),expiresAt:expiry});
  assert.equal(await read,undefined);assert.equal(panel.blocked(),false);assert.equal(saves,0);
 });
+
+test('a Calendar-scoped user can review and save a private default event category',async t=>{
+ const options={allowTaskCreate:true,allowQuickAddPreferences:true,allowSearch:true,allowSearchDates:true,allowEventCreate:true,allowEventEdit:true,allowEventDetails:true};
+ const scoped=privateWorkspaceFixture(t,{...options,allowCalendarWorkspace:true}),owner=scoped.tab(),second=scoped.tab();
+ await owner.login();await second.login();
+ const settings=await owner.client.quickAddLayoutRead();
+ settings.layout.event.calendarCategory='Appointments';
+ const review=await owner.client.quickAddLayoutReview({baseTag:settings.baseTag,layout:settings.layout});
+ assert.equal((await second.client.quickAddLayoutRead()).layout.event.calendarCategory,undefined);
+ await owner.client.quickAddLayoutSave(review.reviewId);
+ assert.equal((await second.client.quickAddLayoutRead()).layout.event.calendarCategory,'Appointments');
+ const off=privateWorkspaceFixture(t,options).tab();await off.login();
+ const limited=await off.client.quickAddLayoutRead();
+ limited.layout.event.calendarCategory='Appointments';
+ await assert.rejects(off.client.quickAddLayoutReview({baseTag:limited.baseTag,layout:limited.layout}));
+ for(const category of ['all',' bad ','x'.repeat(49),'line\nbreak']){
+  const layout=defaultQuickAddLayout();layout.event.calendarCategory=category;
+  assert.throws(()=>validateQuickAddLayout(layout));
+ }
+});

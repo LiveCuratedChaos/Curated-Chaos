@@ -130,7 +130,7 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
  const favoritePages=enabledFavoritePages({allowWidgetLayouts,allowWidgetPages,allowCalendarWorkspace,allowTaskWorkspace,allowNotesWorkspace});
  const favorites=allowFavorites?createPrivateFavorites({api,now,pages:favoritePages}):null;
  const onboarding=allowOnboarding?createPrivateOnboarding({api,now,allowAppearanceSave:allowAppearance&&allowPreferencesSave}):null;
- const quickAddLayouts=allowQuickAddPreferences?createPrivateQuickAddLayout({api,now}):null;
+ const quickAddLayouts=allowQuickAddPreferences?createPrivateQuickAddLayout({api,now,allowCalendarCategory:allowCalendarWorkspace}):null;
  const briefSnapshots=allowBriefLayout?createPrivateBriefSnapshots({api,now}):null;
  const briefLayouts=allowBriefLayout?createPrivateBriefLayout({api,now}):null;
  const projects=allowProjects?createPrivateProjects({api,now,readColors:visibleRecordColors,readLinkedNote:allowNoteRead?async(id,actor,expiresAt,item)=>{const {noteToken}=noteReader.begin(id,actor.ownerId,expiresAt,1)({id:item.id,version:item.version,payload:{title:item.title}});return noteReader.read(id,actor,noteToken);}:null,allowSavedMail:allowSavedMailRead,documentStorage:allowDocuments?api.documentStorage:null}):null;

@@ -54,7 +54,11 @@ export function createPrivateFavoriteItemStore(options){
   validateChange:(_before,after,current)=>validateFavoriteMemberships(after,details(current).collections)});
 }
 const quickAddPolicy=Object.freeze({extension:'quickAddLayout',validate:validateQuickAddLayout,defaultValue:defaultQuickAddLayout,label:'Quick Add settings'});
-export function createPrivateQuickAddLayout(options){return createPrivatePresentation(options,quickAddPolicy);}
+export function createPrivateQuickAddLayout(options){
+ return createPrivatePresentation(options,{...quickAddPolicy,validateChange(before,after){
+  if(!options.allowCalendarCategory&&before.event.calendarCategory!==after.event.calendarCategory)throw Error('Calendar category scope required.');
+ }});
+}
 export function createPrivateBriefLayout(options){return createPrivatePresentation(options,briefPolicy);}
 export function createPrivateBriefSnapshots(options){
  return createPrivatePresentation(options,{extension:'briefSnapshots',validate:validateBriefSnapshots,
