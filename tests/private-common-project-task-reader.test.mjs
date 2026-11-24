@@ -28,3 +28,24 @@ test('the combined project read refuses swapped responses for different courses 
  };
  await assert.rejects(s.read(),/Complete current project task progress/);
 });
+
+
+test('the subproject roll-up refuses swapped replies for two original smaller projects',async()=>{
+ const s=hierarchyFixture();
+ const sibling={...structuredClone(s.child),id:id(702)};
+ sibling.payload.title='Another smaller project';
+ const relationship=structuredClone(s.snapshot.relationships[0]);
+ relationship.id=id(703);
+ relationship.payload.childProjectId=sibling.id;
+ s.snapshot.projects.push(sibling);
+ s.snapshot.relationships.push(relationship);
+ const get=s.api.getCommonTaskSource;
+ s.api.getCommonTaskSource=async(token,ref,who)=>ref.recordId===sibling.id?[structuredClone(sibling)]:get(token,ref,who);
+ assert.equal((await s.read({includeSubprojects:true})).progress.linkedTotal,2);
+ s.api.getCommonTaskSource=async(token,ref,who)=>{
+  if(ref.recordId===sibling.id)return [structuredClone(s.child)];
+  if(ref.recordId===s.child.id)return [structuredClone(sibling)];
+  return get(token,ref,who);
+ };
+ await assert.rejects(s.read({includeSubprojects:true}),/Complete current project task progress/);
+});

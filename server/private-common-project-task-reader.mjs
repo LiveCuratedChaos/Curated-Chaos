@@ -14,6 +14,11 @@ export async function readPrivateCommonProjectTasks({api,actor,selectedProject,i
  if(typeof includeSubprojects!=='boolean'||includeSubprojects&&typeof api?.projectHierarchySnapshot!=='function')fail();
  if(typeof isCurrent!=='function'||['getCommonTaskSource','listCommonTaskMemberships','listProjectTaskChoices','listProjectTaskMemberships','commonTaskLinksReady'].some(k=>typeof api?.[k]!=='function')||typeof actor?.accessToken!=='string'||!actor.accessToken||!isCurrent())fail();
  const target=resolveCommonProjectTarget(selectedProject,actor.ownerId,{kind:'project',recordId:selectedProject?.id}),owner=actor.ownerId,token=actor.accessToken;
+ async function readOriginal(ref){
+  const rows=await api.getCommonTaskSource(token,ref,owner);
+  if(!Array.isArray(rows)||rows.length!==1||typeof rows[0]?.id!=='string'||rows[0].id.toLowerCase()!==ref.recordId.toLowerCase())fail();
+  return rows[0];
+ }
  async function capture(){
   if(!isCurrent())fail();const [projects,tasks,ordinary,canonical,ready,hierarchy]=await Promise.all([api.getCommonTaskSource(token,target.reference,owner),api.listProjectTaskChoices(token,owner),api.listProjectTaskMemberships(token,target.source.id,owner),api.listCommonTaskMemberships(token,owner),api.commonTaskLinksReady(token),includeSubprojects?api.projectHierarchySnapshot(token,owner):null]);
   if(!isCurrent()||ready!==true||!Array.isArray(projects)||projects.length!==1||![tasks,ordinary,canonical].every(v=>Array.isArray(v)&&v.length<=2000)||ordinary.length+canonical.length>2000)fail();
@@ -21,7 +26,12 @@ export async function readPrivateCommonProjectTasks({api,actor,selectedProject,i
   for(const row of ordinary){const link=projectMembershipState(row,owner);if(link.payload.projectId.toLowerCase()!==target.source.id.toLowerCase())fail();}
   let selectedProjects=projects,selectedMemberships=ordinary;const included=new Set([target.source.id.toLowerCase()]);
   if(includeSubprojects){projectSubprojectTaskView({snapshot:hierarchy,ownerId:owner,project:projects[0],tasks,memberships:ordinary.map(row=>projectMembershipState(row,owner))});const graph=hierarchyProgress({...hierarchy,ownerId:owner,rootProjectId:target.source.id}),ids=graph.projectIds.filter(id=>id!==target.source.id),additional=[];
-   for(let offset=0;offset<ids.length;offset+=4){if(!isCurrent())fail();const batch=await Promise.all(ids.slice(offset,offset+4).map(recordId=>api.getCommonTaskSource(token,{kind:'project',recordId},owner)));if(!isCurrent()||batch.some(v=>!Array.isArray(v)||v.length!==1))fail();additional.push(...batch.map(v=>v[0]));}
+   for(let offset=0;offset<ids.length;offset+=4){
+    if(!isCurrent())fail();
+    const batch=await Promise.all(ids.slice(offset,offset+4).map(recordId=>readOriginal({kind:'project',recordId})));
+    if(!isCurrent())fail();
+    additional.push(...batch);
+   }
    for(const row of additional){resolveCommonProjectTarget(row,owner,{kind:'project',recordId:row.id});const original=hierarchy.projects.find(p=>p.id===row.id);if(!original||original.version!==row.version||original.section!==row.section||original.payload.title!==row.payload.title||original.payload.status!==row.payload.status||separatesRecurring(original.payload)!==separatesRecurring(row.payload))fail();included.add(row.id.toLowerCase());}
    if(included.size!==graph.projectIds.length)fail();selectedProjects=[...projects,...additional];selectedMemberships=hierarchy.memberships;
   }
@@ -30,11 +40,7 @@ export async function readPrivateCommonProjectTasks({api,actor,selectedProject,i
   const sources=[],refs=[...references.values()];
   for(let offset=0;offset<refs.length;offset+=4){
    if(!isCurrent())fail();
-   const batch=await Promise.all(refs.slice(offset,offset+4).map(async ref=>{
-    const rows=await api.getCommonTaskSource(token,ref,owner);
-    if(!Array.isArray(rows)||rows.length!==1||typeof rows[0]?.id!=='string'||rows[0].id.toLowerCase()!==ref.recordId.toLowerCase())fail();
-    return rows[0];
-   }));
+   const batch=await Promise.all(refs.slice(offset,offset+4).map(readOriginal));
    if(!isCurrent())fail();
    sources.push(...batch);
   }

@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R15** Smaller-project roll-ups verify each reply against its requested original project before combining tasks. All 35 related checks passed, including signed-in hierarchy navigation and isolated SQL guards. Independent database connections and device acceptance remain pending.
+
 - **R14** The combined project task reader checks that each batched source reply belongs to the requested original course. Swapped replies fail before progress is shown. All 41 related checks passed, including signed-in subproject reads and isolated membership writes.
 
 - **R13** Search interpretation supports previous calendar weeks and months for tasks and events. The preview uses fixed dates, respects the configured first weekday, and handles leap years and year boundaries. All 42 related checks passed, including the signed-in search with no record writes.
