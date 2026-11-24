@@ -874,6 +874,12 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "selectedRemovalReview": {
+      "passed": 333,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Selected removed title, kind, area, direction, missing choice, late response, suspended approval, source deadline and zero writes on refusal."
+    },
     "selectiveNoteHistory": {
       "passed": 377,
       "failed": 0,

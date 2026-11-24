@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R12** bound the restoration review to the selected Recently Deleted row and its original deadline. A delayed response, a different title or record type, a switched action, or an expired approval prevents any write. All 333 related checks passed, plus four final timer and approval checks.
+
 - **R12** added separate earlier-title and earlier-body actions for notes. Copying just the body preserved the current title in embedded PostgreSQL, and a lost acknowledgment retained the selected draft. All 377 related checks passed. Ten panel checks also passed after clarifying the combined action label.
 
 - **R12** corrected a reproduced daylight-saving error in the School SQL guard. The inclusive boundary is 2,160 elapsed hours in every database time zone. Readiness checks for academic history and common task memberships still require the exact reviewed functions. All 217 focused checks passed.
@@ -49,7 +51,7 @@ Playwright 1.65.1 discovered 236 cases. Fourteen selected desktop and phone-size
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12 by binding a Recently Deleted restoration review to the specific displayed row and expiry, even after a tab has been suspended. Check late responses, wrong titles or actions, and an expired approval before any write.
+2. Continue R12 with a short-lived Undo for a confirmed removal. Bind it to the exact version that was just removed, retain it across the acknowledgment refresh, and use the ordinary restoration review before writing. Verify duplicate titles, changed records, lost acknowledgments, expiry and sign-out.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

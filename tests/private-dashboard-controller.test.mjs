@@ -1008,3 +1008,31 @@ test('Daily Brief bills are hidden by default and load only for the selected day
  assert.doesNotMatch(s.root.innerHTML,/Private internet|private-brief-bills-open/);
  click('#private-brief-bills-open');await turn();assert.deepEqual(days,[day]);
 });
+
+test('Recently Deleted ties review and approval to the displayed choice and its original deadline',async t=>{
+ for(const stage of ['title','type','action','late reply','suspended approval','suspended list','missing selection']){
+  let now=1,reads=0,writes=0;
+  const s=await setup(t,{allowRecentlyDeleted:true,clock:()=>now});
+  const token='t'.repeat(43),deadline=100;
+  const row={title:'Removed note',type:'note',section:'Personal Life',deletedAt:new Date(deadline-1-90*86400000).toISOString(),recordToken:token};
+  s.client.deletedRecords=async()=>({retentionDays:90,offset:0,limit:50,matchCount:1,expiresAt:5000,records:[row]});
+  s.client.reviewRecord=async()=>{
+   reads++;
+   if(stage==='late reply')now=deadline;
+   return{reviewId:'r'.repeat(43),title:stage==='title'?'Different note':row.title,type:stage==='type'?'task':row.type,section:row.section,restoring:stage!=='action',retentionDays:90,expiresAt:5000};
+  };
+  s.client.saveRecord=async()=>{writes++;return{saved:true,restored:true};};
+  const click=(selector,dataset={})=>s.events.click({target:{closest:q=>q===selector?{dataset}:null}});
+  const settle=async()=>{for(let n=0;n<4;n++)await turn();};
+  click('#private-records-open');await settle();
+  assert.match(s.root.innerHTML,/Removed note/);
+  if(stage==='suspended list')now=deadline;
+  click('[data-private-record-review]',{privateRecordRestore:'',privateRecordReview:stage==='missing selection'?'u'.repeat(43):token});
+  await settle();
+  if(stage==='suspended approval'){assert.match(s.root.innerHTML,/Restore this item/);now=deadline;}
+  click('#private-record-approve');await settle();
+  assert.equal(reads,['missing selection','suspended list'].includes(stage)?0:1);
+  assert.equal(writes,0);
+  assert.doesNotMatch(s.root.innerHTML,/Approve restoration|Approve removal|Different note/);
+ }
+});

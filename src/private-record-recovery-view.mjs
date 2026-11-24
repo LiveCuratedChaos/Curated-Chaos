@@ -12,7 +12,14 @@ export function verifyPrivateRecoveryList(value,{offset=0,now=Date.now(),allowPr
  const expiresAt=Math.min(value.expiresAt,...value.records.map(row=>privateRecoveryDeadline(row.deletedAt)));
  return expiresAt===value.expiresAt?value:{...value,expiresAt};
 }
-export function verifyPrivateRecoveryReview(value,{now=Date.now(),allowProjects=false}={}){
+export function verifyPrivateRecoveryReview(value,{now=Date.now(),allowProjects=false,selection,sourceExpiresAt}={}){
  if(typeof allowProjects!=='boolean'||!fresh(value,now)||!item(value,allowProjects)||!token(value.reviewId)||typeof value.restoring!=='boolean')throw Error('Item review could not be verified.');
+ if(selection===null&&value.restoring)throw Error('Item review could not be verified.');
+ if(selection){
+  if(!value.restoring||['title','type','section'].some(field=>value[field]!==selection[field])||!Number.isFinite(sourceExpiresAt))throw Error('The removed item changed. Fetch latest.');
+  const expiresAt=Math.min(value.expiresAt,sourceExpiresAt,privateRecoveryDeadline(selection.deletedAt));
+  if(!Number.isFinite(expiresAt)||expiresAt<=now)throw Error('The removed-item view expired. Fetch latest before reviewing again.');
+  return expiresAt===value.expiresAt?value:{...value,expiresAt};
+ }
  return value;
 }
