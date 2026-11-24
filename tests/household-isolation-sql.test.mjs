@@ -25,6 +25,3 @@ test('membership removal and section revocation block subsequent shared reads wh
 test('anonymous access, hard deletion and unsupported child membership remain denied by the current foundation',async t=>{
  const db=await setup(t);await actor(db,'','anon');await assert.rejects(db.query('select id from public.cc_records'),/permission denied/);await actor(db,A);await assert.rejects(db.query('delete from public.cc_records'),/permission denied/);await admin(db);await assert.rejects(db.query("insert into public.cc_household_memberships(household_id,user_id,role) values($1,$2,'child')",[H,C]),/check constraint/);
 });
-test('generated hosted-policy check executes all assertions and rolls back every fictional row',async t=>{
- const {householdPolicyCheck}=await import('../server/household-policy-check.mjs');const db=await setup(t),before=await labels(db),check=householdPolicyCheck({ownerA:A,ownerB:B});const output=await db.exec(check.sql),result=output.at(-1).rows[0];assert.equal(result.policy_checks,'passed');assert.equal(result.no_qa_households_saved,true);assert.equal(result.no_qa_memberships_saved,true);assert.equal(result.no_qa_records_saved,true);assert.deepEqual(await labels(db),before);assert.throws(()=>householdPolicyCheck({ownerA:A,ownerB:A}));assert.throws(()=>householdPolicyCheck({ownerA:"';select 1;--",ownerB:B}));
-});

@@ -10,3 +10,20 @@ test('membership departure removes access to own shared records while preserving
 test('revoked, missing and wrong-owner sessions cannot use valid household grants or read membership metadata',async t=>{
  const db=await setup(t);await db.query('delete from auth.sessions where id=$1',[i.sb]);for(const session of [i.sb,i.sa,undefined]){await actor(db,i.b,session);for(const table of ['cc_profiles','cc_households','cc_household_memberships','cc_records'])assert.equal((await db.query('select * from public.'+table)).rows.length,0,table);await assert.rejects(db.query("insert into public.cc_records(owner_id,household_id,visibility,section,item_type,payload) values($1,$2,'household','School','note','{}')",[i.b,i.home]),/row-level security/);}await actor(db,i.a,i.sa);assert.ok((await visibleLabels(db)).includes('shared-home'));
 });
+
+test('rollback-only household policy check verifies current sessions and leaves fictional state intact',async t=>{
+ const {householdPolicyCheck}=await import('../server/household-policy-check.mjs');
+ const db=await setup(t),before=await visibleLabels(db);
+ const identities={ownerA:i.a,ownerB:i.b,sessionA:i.sa,sessionB:i.sb};
+ assert.throws(()=>householdPolicyCheck({...identities,sessionB:undefined}));
+ assert.throws(()=>householdPolicyCheck({...identities,ownerB:i.a}));
+ assert.throws(()=>householdPolicyCheck({...identities,ownerA:"';select 1;--"}));
+ const check=householdPolicyCheck(identities);
+ const output=await db.exec(check.sql);
+ assert.deepEqual(output.at(-1).rows[0],{policy_checks:'passed',no_qa_households_saved:true,no_qa_memberships_saved:true,no_qa_records_saved:true});
+ assert.deepEqual(await visibleLabels(db),before);
+ await db.query('delete from auth.sessions where id=$1',[i.sb]);
+ await assert.rejects(db.exec(check.sql),/Member session expired/);
+ await db.exec('rollback');
+ assert.deepEqual(await visibleLabels(db),before);
+});
