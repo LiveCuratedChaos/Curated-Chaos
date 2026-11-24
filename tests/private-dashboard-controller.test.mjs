@@ -1010,3 +1010,18 @@ test('Quick Add puts a saved event category in the original editable Calendar fo
  for(let i=0;i<4;i++)await turn();
  assert.match(s.root.innerHTML,/name="create-calendarCategory" maxlength="48" value="Appointments"/);
 });
+
+test('Calendar keeps view controls available for open date ranges and switches to Agenda without another read',async t=>{
+ const s=await setup(t,calendarOptions),reads=[],read=s.client.calendar;
+ s.client.calendar=fields=>{reads.push(structuredClone(fields));return read(fields);};
+ s.events.input({target:{name:'search-dateFrom',value:''}});
+ await s.events.submit({target:{id:'private-title-search'},preventDefault(){}});
+ for(let i=0;i<3;i++)await turn();
+ assert.equal(reads[0].dateFrom,'');
+ assert.match(s.root.innerHTML,/Choose a From date to show a month overview/);
+ assert.match(s.root.innerHTML,/data-private-calendar-view="agenda" aria-pressed="false"/);
+ clickCalendarView(s,'agenda');await turn();
+ assert.equal(reads.length,1);
+ assert.match(s.root.innerHTML,/data-private-calendar-view="agenda" aria-pressed="true"/);
+ assert.match(s.root.innerHTML,/Agenda · Any date/);
+});
