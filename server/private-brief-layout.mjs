@@ -1,3 +1,4 @@
+import {validateBriefSnapshots} from '../src/private-brief-snapshots.mjs';
 import {emptyFavoriteItems,validateFavoriteItems,favoriteCollections,validateFavoriteMemberships,afterCollectionChange} from './private-favorite-items.mjs';
 import {FAVORITE_PAGES,defaultFavorites,validateFavoritePages} from '../src/private-favorites.mjs';
 import {defaultOnboarding,validateOnboarding} from '../src/private-onboarding.mjs';
@@ -55,6 +56,10 @@ export function createPrivateFavoriteItemStore(options){
 const quickAddPolicy=Object.freeze({extension:'quickAddLayout',validate:validateQuickAddLayout,defaultValue:defaultQuickAddLayout,label:'Quick Add settings'});
 export function createPrivateQuickAddLayout(options){return createPrivatePresentation(options,quickAddPolicy);}
 export function createPrivateBriefLayout(options){return createPrivatePresentation(options,briefPolicy);}
+export function createPrivateBriefSnapshots(options){
+ return createPrivatePresentation(options,{extension:'briefSnapshots',validate:validateBriefSnapshots,
+  defaultValue:()=>({version:1,items:[]}),label:'Brief snapshots'});
+}
 export function createPrivateCalendarPresentation(options){return createPrivatePresentation(options,calendarPolicy);}
 function createPrivatePresentation({api,now=Date.now}={},policy){
  if(typeof now!=='function'||['listBriefPreferences','addBriefPreferences','updateBriefPreferences'].some(key=>typeof api?.[key]!=='function'))throw Error(`Explicit private ${policy.label} API required.`);

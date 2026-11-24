@@ -1,3 +1,4 @@
+import {validateBriefSnapshots} from '../src/private-brief-snapshots.mjs';
 import {validateFavoriteItems,validateFavoriteMemberships,favoriteCollections} from './private-favorite-items.mjs';
 import {validateFavoritePages} from '../src/private-favorites.mjs';
 import {normalizeBriefPreferences} from '../src/dev-preferences-model.mjs';
@@ -107,7 +108,7 @@ export function blockedManualFinanceRestores(inserts,existing,key,verifiedDocume
 }
 
 const presentationFields=new Map([
- ['briefLayout',validateBriefLayout],['calendarPresentation',validateCalendarPresentation],
+ ['briefLayout',validateBriefLayout],['briefSnapshots',validateBriefSnapshots],['calendarPresentation',validateCalendarPresentation],
  ['favoriteItems',validateFavoriteItems],['favorites',validateFavoritePages],['onboarding',validateOnboarding],['quickAddLayout',validateQuickAddLayout]
 ]);
 

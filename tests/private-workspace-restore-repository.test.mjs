@@ -141,7 +141,8 @@ test('encrypted recovery preserves the private profile, presentation settings, a
  const base=makeBriefPreferencesRecord({palette:'coastal',density:'spacious',hideAmounts:true,textSize:'large',motion:'minimal',completionSound:'off',completionHaptics:'on',categoryColors:{sections:{Work:'warning'},items:{[originalTask.id]:'accent'}}},i.a);
  const originalNote=record({});
  const favoriteItems={version:1,items:[{type:'note',id:originalNote.id,collections:[i.a]},{type:'task',id:originalTask.id,collections:[i.a]}]};
- const settings=record({...base,payload:{...base.payload,briefLayout:brief,calendarPresentation:{schemaVersion:1,monthDisplay:'dots'},quickAddLayout:quick,onboarding,favorites,favoriteItems}});
+ const briefSnapshots={version:1,items:[{day:'2026-11-17',capturedAt:'2026-11-17T12:00:00.000Z',counts:{notes:1,dueTasks:2}}]};
+ const settings=record({...base,payload:{...base.payload,briefLayout:brief,briefSnapshots,calendarPresentation:{schemaVersion:1,monthDisplay:'dots'},quickAddLayout:quick,onboarding,favorites,favoriteItems}});
  const sourceReview=await src.executor.prepare(src.who,{bytes:seal([settings,originalTask,originalNote])});
  assert.equal(sourceReview.canRestore,true);
  await src.executor.execute(src.who,{approved:true,reviewId:sourceReview.reviewId});

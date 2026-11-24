@@ -59,6 +59,8 @@ paths.add('/src/private-record-version-page.mjs');
 paths.add('/src/private-record-version-panel.mjs');
 paths.add('/src/private-project-overview.mjs');
 paths.add('/src/private-brief-layout.mjs');
+paths.add('/src/private-brief-snapshots.mjs');
+paths.add('/src/private-brief-snapshots-panel.mjs');
 paths.add('/src/private-brief-dates.mjs');
 paths.add('/src/private-brief-week.mjs');
 paths.add('/src/private-brief-narrative.mjs');
