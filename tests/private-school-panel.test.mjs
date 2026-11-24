@@ -22,3 +22,26 @@ test('program progress and 51 course pagination retain full totals and expiry re
 test('changed and late selected details cannot expose private record contents',async t=>{for(const mode of ['changed','offline','permission']){let allowed=true,release;const now=Date.parse('2026-11-18T12:00:00Z'),token='p'.repeat(43),overview={readOnly:true,providerRead:false,checkedAt:new Date(now).toISOString(),expiresAt:now+100000,viewId:'v'.repeat(43),programs:[{schoolReadToken:token,title:'Degree',progressMetric:'classes',done:0,total:0,percentage:0,courseCount:0}],courses:[]};const panel=createPrivateSchoolPanel({clock:()=>now,canUse:()=>allowed,client:{async schoolOverview(){return overview;},schoolRead(){return new Promise(r=>release=r);}}});t.after(()=>panel.dispose());panel.click({target:{closest:s=>s==='#private-school-open'?{}:null}});await turn();panel.click({target:{closest:s=>s==='[data-school-read]'?{dataset:{schoolRead:token}}:null}});if(mode==='offline')panel.offline();if(mode==='permission')allowed=false;release({readOnly:true,expiresAt:now+100000,kind:'degree',title:mode==='changed'?'PRIVATE_CHANGED':'Degree',progressMetric:'classes',totalCredits:0,totalTerms:0,targetDate:''});await turn();assert.doesNotMatch(panel.render(),/PRIVATE_CHANGED|Total credits/);assert.equal(panel.blocked(),false);}});
 test('offered sparse overview stays closed, opens without fetch and reads only a verified member',async t=>{let now=Date.parse('2026-11-18T12:00:00Z'),allowed=true;const token='p'.repeat(43),calls=[],callbacks=[];const value={readOnly:true,providerRead:false,checkedAt:new Date(now).toISOString(),expiresAt:now+100000,viewId:'v'.repeat(43),programs:[{schoolReadToken:token,title:'Cached degree',progressMetric:'classes',done:0,total:0,percentage:0,courseCount:0}],courses:[]};const panel=createPrivateSchoolPanel({clock:()=>now,canUse:()=>allowed,onOverview:v=>callbacks.push(v),client:{async schoolOverview(){calls.push('overview');return structuredClone(value);},async schoolRead(v){calls.push(v);return{readOnly:true,expiresAt:value.expiresAt,kind:'degree',title:'Cached degree',progressMetric:'classes',totalCredits:0,totalTerms:0,targetDate:''};}}});t.after(()=>panel.dispose());const click=async id=>{panel.click({target:{closest:s=>s==='#private-school-'+id?{}:null}});await turn();};assert.equal(panel.offerOverview(value),true);value.programs[0].title='Changed caller copy';assert.match(panel.render(),/View saved School/);assert.equal(calls.length,0);assert.equal(callbacks.length,0);await click('open');assert.match(panel.render(),/Cached degree/);assert.equal(calls.length,0);assert.equal(panel.openOverviewRecord({...value,programs:[{...value.programs[0],title:'Cached degree'}]},'x'.repeat(43)),false);assert.equal(calls.length,0);value.programs[0].title='Cached degree';assert.equal(panel.openOverviewRecord(value,token),true);await turn();assert.deepEqual(calls,[{schoolReadToken:token}]);assert.match(panel.render(),/Total credits/);await click('refresh');assert.equal(callbacks.length,1);assert.equal(calls.at(-1),'overview');allowed=false;assert.equal(panel.offerOverview(value),false);assert.equal(panel.openOverviewRecord(value,token),false);allowed=true;now+=100001;assert.equal(panel.offerOverview(value),false);});
 test('offered snapshots cannot replace an in-flight source read or accept malformed records',async t=>{const f=fixture(t);assert.equal(f.panel.offerOverview({readOnly:true}),false);f.click('open');assert.equal(f.panel.offerOverview({readOnly:true}),false);assert.equal(f.panel.openOverviewRecord({},'x'.repeat(43)),false);f.release({});await turn();assert.equal(f.calls(),1);});
+
+test('expired selected School details cannot open a new editor before the timer runs',async t=>{
+ let now=Date.parse('2026-11-18T12:00:00Z'),editorReads=0;
+ const token='a'.repeat(43),course={schoolReadToken:token,title:'Fictional course',code:'F101',term:'Fall',status:'In Progress',
+  credits:3,officialOrder:1,studyOrder:2,targetDate:'',programReadToken:'',programTitle:'Unassigned',association:'unassigned'};
+ const panel=createPrivateSchoolPanel({clock:()=>now,canUse:()=>true,allowEdit:true,client:{
+  schoolOverview:async()=>({readOnly:true,providerRead:false,checkedAt:new Date(now).toISOString(),
+   expiresAt:now+100000,viewId:'v'.repeat(43),programs:[],courses:[course]}),
+  schoolRead:async()=>({readOnly:true,expiresAt:now+10000,kind:'course',title:course.title,code:course.code,term:course.term,
+   status:course.status,credits:3,officialOrder:1,studyOrder:2,targetDate:'',notes:'Private stale notes',assessments:[],studySessions:[]}),
+  schoolEditRead:async()=>{editorReads++;throw Error();}
+ }});
+ t.after(()=>panel.dispose());
+ const click=selector=>panel.click({target:{closest:query=>query===selector?{dataset:{schoolRead:token}}:null}});
+ click('#private-school-open');await turn();
+ click('[data-school-read]');await turn();
+ assert.match(panel.render(),/Private stale notes/);
+ now+=10000;
+ click('#private-school-edit');await turn();
+ assert.equal(editorReads,0);
+ assert.doesNotMatch(panel.render(),/Private stale notes/);
+ assert.match(panel.render(),/School record details expired/);
+});
