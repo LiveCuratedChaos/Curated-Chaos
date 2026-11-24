@@ -10,3 +10,21 @@ test('membership departure removes access to own shared records while preserving
 test('revoked, missing and wrong-owner sessions cannot use valid household grants or read membership metadata',async t=>{
  const db=await setup(t);await db.query('delete from auth.sessions where id=$1',[i.sb]);for(const session of [i.sb,i.sa,undefined]){await actor(db,i.b,session);for(const table of ['cc_profiles','cc_households','cc_household_memberships','cc_records'])assert.equal((await db.query('select * from public.'+table)).rows.length,0,table);await assert.rejects(db.query("insert into public.cc_records(owner_id,household_id,visibility,section,item_type,payload) values($1,$2,'household','School','note','{}')",[i.b,i.home]),/row-level security/);}await actor(db,i.a,i.sa);assert.ok((await visibleLabels(db)).includes('shared-home'));
 });
+
+test('an existing session immediately loses old section permissions after a household grant changes',async t=>{
+ const db=await setup(t);
+ const edit=async label=>(await db.query(
+  "update public.cc_records set payload=payload||'{\"edited\":true}' where payload->>'label'=$1 returning version",[label])).rows;
+ await actor(db,i.b,i.sb);
+ assert.equal((await edit('shared-school')).length,1);
+ await administrator(db);
+ await db.query("update public.cc_household_memberships set read_sections=array['Home'],write_sections='{}' where household_id=$1 and user_id=$2",[i.home,i.b]);
+ await actor(db,i.b,i.sb);
+ assert.deepEqual(await visibleLabels(db),['private-b','shared-by-b','shared-home']);
+ assert.deepEqual(await edit('shared-school'),[]);
+ assert.deepEqual(await edit('shared-home'),[]);
+ assert.deepEqual(await edit('shared-by-b'),[]);
+ assert.equal((await edit('private-b')).length,1);
+ await actor(db,i.a,i.sa);
+ assert.ok((await visibleLabels(db)).includes('shared-school'));
+});

@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R04** Verified in isolated PostgreSQL that narrowing a household grant immediately removes the active session’s old section access and prevents edits even to its own shared records, while independent private records remain editable. All four current-policy checks passed.
+
 - **R01 / R04** The existing restricted-runner mode now covers the staged cookie acceptance suite through the original request handler. It retains socket transport by default. All 71 related checks passed, recovering 20 tests that previously stopped at a denied listener. Release-environment and actual socket acceptance remain separate.
 
 - **R03** Restore review uses the same microsecond-accurate timestamp comparison as approval. A same-millisecond change to a creation or removal timestamp blocks approval, while an equivalent offset permits recovery. All 51 related checks passed, including encrypted archives and isolated PostgreSQL. Separate-device acceptance still requires a verified destination and authenticated sessions.
