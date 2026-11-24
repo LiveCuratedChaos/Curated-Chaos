@@ -33,6 +33,29 @@ test('isolated SQL task text correction uses original approval preserves current
  const previous=(await db.query('select snapshot from cc_private.record_versions where record_id=$1',[id])).rows;
  assert.ok(previous.some(entry=>entry.snapshot.version===manual.version&&entry.snapshot.payload.day===manual.payload.day));
 
+ const laterFields={title:'Keep my latest title',description:'Keep my latest description'};
+ await db.query('update public.cc_records set payload=payload||$1::jsonb where id=$2',[JSON.stringify(laterFields),id]);
+ for(const textField of ['description','title']){
+  const current=(await read())[0],context='select-'+textField;
+  const chosen=reader.begin(context,i.a,Date.now()+300000)(current).taskReadToken;
+  const page=await reader.listVersions(context,viewer,chosen);
+  const entry=page.versions.find(version=>version.version===row.version);
+  const detail=await reader.readVersion(context,viewer,entry.historyReadToken);
+  const patch=taskHistoricalTextDraft(detail,{textField});
+  const selected=await reader.selectedRecord(context,viewer,chosen);
+  const editToken=edits.begin(context,i.a,selected.expiresAt)(selected.record).editToken;
+  const editor=await edits.read(context,viewer,editToken);
+  const review=await edits.prepare(context,viewer,{editToken,title:editor.title,description:editor.description,
+   day:editor.day,section:editor.section,priority:editor.priority,...patch});
+  assert.deepEqual((await read())[0],current);
+  const claim=edits.claim(context,i.a,review.reviewId);assert.equal(await edits.authorize(claim,viewer),true);
+  assert.deepEqual(await edits.save(claim,viewer),{saved:true});
+  const result=(await read())[0];assert.deepEqual(result.payload,{...current.payload,[textField]:row.payload[textField]});
+  const capture=await db.query('select snapshot from cc_private.record_versions where record_id=$1 and source_version=$2',[id,current.version]);
+  assert.equal(capture.rows.length,1);assert.deepEqual(capture.rows[0].snapshot.payload,current.payload);
+ }
+ assert.deepEqual(await others(),beforeOthers);
+
 });
 
 test('historical priority copying is explicit, validated and never restores old task lifecycle or omitted checklist',()=>{
@@ -48,4 +71,15 @@ test('due-date correction proposes one field and guards an undated or invalid ca
  entry.record.day='2026-02-30';
  assert.throws(()=>taskHistoricalTextDraft(entry,{now,dueDateOnly:true,allowUndated:true}));
  assert.throws(()=>taskHistoricalTextDraft(historical(),{now,includePriority:true,dueDateOnly:true}));
+});
+
+test('earlier task title and description can be selected independently of each other and of date or priority',()=>{
+ const entry=historical();
+ assert.deepEqual(taskHistoricalTextDraft(entry,{now,textField:'title'}),{title:entry.record.title});
+ entry.record.title='x'.repeat(180);entry.record.description='';
+ assert.deepEqual(taskHistoricalTextDraft(entry,{now,textField:'description'}),{description:''});
+ assert.throws(()=>taskHistoricalTextDraft(entry,{now,textField:'title'}));
+ for(const options of [{textField:'status'},{textField:'title',dueDateOnly:true},{textField:'description',includePriority:true}]){
+  assert.throws(()=>taskHistoricalTextDraft(historical(),{now,...options}));
+ }
 });

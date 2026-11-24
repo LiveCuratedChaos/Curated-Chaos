@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R12** added separate earlier-title and earlier-description actions for tasks. Each starts in the current editor, retains the other current fields and requires explicit approval. All 359 related checks passed, including a later rename, unchanged checklist and loss of acknowledgment.
+
 - **R03 / R12** verified Undo after encrypted shortcut recovery with PostgreSQL’s version and restore-window triggers installed together. The prior name and filters reopened, the removal time matched its archived version, all three imported entries stayed intact and the earlier archive could not reverse later changes. All 32 related checks passed.
 
 - **R16 / R17** added on-demand paid and unpaid counts in the Detailed week’s Bills section, using the configured rolling or calendar week. Opening a date uses its original Daily Brief. The summary omits bill names and amounts and clears when financial details are hidden. All 334 related checks passed.
@@ -70,19 +72,19 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Verification and blockers
 
-The November 24 full macOS check passed 3,519 of 3,543 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Of the 24 listener-related failures, 16 directly reported a binding denial and eight received the same denial inside an assertion. Privacy, whitespace and launcher checks passed. Two obsolete School shortcut expectations had failed on the first run and passed after correction.
+The November 24 full macOS check passed 3,524 of 3,548 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Of the 24 listener-related failures, 16 directly reported a binding denial and eight received the same denial inside an assertion. Privacy, whitespace and launcher checks passed. Two obsolete School shortcut expectations had failed on the first run and passed after correction.
 
-Playwright 1.65.1 discovered 238 cases. Eighteen selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, selective earlier note text, Undo removal and named shortcut history. All local acceptance used fictional records.
+Playwright 1.65.1 discovered 240 cases. Twenty selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, selective earlier note text, Undo removal named shortcut history and selective task descriptions. All local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12 with separate earlier-title and earlier-description actions in the original task editor.
+2. Continue R03/R16 with a restored manual bill and payment. Verify weekly counts, the original daily schedule, and replay on an isolated destination.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
-npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain'
+npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description'
 ```
 
 Earlier Calendar and Favorites contributions passed 432 focused tests. The previous full attempt passed 3,441 of 3,476. Historical logs under `/tmp` belong to the originating Mac. Linux omits the macOS-native Calendar transfer check.

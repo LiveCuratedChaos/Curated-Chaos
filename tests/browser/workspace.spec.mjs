@@ -561,6 +561,27 @@ test('saved task versions show earlier details read only without changing curren
  const row=page.locator('li').filter({has:page.getByText('Fictional plan for today',{exact:true})});await row.getByRole('button',{name:'Edit task',exact:true}).click();await page.locator('[name="create-description"]').fill('Fictional later task description');await page.getByRole('button',{name:'Review task changes',exact:true}).click();await page.getByRole('button',{name:'Approve task changes',exact:true}).click();await row.getByRole('button',{name:'Open task',exact:true}).click();const current=page.getByRole('region',{name:'Fictional plan for today',exact:true});await expect(current).toContainText('Fictional later task description');await page.getByRole('button',{name:'Browse saved versions',exact:true}).click();await page.getByRole('button',{name:'Open earlier task',exact:true}).first().click();const historical=page.getByRole('article',{name:'Earlier task version',exact:true});await expect(historical).toBeVisible();await expect(historical).toContainText('Read only');await expect(historical).not.toContainText('Fictional later task description');await expect(current).toContainText('Fictional later task description');await expect(historical.getByRole('button',{name:'Use earlier task text in current draft',exact:true})).toHaveCount(1);await expect(historical.getByRole('button',{name:/Approve/})).toHaveCount(0);await page.getByRole('button',{name:'Close versions',exact:true}).click();await expect(historical).toHaveCount(0);await expect(current).toContainText('1 of 2 displayed steps complete');
 });
 
+test('an earlier task description can be selected while keeping a later task title',async({page})=>{
+ const original=page.locator('li').filter({has:page.getByText('Fictional plan for today',{exact:true})});
+ await original.getByRole('button',{name:'Edit task',exact:true}).click();
+ const title=page.locator('[name="create-title"]'),description=page.locator('[name="create-description"]');
+ const earlier=await description.inputValue();
+ const renamed='Fictional revised plan title';
+ await title.fill(renamed);await description.fill('Fictional second description');
+ const approve=page.getByRole('button',{name:'Approve task changes',exact:true});
+ const review=page.getByRole('button',{name:'Review task changes',exact:true});
+ await review.click();await approve.click();
+ const row=page.locator('li').filter({has:page.getByText(renamed,{exact:true})});
+ await row.getByRole('button',{name:'Open task',exact:true}).click();
+ await page.getByRole('button',{name:'Browse saved versions',exact:true}).click();
+ await page.getByRole('button',{name:'Open earlier task',exact:true}).first().click();
+ await page.getByRole('button',{name:'Use earlier task description in current draft',exact:true}).click();
+ await expect(title).toHaveValue(renamed);await expect(description).toHaveValue(earlier);
+ await review.click();await approve.click();
+ await row.getByRole('button',{name:'Edit task',exact:true}).click();
+ await expect(title).toHaveValue(renamed);await expect(description).toHaveValue(earlier);
+});
+
 test('event saved versions preserve current calendar details and expose no historical commitment controls',async({page})=>{
  const row=page.locator('li').filter({has:page.getByText('Fictional check-in',{exact:true})});await row.getByRole('button',{name:'Edit event',exact:true}).click();await page.locator('[name="create-description"]').fill('Fictional later calendar details');await page.getByRole('button',{name:'Review event changes',exact:true}).click();await page.getByRole('button',{name:'Approve event changes',exact:true}).click();await row.getByRole('button',{name:'Open event',exact:true}).click();await expect(page.getByLabel('Workspace event details',{exact:true})).toHaveText('Fictional later calendar details');await page.getByRole('button',{name:'Browse saved versions',exact:true}).click();await page.getByRole('button',{name:'Open earlier event',exact:true}).first().click();const historical=page.getByRole('article',{name:'Earlier event version',exact:true});await expect(historical).toBeVisible();await expect(historical).toContainText('Read only');await expect(historical).not.toContainText('Fictional later calendar details');await expect(historical.getByRole('button',{name:'Use earlier fields in current draft',exact:true})).toHaveCount(1);await expect(historical.getByRole('button',{name:/Approve/})).toHaveCount(0);await expect(page.getByLabel('Workspace event details',{exact:true})).toHaveText('Fictional later calendar details');await page.getByRole('button',{name:'Close versions',exact:true}).click();await expect(historical).toHaveCount(0);
 });

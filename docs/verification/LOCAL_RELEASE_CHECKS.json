@@ -11,8 +11,8 @@
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3543,
-        "passed": 3519,
+        "total": 3548,
+        "passed": 3524,
         "failed": 24,
         "cancelled": 0,
         "skipped": 0
@@ -35,7 +35,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "Full gate through named-shortcut Undo and both corrected School scope checks. All 24 failures require a loopback listener."
+    "note": "Full gate through selective earlier task fields, encrypted shortcut Undo and detailed weekly bills. Every remaining failure requires a loopback listener."
   },
   "result": {
     "platformExclusions": [],
@@ -61,11 +61,11 @@
     }
   },
   "browser": {
-    "preparedCases": 238,
+    "preparedCases": 240,
     "freshExecutionVerified": false,
-    "selectedCases": 18,
+    "selectedCases": 20,
     "selectedCasesExecuted": 0,
-    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain'",
+    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description'",
     "reason": "The fictional fixture could not bind 127.0.0.1:5316 in the managed Mac session."
   },
   "releaseComplete": false,
@@ -873,6 +873,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "selectiveHistoricalTaskText": {
+      "date": "2026-11-24",
+      "passed": 359,
+      "failed": 0,
+      "scope": "Prior title or description alone enters the original task editor. A signed-in review and isolated PostgreSQL writes retained current fields and captured each exact prior payload."
     },
     "recoveredNamedShortcutUndo": {
       "date": "2026-11-24",
