@@ -3,7 +3,7 @@ begin;
 set local lock_timeout='3s';
 set local statement_timeout='20s';
 lock table public.cc_records in share row exclusive mode nowait;
-do $$begin if to_regprocedure('public.cc_private_school_recovery_ready()') is null or not exists(select 1 from pg_proc where oid=to_regprocedure('cc_private.school_recovery_guard()') and md5(prosrc)='dda72fea77e67d9c37f6fe229cdd3bf1') then raise exception 'Reviewed School recovery prerequisite required';end if;end$$;
+do $$begin if to_regprocedure('public.cc_private_school_recovery_ready()') is null or not exists(select 1 from pg_proc where oid=to_regprocedure('cc_private.school_recovery_guard()') and md5(prosrc)='66fb62bfbb3eb162f7061d7c07421b5e') then raise exception 'Reviewed School recovery prerequisite required';end if;end$$;
 create function cc_private.school_assessment_nodes(p jsonb) returns setof jsonb language sql immutable set search_path='' as $$
 select value from jsonb_array_elements(coalesce(p->'assessments','[]'::jsonb)) union all select value->'record' from jsonb_array_elements(coalesce(p->'removedAcademicRecords','[]'::jsonb)) where value->>'kind'='assessment'
 $$;

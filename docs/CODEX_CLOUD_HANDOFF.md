@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R12** corrected a reproduced daylight-saving error in the School SQL guard. The inclusive boundary is 2,160 elapsed hours in every database time zone. Readiness checks for academic history and common task memberships still require the exact reviewed functions. All 217 focused checks passed.
+
 - **R03 / R12 / R13** recovered a removed School shortcut from an encrypted archive into isolated PostgreSQL with the restore-window guard installed. Only the original reviewed shortcut action returned it to active use. Its filters were exact, an expired shortcut stayed absent, and replaying the archive preserved the newer state. All 16 repository drills passed.
 
 - **R12** prepared a PostgreSQL restore-window guard for private tasks, notes, events, projects and saved searches. It checks elapsed time when the database processes the row and protects its original removal timestamp. All 24 related checks passed, including installation and rollback on fictional data. Hosted installation is pending.
@@ -45,7 +47,7 @@ Playwright 1.65.1 discovered 236 cases. Twelve selected desktop and phone-size c
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12 at the nested School SQL guard. Its current calendar-day subtraction can change the elapsed recovery period at daylight-saving transitions. Apply the fixed elapsed-time rule to assessment and step restoration while preserving history. Check the existing original trigger and its protected readiness check.
+2. Continue R12 by letting a person take just the earlier title or just the earlier body from a note into its original editor. Preserve the other current field and require the normal reviewed save. Exercise old editor limits and the authenticated source checks.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

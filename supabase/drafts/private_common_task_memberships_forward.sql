@@ -5,7 +5,7 @@ set local lock_timeout='3s';
 set local statement_timeout='20s';
 lock table public.cc_records in share row exclusive mode nowait;
 do $$begin
- if not exists(select 1 from pg_catalog.pg_proc where oid=pg_catalog.to_regprocedure('public.cc_private_school_recovery_ready()') and pg_catalog.md5(prosrc)='851c3a9c9442f114911f24e2e7da0216' and not prosecdef) then
+ if not exists(select 1 from pg_catalog.pg_proc where oid=pg_catalog.to_regprocedure('public.cc_private_school_recovery_ready()') and pg_catalog.md5(prosrc)='5ccdd01d242af0faaaf47502ce3b9bb3' and not prosecdef) then
  raise exception 'Reviewed School recovery prerequisite is not installed';end if;
 end$$;
 -- OFFLINE PREPARATION: preserve writer signatures, privileges and behavior; acquire the School owner lock before row/hierarchy locks.
@@ -485,7 +485,7 @@ select coalesce(public.cc_private_school_recovery_ready(),false)
 ('cc_private.common_task_recurring_carry_guard()','aa5b6bfaa780a3aba53fd8086414e1cd',false,'trigger','v','plpgsql',array[]::text[],0,null,false),
 ('public.cc_set_common_task_link(jsonb,integer,jsonb,integer,integer,boolean)','3eebe314e57c5001777abe5206fa3d40',true,'jsonb','v','plpgsql',array['p_task','p_task_version','p_project','p_project_version','p_link_version','p_linked']::text[],0,null,false),
 ('public.cc_complete_common_recurring_chore(uuid,integer,jsonb,date,date,uuid,uuid)','8732f679655e4300ebba97a6b642a6c7',true,'jsonb','v','plpgsql',array['p_record_id','p_version','p_schedule','p_next_day','p_review_day','p_operation_id','p_successor_id']::text[],0,null,false),
-('public.cc_private_school_recovery_ready()','851c3a9c9442f114911f24e2e7da0216',true,'boolean','s','sql',array[]::text[],0,null,false),
+('public.cc_private_school_recovery_ready()','5ccdd01d242af0faaaf47502ce3b9bb3',true,'boolean','s','sql',array[]::text[],0,null,false),
 ('cc_private.validate_project_task_link()','f040a387f1dd3b53851a0474842bcadf',false,'trigger','v','plpgsql',array[]::text[],0,null,false),
 ('cc_private.touch_linked_task()','f7b935c39f53f9da91c38ba32dbc86d6',false,'trigger','v','plpgsql',array[]::text[],0,null,false),
 ('cc_private.protect_link_targets()','1d3f12202ff11f58bc9e3c2ba6a622ef',false,'trigger','v','plpgsql',array[]::text[],0,null,false),

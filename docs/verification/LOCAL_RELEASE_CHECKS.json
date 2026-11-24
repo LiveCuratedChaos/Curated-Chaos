@@ -874,6 +874,12 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "schoolSqlElapsedRecovery": {
+      "passed": 217,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Actual nested School trigger, exact millisecond before/at/after the cutoff in UTC and a daylight-saving transition, School assessment history and downstream common-task readiness."
+    },
     "removedShortcutArchive": {
       "passed": 16,
       "failed": 0,

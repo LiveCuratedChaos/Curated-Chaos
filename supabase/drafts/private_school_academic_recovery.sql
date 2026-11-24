@@ -90,7 +90,7 @@ begin
  elsif jsonb_array_length(new_entries)=jsonb_array_length(old_entries)-1 then
   entry_idx:=-1;idx:=0;for e in select value from jsonb_array_elements(old_entries) loop if (old_entries-idx)=new_entries then entry_idx:=idx;exit;end if;idx:=idx+1;end loop;
   if entry_idx<0 then raise exception 'Exactly one retained recovery entry may be restored';end if;e:=old_entries->entry_idx;removed_time:=cc_private.school_recovery_time(e->'removedAt');
-  if removed_time is null or removed_time>date_trunc('milliseconds',statement_timestamp()) or removed_time<date_trunc('milliseconds',statement_timestamp())-interval '90 days' then raise exception 'Academic recovery entry is outside its restore window';end if;
+  if removed_time is null or removed_time>date_trunc('milliseconds',statement_timestamp()) or removed_time<date_trunc('milliseconds',statement_timestamp())-interval '2160 hours' then raise exception 'Academic recovery entry is outside its restore window';end if;
   expected:=old.payload;pos:=(e->>'position')::integer;
   if e->>'kind'='assessment' then
    items:=old.payload->'assessments';if jsonb_array_length(items)>=25 then raise exception 'Active assessment capacity reached';end if;pos:=least(pos,jsonb_array_length(items)+1);
