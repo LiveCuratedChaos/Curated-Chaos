@@ -84,10 +84,16 @@ test('one original task can override its section color, survive other settings c
  const stale=await client.reviewPreferences({baseTag:currentView.baseTag,itemColorToken:current.taskReadToken,changes:{itemColor:'warning'}});
  await browse();await assert.rejects(client.savePreferences(stale.reviewId));
  const selected=(await browse()).results.find(r=>r.displayColor==='positive'),view=await client.itemColor(selected.taskReadToken);
- const remove=await client.reviewPreferences({baseTag:view.baseTag,itemColorToken:selected.taskReadToken,changes:{itemColor:'section'}});
+ const themeDefault=await client.reviewPreferences({baseTag:view.baseTag,itemColorToken:selected.taskReadToken,changes:{itemColor:'inherit'}});
+ assert.equal((await client.savePreferences(themeDefault.reviewId)).itemColor,'inherit');
+ const afterDefault=(await browse()).results;
+ assert.deepEqual(afterDefault.map(r=>r.displayColor??'section').sort(),['inherit','section']);
+ const override=afterDefault.find(r=>r.displayColor==='inherit'),overrideView=await client.itemColor(override.taskReadToken);
+ assert.equal(overrideView.sectionColor,'accent');
+ const remove=await client.reviewPreferences({baseTag:overrideView.baseTag,itemColorToken:override.taskReadToken,changes:{itemColor:'section'}});
  assert.equal((await client.savePreferences(remove.reviewId)).itemColor,'section');
  assert.ok((await browse()).results.every(r=>r.displayColor===undefined));
- await assert.rejects(other.client.itemColor(selected.taskReadToken));
+ await assert.rejects(other.client.itemColor(override.taskReadToken));
 });
 
 test('original note and calendar colors survive reload across lists, month and the selected day',async t=>{
