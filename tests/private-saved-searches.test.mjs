@@ -56,3 +56,23 @@ test('an off-page removed shortcut bounds the count, tokens, review and final ap
  assert.equal(x.s.writes,1);
  assert.equal((await x.list(true)).matchCount,50);
 });
+
+test('optional School and document shortcuts follow their read scope in active and removed lists',async t=>{
+ const x=setup(t);await x.create();
+ for(const historical of [
+  {...filters(),type:'school-course',section:'School',status:'all',priority:'all',dateFrom:'',dateTo:'',dateStatus:'all'},
+  {type:'document-text',query:'Private fictional phrase'}
+ ]){
+  x.s.row.payload.filters=historical;
+  for(const removed of [false,true]){
+   x.s.row.deleted_at=removed?new Date(x.s.clock).toISOString():null;
+   const hidden=await x.list(removed);
+   assert.equal(hidden.matchCount,0);assert.deepEqual(hidden.records,[]);
+   const scoped=createPrivateSavedSearches({api:x.api,now:()=>x.s.clock,allowSchool:historical.type==='school-course',allowDocuments:historical.type==='document-text'});
+   try{
+    const visible=await scoped.list('owner',x.actor,x.s.clock+100000,{removed});
+    assert.equal(visible.matchCount,1);assert.deepEqual(visible.records[0].filters,historical);
+   }finally{scoped.dispose();}
+  }
+ }
+});

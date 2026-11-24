@@ -156,4 +156,12 @@ do $install$declare expected text;policy_hash text;begin
 end$install$;
 revoke all on function public.cc_private_record_versions_ready() from public,anon;
 grant execute on function public.cc_private_record_versions_ready() to authenticated;
+create function public.cc_private_saved_search_versions_ready() returns boolean language sql stable set search_path='' as $$
+ select public.cc_private_record_versions_ready() and exists (
+  select 1 from pg_catalog.pg_constraint where conrelid='cc_private.record_versions'::regclass and contype='c'
+   and position(quote_literal('saved_search') in pg_catalog.pg_get_constraintdef(oid))>0
+ );
+$$;
+revoke all on function public.cc_private_saved_search_versions_ready() from public,anon;
+grant execute on function public.cc_private_saved_search_versions_ready() to authenticated;
 commit;

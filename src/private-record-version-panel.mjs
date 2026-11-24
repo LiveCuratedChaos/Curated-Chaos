@@ -1,7 +1,7 @@
 // Shared lazy history capabilities. Domain adapters validate and escape their own details.
 import {escapeHtml as e} from './core.mjs';
 import {verifyRecordVersionPage} from './private-record-version-page.mjs';
-const keys={note:'noteToken',task:'taskReadToken',event:'eventEditToken',project:'projectReadToken',layout:'viewId'};
+const keys={note:'noteToken',task:'taskReadToken',event:'eventEditToken',project:'projectReadToken',layout:'viewId',shortcut:'savedSearchToken'};
 export function createPrivateRecordVersionPanel({kind,client,clock=Date.now,source=()=>null,canUse=()=>false,onChange=()=>{},onUse=null,canUseDraft=()=>true,draftActions=[],verifyDetails,renderDetails}){
  const key=typeof kind==='string'&&Object.hasOwn(keys,kind)?keys[kind]:null;if(!key||typeof verifyDetails!=='function'||typeof renderDetails!=='function'||onUse!==null&&typeof onUse!=='function'||typeof canUseDraft!=='function')throw Error('Explicit historical record adapter required.');
  if(!Array.isArray(draftActions)||draftActions.length>4||new Set(draftActions.map(a=>a?.id)).size!==draftActions.length||draftActions.some(a=>!a||!/^use-[a-z-]{1,30}$/.test(a.id)||typeof a.label!=='string'||!a.label||a.label.length>100||typeof a.canUse!=='function'||typeof a.onUse!=='function'))throw Error('Explicit bounded historical draft actions required.');

@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R12 / R13** added View versions on an active named shortcut. Selecting one earlier version reveals its name and exact filters. Reopening a stale selection or using it from a different tab fails. The optional School and document scopes now apply to active and removed list counts as well as version reads. All 477 integration checks passed. All 64 saved-search checks passed with the additional scope coverage.
+
 - **R03 / R12 / R13** added protected history for explicitly named saved shortcuts. Rename, removal and restoration produced the three expected versions. Running or offering an unsaved query produced none. An encrypted archive restored all three with verified provenance. The database and archive refused unrelated results. All 148 related checks passed, followed by the expanded archive case.
 
 - **R01** added local lookup codes for unexpected failures. The offline summary still withholds paths, test names and error contents. On the same checkout, `node tools/check-offline.mjs --locate <entry>` resolves a code to a file and line without rerunning checks. All seven runner tests passed.
@@ -54,17 +56,17 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 The latest full macOS check through named-shortcut history passed 3,506 of 3,530 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Sixteen failures directly reported denied local listeners and eight assertions received the same denial. There were zero unclassified failures. Privacy, whitespace and launcher checks passed. The earlier 3,502/3,527 run through Undo had one additional failure that did not recur in a two-group diagnostic or this full run.
 
-Playwright 1.65.1 discovered 238 cases. Sixteen selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, selective earlier note text and Undo removal. All local acceptance used fictional records.
+Playwright 1.65.1 discovered 238 cases. Eighteen selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, selective earlier note text, Undo removal and named shortcut history. All local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12/R13 with owner-selected browsing of saved-shortcut versions. Use the original active shortcut selection, bounded version list and one-use detail read. Preserve the existing optional School and Document scopes and keep the action read-only.
+2. Continue R12/R13 by letting an owner run the filters of a selected earlier shortcut against current data. Recheck that the original is still active, keep dates fixed, and use the existing scoped search entry point.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
-npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns'
+npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain'
 ```
 
 Earlier Calendar and Favorites contributions passed 432 focused tests. The previous full attempt passed 3,441 of 3,476. Historical logs under `/tmp` belong to the originating Mac. Linux omits the macOS-native Calendar transfer check.

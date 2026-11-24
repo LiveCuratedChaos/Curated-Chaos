@@ -63,9 +63,9 @@
   "browser": {
     "preparedCases": 238,
     "freshExecutionVerified": false,
-    "selectedCases": 16,
+    "selectedCases": 18,
     "selectedCasesExecuted": 0,
-    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns'",
+    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain'",
     "reason": "The fictional fixture could not bind 127.0.0.1:5316 in the managed Mac session."
   },
   "releaseComplete": false,
@@ -873,6 +873,13 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "selectedNamedShortcutVersions": {
+      "passed": 477,
+      "failed": 0,
+      "followUpSavedSearchTestsPassed": 64,
+      "node": "24.22.3",
+      "scope": "Signed-in selected shortcut history, early timer wakeup, scoped active and removed listings, single-use version reads, source changes, tab isolation, default-off and encrypted recovery."
     },
     "namedShortcutVersionRecovery": {
       "passed": 148,

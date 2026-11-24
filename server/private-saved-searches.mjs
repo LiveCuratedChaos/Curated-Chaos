@@ -1,7 +1,8 @@
+import {createPrivateRecordVersionReader} from './private-record-version-reader.mjs';
 import {isSchoolSearchType} from '../src/private-school-search-types.mjs';
 import {CALENDAR_FILTER_KEYS,validCalendarShortcut} from '../src/private-calendar-filters.mjs';
 import {documentShortcutFilters,isDocumentShortcut} from '../src/private-document-fields.mjs';
-// Prepared storage component only; no routes, startup flag or automatic history collection.
+// Owner-selected named shortcuts. An applied search alone never creates a stored row.
 import {randomBytes,randomUUID} from 'node:crypto';
 import {privateSearchFields} from './private-workspace-search.mjs';
 import {stableStringify} from './stable-json.mjs';
@@ -31,10 +32,28 @@ export function privateSavedSearchState(row,ownerId){
 }
 function sameSelection(a,b){return same({...a,payload:{title:a.payload.title,filters:a.payload.filters}},{...b,payload:{title:b.payload.title,filters:b.payload.filters}});}
 function same(a,b){return a.id===b.id&&a.owner_id===b.owner_id&&a.version===b.version&&sameStamp(a.deleted_at,b.deleted_at)&&stamp(a.created_at)===stamp(b.created_at)&&equal(a.payload,b.payload);}
-export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUID,allowSchool=false,allowDocuments=false}){
+export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUID,allowSchool=false,allowDocuments=false,allowHistory=false}){
  if(typeof allowDocuments!=='boolean'||typeof allowSchool!=='boolean'||typeof now!=='function'||typeof idFactory!=='function'||['getPrivateSavedSearch','listPrivateSavedSearches','addPrivateSavedSearch','updatePrivateSavedSearch','setPrivateSavedSearchDeletedAt'].some(k=>typeof api?.[k]!=='function'))throw Error('Explicit saved-search API required.');
+ if(typeof allowHistory!=='boolean')throw Error('Explicit saved-search history scope required.');
  const contexts=new Map();let disposed=false;
- function clear(id){clearTimeout(contexts.get(id)?.timer);contexts.delete(id);}
+ const inScope=filters=>(allowSchool||!isSchoolSearchType(filters.type))&&(allowDocuments||!isDocumentShortcut(filters));
+ function historyFields(record,owner){
+  const row=privateSavedSearchState(record,owner);
+  if(Object.keys(row.payload).sort().join(',')!=='fictional,filters,schemaVersion,source,title'||!inScope(row.payload.filters))throw Error('Shortcut history unavailable.');
+  return {name:row.payload.title,filters:structuredClone(row.payload.filters)};
+ }
+ const history=allowHistory?createPrivateRecordVersionReader({
+  api:{...api,isPrivateRecordVersionsReady:api.isPrivateSavedSearchVersionsReady},now,
+  async resolveSource(id,actor,key){
+   const {s,row}=selected(id,actor,key);
+   if(row.deleted_at!==null)throw Error('Choose an active saved search.');
+   const current=await get(actor,row.id);historyFields(current,actor.ownerId);
+   if(!alive(s)||!sameSelection(current,row))throw Error('Saved search changed. Fetch again.');
+   return {record:current,expiresAt:s.expiresAt};
+  },
+  describeSnapshot:row=>historyFields(row,row.owner_id)
+ }):null;
+ function clear(id){history?.clear(id);clearTimeout(contexts.get(id)?.timer);contexts.delete(id);}
  function alive(s){return !disposed&&contexts.get(s.contextId)===s&&s.expiresAt>now();}
  function begin(contextId,ownerId,expiresAt){if(disposed||typeof contextId!=='string'||!contextId||!uuid(ownerId)||!Number.isFinite(expiresAt)||expiresAt<=now())throw Error('Saved-search context unavailable.');clear(contextId);const s={contextId,ownerId,expiresAt:Math.min(expiresAt,now()+300000),actions:new Map(),review:null,viewId:token()};contexts.set(contextId,s);s.timer=setTimeout(()=>clear(contextId),Math.max(1,s.expiresAt-now()));s.timer.unref?.();return s;}
  function eligible(row){if(row.deleted_at!==null&&!withinPrivateRecoveryWindow(row.deleted_at,now()))throw Error('The 90-day recovery period has ended.');}
@@ -47,7 +66,7 @@ export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUI
   if(!alive(s)||!Array.isArray(rows)||rows.length>2000||new Set(rows.map(r=>r?.id)).size!==rows.length)throw Error('Saved-search list unverified.');
   const checked=rows.map(r=>privateSavedSearchState(r,actor.ownerId));if(checked.some(r=>(r.deleted_at!==null)!==removed))throw Error('Saved-search list scope changed.');
   const asOf=now();
-  const items=checked.filter(r=>allowDocuments||!isDocumentShortcut(r.payload.filters)).filter(r=>!removed||withinPrivateRecoveryWindow(r.deleted_at,asOf)).sort((a,b)=>a.payload.title.localeCompare(b.payload.title)||a.id.localeCompare(b.id));
+  const items=checked.filter(r=>inScope(r.payload.filters)).filter(r=>!removed||withinPrivateRecoveryWindow(r.deleted_at,asOf)).sort((a,b)=>a.payload.title.localeCompare(b.payload.title)||a.id.localeCompare(b.id));
   if(removed)s.expiresAt=Math.min(s.expiresAt,...items.map(row=>privateRecoveryDeadline(row.deleted_at)));
   return{viewId:s.viewId,removed,offset,limit:50,matchCount:items.length,retentionDays:PRIVATE_RECOVERY_DAYS,expiresAt:s.expiresAt,records:items.slice(offset,offset+50).map(row=>{const key=token();s.actions.set(key,row);return{name:row.payload.title,filters:structuredClone(row.payload.filters),...(removed?{deletedAt:new Date(stamp(row.deleted_at)).toISOString()}:{}),savedSearchToken:key};})};
  }
@@ -79,5 +98,8 @@ export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUI
   if(ack.id!==r.record.id||!equal(ack.payload,r.payload)||!sameStamp(ack.deleted_at,deletedAt)||(r.action==='create'?ack.version!==1:ack.version!==r.record.version+1||stamp(ack.created_at)!==stamp(r.record.created_at)))throw Error('Saved-search acknowledgement unverified.');
   const latest=await get(actor,r.record.id);if(!alive(s)||s.review!==r||!same(ack,latest))throw Error('Saved-search reread unverified.');clear(s.contextId);return{saved:true,action:r.action};
  }
- return{offer,list,load,prepare,claim,authorize,save,clear,currentView(id,viewId){const s=contexts.get(id);return Boolean(s&&alive(s)&&s.viewId===viewId);},hasAction(id,key){const s=contexts.get(id);return Boolean(s&&alive(s)&&s.actions.has(key));},offerCurrent(id,key){const s=contexts.get(id);return Boolean(s&&alive(s)&&s.offer?.key===key);},current(id,reviewId){const s=contexts.get(id);return Boolean(s&&alive(s)&&typeof reviewId==='string'&&s.review&&s.review.reviewId===reviewId&&!s.review.claimed);},dispose(){disposed=true;for(const id of contexts.keys())clear(id);}};
+ return{...(history?{
+  listVersions:(id,actor,key,offset)=>history.list(id,actor,key,contexts.get(id)?.expiresAt,{offset}),
+  readVersion:(id,actor,key)=>history.read(id,actor,key)
+ }:{}),offer,list,load,prepare,claim,authorize,save,clear,currentView(id,viewId){const s=contexts.get(id);return Boolean(s&&alive(s)&&s.viewId===viewId);},hasAction(id,key){const s=contexts.get(id);return Boolean(s&&alive(s)&&s.actions.has(key));},offerCurrent(id,key){const s=contexts.get(id);return Boolean(s&&alive(s)&&s.offer?.key===key);},current(id,reviewId){const s=contexts.get(id);return Boolean(s&&alive(s)&&typeof reviewId==='string'&&s.review&&s.review.reviewId===reviewId&&!s.review.claimed);},dispose(){disposed=true;history?.dispose();for(const id of contexts.keys())clear(id);}};
 }

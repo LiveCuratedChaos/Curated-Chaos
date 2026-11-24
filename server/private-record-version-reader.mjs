@@ -7,7 +7,7 @@ import {privateWorkspaceRestoreDigest} from './private-workspace-restore-contrac
 const uuid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v),opaque=()=>randomBytes(32).toString('base64url');
 const fail=()=>{throw Error('Current owned record history could not be verified.');};
 function record(row,owner){
- if(!uuid(row?.id)||row.owner_id!==owner||row.visibility!=='private'||row.household_id!==null||!['task','note','event','project','school_fixture','dashboard_layout'].includes(row.item_type)||!Number.isInteger(row.version)||row.version<1||!row.payload||typeof row.payload!=='object'||Array.isArray(row.payload)||Buffer.byteLength(JSON.stringify(row.payload))>1024*1024||![row.created_at,row.updated_at].every(safeSavedAt)||row.deleted_at!==null&&!safeSavedAt(row.deleted_at))fail();
+ if(!uuid(row?.id)||row.owner_id!==owner||row.visibility!=='private'||row.household_id!==null||!['task','note','event','project','school_fixture','dashboard_layout','saved_search'].includes(row.item_type)||!Number.isInteger(row.version)||row.version<1||!row.payload||typeof row.payload!=='object'||Array.isArray(row.payload)||Buffer.byteLength(JSON.stringify(row.payload))>1024*1024||![row.created_at,row.updated_at].every(safeSavedAt)||row.deleted_at!==null&&!safeSavedAt(row.deleted_at))fail();
  return privateWorkspaceRestoreDigest([row]);
 }
 function instant(value){if(!safeSavedAt(value))fail();return BigInt(Date.parse(value))*1000n+BigInt((value.match(/\.(\d{1,6})(?:Z|[+-])/)?.[1]??'').padEnd(6,'0').slice(3));}

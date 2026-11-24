@@ -93,7 +93,9 @@ export function createPrivateWorkspaceRestoreRepository({projectRef,withConnecti
  async function savedSearchHistoryReady(db,owner){
   if(!allowRecordHistoryImport)return false;
   await verify(db,owner);
-  const result=await db.query("select to_regprocedure('cc_private.named_search_version_source(jsonb)') is not null and exists(select 1 from pg_constraint where conrelid=to_regclass('cc_private.record_versions') and contype='c' and position('''saved_search''' in pg_get_constraintdef(oid))>0) as ready");
+  const installed=await db.query("select to_regprocedure('public.cc_private_saved_search_versions_ready()') is not null as installed");
+  if(installed.rows?.[0]?.installed!==true)return false;
+  const result=await db.query('select public.cc_private_saved_search_versions_ready() as ready');
   return result.rows?.[0]?.ready===true;
  }
  async function importReady(db,owner,locked=false){if(!allowRecordHistoryImport)return false;await verify(db,owner);const installed=await db.query("select to_regprocedure('public.import_private_record_versions(uuid,jsonb)') is not null as installed");if(installed?.rows?.[0]?.installed!==true)return false;if(locked){const held=await db.query('select public.lock_private_record_versions_for_recovery() as held');if(held?.rows?.[0]?.held!==true)return false;}const result=await db.query('select public.cc_private_record_versions_ready() as ready');return result?.rows?.[0]?.ready===true;}

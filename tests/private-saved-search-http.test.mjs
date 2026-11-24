@@ -82,3 +82,25 @@ test('named School course and program searches preserve their type through revie
   assert.deepEqual(rerun.results.map(row=>row.title),result.results.map(row=>row.title));
  }
 });
+test('explicit shortcut history uses the selected saved source and one-use version tokens',async t=>{
+ const {privateWorkspaceFixture}=await import('./support/private-workspace-fixture.mjs');
+ const f=privateWorkspaceFixture(t,{...features,allowSavedSearches:true,allowSavedSearchHistory:true});
+ const a=f.tab(),b=f.tab();await a.login();await b.login();
+ const source=await a.client.search(filters);
+ const created=await a.client.reviewSavedSearch({action:'create',name:'First name',saveSearchToken:source.saveSearchToken});await a.client.saveSavedSearch(created.reviewId);
+ const list=async tab=>(await tab.client.savedSearches({removed:false,offset:0})).records[0];
+ const first=await list(a),change=await a.client.reviewSavedSearch({action:'rename',name:'Current name',savedSearchToken:first.savedSearchToken});
+ await a.client.saveSavedSearch(change.reviewId);
+ const current=await list(a),page=await a.client.shortcutHistoryList({savedSearchToken:current.savedSearchToken,offset:0});
+ assert.equal(page.matchCount,1);assert.doesNotMatch(JSON.stringify(page),/First name|Current name|Fictional|owner_id/);
+ const token=page.versions[0].historyReadToken;
+ await assert.rejects(b.client.shortcutHistoryRead({historyReadToken:token}));
+ const prior=await a.client.shortcutHistoryRead({historyReadToken:token});
+ assert.deepEqual(prior.record,{name:'First name',filters});assert.equal(prior.readOnly,true);
+ await assert.rejects(a.client.shortcutHistoryRead({historyReadToken:token}));
+ const again=await a.client.shortcutHistoryList({savedSearchToken:current.savedSearchToken,offset:0});
+ const other=await list(b),renamed=await b.client.reviewSavedSearch({action:'rename',name:'Newer name',savedSearchToken:other.savedSearchToken});await b.client.saveSavedSearch(renamed.reviewId);
+ await assert.rejects(a.client.shortcutHistoryRead({historyReadToken:again.versions[0].historyReadToken}));
+ const off=privateWorkspaceFixture(t,{...features,allowSavedSearches:true}).tab();await off.login();
+ await assert.rejects(off.client.shortcutHistoryList({savedSearchToken:current.savedSearchToken,offset:0}));
+});

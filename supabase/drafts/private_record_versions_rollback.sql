@@ -6,6 +6,7 @@ lock table cc_private.record_versions in access exclusive mode nowait;
 do $$begin if exists(select 1 from cc_private.record_versions) then raise exception 'Retained record versions require protected archival before rollback';end if;end$$;
 drop function public.import_private_record_versions(uuid,jsonb);
 drop function cc_private.record_version_recovery_valid(jsonb,integer);
+drop function public.cc_private_saved_search_versions_ready();
 drop function public.cc_private_record_versions_ready();
 drop function public.lock_private_record_versions_for_recovery();
 drop function public.export_private_record_versions(uuid);
