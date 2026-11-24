@@ -4,7 +4,7 @@ import {manualIncomeForPeriod} from '../src/private-manual-income.mjs';
 import {validateIncomeRow,incomeSourceType,incomePaymentType} from './private-income-records.mjs';
 import {financeRecordId} from './private-finance-identity.mjs';
 import {randomBytes} from 'node:crypto';
-import {manualBudgetPeriod,normalizeManualBudget,calculateManualBudget,nextManualBudget} from '../src/private-finance-manual.mjs';
+import {manualBudgetMonth,manualBudgetPeriod,normalizeManualBudget,calculateManualBudget,nextManualBudget} from '../src/private-finance-manual.mjs';
 import {stableStringify} from './stable-json.mjs';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -47,6 +47,16 @@ export function createPrivateBudgetReview({api,now=Date.now,documentStorage=null
   validateBudgetRow(rows[0],actor.ownerId);
   if(rows[0].id!==id)throw Error('Budget selection changed.');
   return rows[0];
+ }
+ async function savedMonths(actor,{year},expiresAt){
+  if(!Number.isInteger(year)||year<0||year>9999)throw Error('Choose a four-digit budget year.');
+  const first=String(year).padStart(4,'0')+'-01-01';
+  const ids=Array.from({length:12},(_,month)=>manualBudgetId(actor.ownerId,manualBudgetMonth(first,month)));
+  const saved=await api.listManualBudgetIds(actor.accessToken,actor.ownerId,ids);
+  if(!Array.isArray(saved)||saved.length>12||new Set(saved).size!==saved.length||saved.some(id=>!ids.includes(id)))
+   throw Error('Could not verify the saved months.');
+  const months=ids.map((id,index)=>saved.includes(id)?index+1:null).filter(Boolean).reverse();
+  return {year,months,expiresAt:Math.min(now()+300000,expiresAt)};
  }
  async function open(id,actor,values,expiresAt){
   clear(id);
@@ -168,5 +178,5 @@ export function createPrivateBudgetReview({api,now=Date.now,documentStorage=null
   clear(view.id);
   return {saved:true,version:latest.version};
  }
- return {open,prepare,cashFlow,receipts,receiptDownload,claim,save,clear,dispose(){for(const id of views.keys())clear(id);}};
+ return {savedMonths,open,prepare,cashFlow,receipts,receiptDownload,claim,save,clear,dispose(){for(const id of views.keys())clear(id);}};
 }

@@ -29,6 +29,16 @@ export function includedManualBalance(accounts) {
  return safeCents(total);
 }
 
+export function manualBudgetMonth(value,offset=0){
+ if(!day(value)||!Number.isInteger(offset))throw Error('Choose a month.');
+ const date=new Date(value+'T00:00:00Z');
+ date.setUTCMonth(date.getUTCMonth()+offset,1);
+ if(date.getUTCFullYear()<0||date.getUTCFullYear()>9999)throw Error('Choose a supported month.');
+ const periodStart=date.toISOString().slice(0,10);
+ date.setUTCMonth(date.getUTCMonth()+1,0);
+ return {period:'month',periodStart,periodEnd:date.toISOString().slice(0,10)};
+}
+
 export function manualBudgetPeriod({period,periodStart,periodEnd}={}) {
  if (!['month','pay_period'].includes(period)||!day(periodStart)||!day(periodEnd)||periodStart>periodEnd)
   throw Error('Choose a valid budget period.');

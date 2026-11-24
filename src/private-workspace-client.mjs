@@ -87,6 +87,7 @@ export function createPrivateWorkspaceClient(fetcher=fetch){let csrf='',generati
   manualIncomeCancel:()=>request('manual-income/cancel','POST',{}),
   manualExpenseReceipts:(index,offset)=>request('manual-budgets/receipts','POST',{index,offset}),
   manualExpenseReceiptDownload:index=>request('manual-budgets/receipt-download','POST',{index}),
+  manualBudgetMonths:year=>request('manual-budgets/months','POST',{year}),
   manualBudgetOpen:period=>request('manual-budgets/open','POST',period),
   manualBudgetReview:values=>request('manual-budgets/review','POST',values),
   manualBudgetSave:reviewId=>request('manual-budgets/save','POST',{approved:true,reviewId}),

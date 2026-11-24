@@ -11,8 +11,8 @@
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3551,
-        "passed": 3527,
+        "total": 3554,
+        "passed": 3530,
         "failed": 24,
         "cancelled": 0,
         "skipped": 0
@@ -35,7 +35,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "Full gate through monthly budget navigation and the encrypted bill and reconciled-budget recovery drills. Every remaining failure requires a loopback listener."
+    "note": "Full gate through the year lookup for saved budgets, monthly navigation and both encrypted finance recovery drills. Every remaining failure requires a loopback listener."
   },
   "result": {
     "platformExclusions": [],
@@ -874,6 +874,13 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "savedMonthlyBudgetLookup": {
+      "date": "2026-11-24",
+      "node": "24.22.3",
+      "passed": 346,
+      "failed": 0,
+      "scope": "The year lookup reads only the owner’s matching IDs. Signed-in tests cover returning to the original budget or transactions, empty years, access scope, pending reviews, expiry and concealment. Embedded PostgreSQL checks owner isolation."
+    },
     "monthlyBudgetNavigation": {
       "date": "2026-11-24",
       "node": "24.22.3",
@@ -1097,7 +1104,7 @@
     "failed": 0,
     "scope": "Canonical shared task/project progress and links, manual status independence, deduplicated hierarchy, recovery/archive boundaries and protected original details. Reuses existing project engine for Personal Life goals."
   },
-  "nextAction": "List saved monthly budgets for a selected year and reopen the chosen original budget or transaction history.",
+  "nextAction": "Browse saved custom pay periods using their exact original start and end dates.",
   "pendingDecisions": [],
   "resolvedHomeCleaningRollover": {
     "requirement": "R31 Home cleaning rollover semantics",

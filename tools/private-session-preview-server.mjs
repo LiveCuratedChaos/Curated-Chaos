@@ -220,6 +220,10 @@ function fixtureApi({fixtureSavedMail=[],fixtureSavedTransactions=[],undated=fal
    const saved={...structuredClone(draft),version:(existing?.version??0)+1,deleted_at:null,created_at:existing?.created_at??createdAt,updated_at:new Date().toISOString()};
    incomeRecords.set(draft.id,saved);return [structuredClone(saved)];
   },
+  async listManualBudgetIds(token,owner,ids){
+   if(!active.has(token)||owner!==ownerId)throw Error('Sign in to find saved budgets.');
+   return ids.filter(id=>manualBudgets.has(id));
+  },
   async getManualBudget(token,id,owner){
    if(!active.has(token)||owner!==ownerId)throw Error('Sign in to open a budget.');
    return manualBudgets.has(id)?[structuredClone(manualBudgets.get(id))]:[];

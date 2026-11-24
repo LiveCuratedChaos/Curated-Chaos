@@ -986,6 +986,15 @@ test('monthly budget navigation preserves the selected view and conceals amounts
  await expect(button('Show amounts')).toBeVisible();
  await expect(panel).not.toContainText('$450.00');
  await button('Choose another period').click();
+ await panel.getByLabel('Month containing').fill('2028-09-01');
+ await button('Find saved months').click();
+ await expect(panel).toContainText('Saved monthly budgets for 2028');
+ await expect(panel).not.toContainText('$450.00');
+ await expect(button('Open September budget')).toHaveCount(0);
+ await button('Open February transactions').click();
+ await expect(panel).toContainText('2028-02-01 through 2028-02-29');
+ await expect(panel.getByRole('heading',{name:'Manual transactions'})).toBeVisible();
+ await button('Choose another period').click();
  await panel.getByLabel('Month containing').fill('2027-12-27');
  await button('Open transaction history').click();
  await button('Next month').click();

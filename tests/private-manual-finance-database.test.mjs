@@ -1,4 +1,4 @@
-import {calculateManualBudget} from '../src/private-finance-manual.mjs';
+import {calculateManualBudget,manualBudgetMonth} from '../src/private-finance-manual.mjs';
 import {readFinanceWidget,readBriefBillWeek,createBriefBillSources} from '../server/private-finance-widget.mjs';
 import {createPrivateWorkspaceRestoreRepository} from '../server/private-workspace-restore-repository.mjs';
 import {createPrivateWorkspaceRestoreExecutor} from '../server/private-workspace-restore-executor.mjs';
@@ -53,6 +53,12 @@ function financeStorage(db,key){
   }
   const parameters=[eq('owner_id'),eq('item_type'),eq('section'),eq('visibility'),eq('origin')];
   let sql='select * from public.cc_records where owner_id=$1 and item_type=$2 and section=$3 and visibility=$4 and origin=$5 and household_id is null and deleted_at is null';
+  if(params.get('select')==='id'){
+   assert.equal(eq('item_type'),'manual_finance_budget');assert.equal(params.get('limit'),'13');
+   const matches=/^in\.\(([^)]+)\)$/.exec(params.get('id'));
+   assert.ok(matches);parameters.push(matches[1].split(','));
+   return (await db.query(sql.replace('select *','select id')+' and id=any($6::uuid[]) limit 13',parameters)).rows;
+  }
   if(params.has('payload->>billId')){
    sql+=" and payload->>'billId'=$6";parameters.push(eq('payload->>billId'));
   }else if(params.has('payload->>matchKey')){
@@ -96,6 +102,10 @@ test('isolated PostgreSQL preserves encrypted finance forms, owner isolation, pe
  const budgetId=manualBudgetId(a,budget);
  const [saved]=await api.saveManualBudget('a',a,draft(budgetId,'manual_finance_budget',{budget}),null);
  assert.equal(saved.payload.budget.plannedIncomeMinor,50000);assert.deepEqual(await api.getManualBudget('b',budgetId,a),[]);
+ const monthIds=Array.from({length:12},(_,month)=>manualBudgetId(a,manualBudgetMonth('2026-01-01',month)));
+ assert.deepEqual(await api.listManualBudgetIds('a',a,monthIds),[budgetId]);
+ assert.deepEqual(await api.listManualBudgetIds('b',a,monthIds),[]);
+
  const billId=nextFinanceSlot(a,billType,[]);
  const bill={label:'Fictional electric',dueDay:'2026-02-14',endDay:'',frequency:'monthly',interval:1,estimated:true,amountMinor:7000};
  const [scheduleRow]=await api.saveBill('a',a,draft(billId,billType,{bill}),null);

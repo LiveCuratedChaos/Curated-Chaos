@@ -3,7 +3,7 @@ import {downloadCheckedDocument} from './private-document-panel.mjs';
 import {manualBudgetProposals} from './private-budget-proposals.mjs';
 import {manualExpense} from './private-manual-transactions.mjs';
 import {escapeHtml as esc} from './core.mjs';
-import {manualBudgetPeriod,normalizeManualBudget,calculateManualBudget,parseManualAmount} from './private-finance-manual.mjs';
+import {manualBudgetMonth,manualBudgetPeriod,normalizeManualBudget,calculateManualBudget,parseManualAmount} from './private-finance-manual.mjs';
 import {savedAccountAmount as dollars} from './private-saved-finance-panel.mjs';
 import {newYorkTaskDay} from './private-smart-task.mjs';
 
@@ -11,19 +11,11 @@ const button=(action,label)=>'<button type="button" class="btn" data-budget-acti
 const field=(label,name,value,type='text',readOnly=false)=>'<label>'+esc(label)+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" required '+(readOnly?'readonly':'')+'></label>';
 const optionalField=(label,name,value)=>'<label>'+esc(label)+'<input name="'+name+'" value="'+esc(value)+'"></label>';
 const check=(label,name,value)=>'<label><input type="checkbox" name="'+name+'" '+(value?'checked':'')+'>'+esc(label)+'</label>';
+const monthName=new Intl.DateTimeFormat('en-US',{month:'long',timeZone:'UTC'});
 const decimal=value=>dollars(value).replace(/[$,]/g,'');
 const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const samePeriod=(a,b)=>a.period===b.period&&a.periodStart===b.periodStart&&a.periodEnd===b.periodEnd;
 const keys=(value,expected)=>value&&Object.keys(value).sort().join(',')===expected;
-function monthRange(day,offset=0){
- const date=new Date(day+'T00:00:00Z');
- if(!Number.isFinite(date.getTime()))throw Error('Choose a month.');
- date.setUTCMonth(date.getUTCMonth()+offset,1);
- if(date.getUTCFullYear()<0||date.getUTCFullYear()>9999)throw Error('Choose a supported month.');
- const periodStart=date.toISOString().slice(0,10);
- date.setUTCMonth(date.getUTCMonth()+1,0);
- return {period:'month',periodStart,periodEnd:date.toISOString().slice(0,10)};
-}
 const empty=period=>({...period,plannedIncomeMinor:0,allocations:[],transactions:[]});
 function editableExpense(t){
  return {category:t.category,day:t.day,receiptFile:t.receiptFile,reconciliationId:t.reconciliationId,amount:t.amountMinor===null?'':decimal(t.amountMinor),label:t.label??'',receiptReference:t.receiptReference??'',
@@ -83,14 +75,28 @@ function transactionRows(transactions,shown,selectable=true,receipts=false){
 }
 export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=false,allowDocuments=false,canDownload=()=>true,download,clock=Date.now,onChange=()=>{},canOpen=()=>true}){
  let transactionsOnly=false,expenseIndex=null,planner=null,receipt=null;
- let period,view,draft,review,cash,priorStart,notice,busy,shown,timer,sequence=0;
+ let period,view,directory,draft,review,cash,priorStart,notice,busy,shown,timer,sequence=0;
  function reset(){
-  sequence++;clearTimeout(timer);period=monthRange(newYorkTaskDay(clock()));view=draft=review=cash=null;
+  sequence++;clearTimeout(timer);period=manualBudgetMonth(newYorkTaskDay(clock()));view=directory=draft=review=cash=null;
   priorStart='';notice='';busy=false;shown=false;transactionsOnly=false;expenseIndex=null;planner=null;receipt=null;
  }
  reset();
  function fresh(){return view&&view.expiresAt>clock();}
  function expire(){reset();notice='The budget view expired. Open the period again.';onChange();}
+ async function findMonths(selection){
+  const year=Number(selection.periodStart.slice(0,4));
+  reset();period=selection;const run=sequence;busy=true;onChange();
+  try{
+   const result=await client.manualBudgetMonths(year);
+   if(run!==sequence)return;
+   if(!keys(result,'expiresAt,months,year')||result.year!==year||!Array.isArray(result.months)||result.months.length>12||
+      result.months.some((month,index)=>!Number.isInteger(month)||month<1||month>12||index>0&&month>=result.months[index-1])||
+      !Number.isFinite(result.expiresAt)||result.expiresAt<=clock()||result.expiresAt>clock()+300000)throw Error();
+   directory=result;
+   timer=setTimeout(expire,Math.max(1,result.expiresAt-clock()));timer.unref?.();
+  }catch{if(run===sequence)notice='Could not verify the saved months for this year.';}
+  finally{if(run===sequence){busy=false;onChange();}}
+ }
  async function open(selection,history=false){
   reset();transactionsOnly=history;period=selection;const run=sequence;busy=true;onChange();
   try {
@@ -111,7 +117,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
    if(carry){
     const end=new Date(period.periodStart+'T00:00:00Z');end.setUTCDate(end.getUTCDate()-1);
     const last=end.toISOString().slice(0,10);
-    source=period.period==='month'?monthRange(last):manualBudgetPeriod({period:'pay_period',periodStart:priorStart,periodEnd:last});
+    source=period.period==='month'?manualBudgetMonth(last):manualBudgetPeriod({period:'pay_period',periodStart:priorStart,periodEnd:last});
    }else if(option){proposal=option.budget;}else if(transactionsOnly){
     expense=expenseFields(draft.expenses[0],period);
     const original=view.budget??empty(period),transactions=[...original.transactions];
@@ -184,8 +190,17 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
  function render(){
   const heading='<h2>'+(transactionsOnly?'Manual transactions':'Manual budget')+'</h2><p role="status">'+esc(busy?'Checking the budget…':notice)+'</p>';
   const group=html=>'<fieldset '+(busy?'disabled':'')+'>'+html+'</fieldset>';
+  if(directory&&directory.expiresAt>clock()){
+   let html='<legend>Saved monthly budgets for '+esc(String(directory.year).padStart(4,'0'))+'</legend>';
+   for(const month of directory.months){
+    const label=monthName.format(Date.UTC(2000,month-1,1));
+    html+='<div>'+button('saved-budget-'+month,'Open '+label+' budget')+button('saved-transactions-'+month,'Open '+label+' transactions')+'</div>';
+   }
+   if(!directory.months.length)html+='<p>No saved monthly budgets for this year.</p>';
+   return heading+group(html+button('close-months','Choose another period'));
+  }
   if(!fresh())return heading+'<form id="budget-period">'+group('<legend>Choose a budget period</legend><label>Period<select name="period"><option value="month">Monthly</option><option value="pay_period" '+(period.period==='pay_period'?'selected':'')+'>Pay period</option></select></label>'+
-   field(period.period==='month'?'Month containing':'Start date','periodStart',period.periodStart,'date')+(period.period==='pay_period'?field('End date','periodEnd',period.periodEnd,'date'):'')+'<button>Open budget</button>'+button('transactions','Open transaction history'))+'</form>';
+   field(period.period==='month'?'Month containing':'Start date','periodStart',period.periodStart,'date')+(period.period==='pay_period'?field('End date','periodEnd',period.periodEnd,'date'):'')+'<button>Open budget</button>'+button('transactions','Open transaction history')+(period.period==='month'?button('saved-months','Find saved months') : ''))+'</form>';
   let html='<p>'+esc(period.periodStart)+' through '+esc(period.periodEnd)+'</p>';
   let periodControls='';
   if(period.period==='month'){
@@ -245,7 +260,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   const el=event.target,form=el.form?.id;
   if(form==='budget-plan'&&el.name==='reserveAmount'&&planner&&!busy&&!review){planner.reserve=el.value;return true;}
   if(el.name==='priorStart'&&fresh()&&!busy){priorStart=el.value;return true;}
-  if(form==='budget-period'&&!view&&!busy&&Object.hasOwn(period,el.name)){period[el.name]=el.value;if(el.name==='period')onChange();return true;}
+  if(form==='budget-period'&&!view&&!directory&&!busy&&Object.hasOwn(period,el.name)){period[el.name]=el.value;if(el.name==='period')onChange();return true;}
   if(form!=='budget-edit')return false;
   if(!draft||review||busy)return true;
   if(el.name==='income')draft.income=el.value;
@@ -270,8 +285,8 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   }
   if(!['budget-period','budget-edit'].includes(event.target.id))return false;
   event.preventDefault();if(busy)return true;
-  if(event.target.id==='budget-period'&&!view&&canOpen()){
-   try{void open(period.period==='month'?monthRange(period.periodStart):manualBudgetPeriod(period));}
+  if(event.target.id==='budget-period'&&!view&&!directory&&canOpen()){
+   try{void open(period.period==='month'?manualBudgetMonth(period.periodStart):manualBudgetPeriod(period));}
    catch{notice='Choose valid budget dates.';onChange();}
   }else if(draft&&!review&&fresh())void prepare(false);
   return true;
@@ -279,8 +294,23 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   const action=event.target.closest('[data-budget-action]')?.dataset.budgetAction;
   if(!action)return false;
   if(busy)return true;
+  if(directory){
+   if(directory.expiresAt<=clock()){expire();return true;}
+   if(action==='close-months'){reset();onChange();return true;}
+   const choice=/^saved-(budget|transactions)-([1-9]|1[0-2])$/.exec(action);
+   if(choice&&canOpen()&&directory.months.includes(Number(choice[2]))){
+    const first=String(directory.year).padStart(4,'0')+'-01-01';
+    void open(manualBudgetMonth(first,Number(choice[2])-1),choice[1]==='transactions');
+   }
+   return true;
+  }
+  if(action==='saved-months'&&!view&&canOpen()&&period.period==='month'){
+   try{void findMonths(manualBudgetMonth(period.periodStart));}
+   catch{notice='Choose a valid budget date.';onChange();}
+   return true;
+  }
   if(action==='transactions'&&!view&&canOpen()){
-   try{void open(period.period==='month'?monthRange(period.periodStart):manualBudgetPeriod(period),true);}
+   try{void open(period.period==='month'?manualBudgetMonth(period.periodStart):manualBudgetPeriod(period),true);}
    catch{notice='Choose valid transaction dates.';onChange();}
    return true;
   }
@@ -324,7 +354,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   }else if(canOpen()){
    if(action==='previous-month'||action==='next-month'){
     if(period.period==='month'){
-     try{void open(monthRange(period.periodStart,action==='previous-month'?-1:1),transactionsOnly);}
+     try{void open(manualBudgetMonth(period.periodStart,action==='previous-month'?-1:1),transactionsOnly);}
      catch{notice='Choose a supported month.';onChange();}
     }
     return true;

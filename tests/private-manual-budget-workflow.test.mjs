@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {privateWorkspaceFixture} from './support/private-workspace-fixture.mjs';
-import {calculateManualBudget,nextManualBudget,normalizeManualBudget,includedManualBalance} from '../src/private-finance-manual.mjs';
+import {manualBudgetMonth,calculateManualBudget,nextManualBudget,normalizeManualBudget,includedManualBalance} from '../src/private-finance-manual.mjs';
 import {createManualBudgetPanel} from '../src/private-manual-budget-panel.mjs';
 import {validatePrivatePreviewArguments} from '../tools/private-session-preview-server.mjs';
 import {manualBudgetId} from '../server/private-budget-period.mjs';
@@ -93,6 +93,14 @@ test('budget storage binds the sealed content to its owner, exact period and rev
  assert.equal(supportsOrdinaryWorkspaceRestore(stored),false);
  assert.equal(supportsOrdinaryWorkspaceRestore({...stored,id:manualBudgetId(owner,december)},{manualFinanceKey:key}),false);
  assert.equal(supportsOrdinaryWorkspaceRestore({...stored,version:2},{manualFinanceKey:key}),false);
+ const ids=Array.from({length:12},(_,month)=>manualBudgetId(owner,manualBudgetMonth('2026-01-01',month)));
+ const directory=createManualFinanceStorage(async(path,options,token)=>{
+  assert.equal(token,'fixture');assert.deepEqual(options,{});
+  const query=new URL(path,'https://fixture.invalid').searchParams;
+  assert.equal(query.get('select'),'id');assert.equal(query.get('owner_id'),'eq.'+owner);
+  assert.equal(query.get('id'),'in.('+ids.join(',')+')');return [{id}];
+ },()=>{throw Error('A month lookup must not open the finance key.');});
+ assert.deepEqual(await directory.listManualBudgetIds('fixture',owner,ids),[id]);
 });
 test('budget launcher requires a separate opt-in and protected session routes',async t=>{
  const flags=['--fixtures-only','--serve-private-dashboard','--allow-private-brief-read','--allow-private-manual-finance-reviewed','--allow-private-manual-budgets-reviewed'];
@@ -196,4 +204,71 @@ test('monthly navigation opens the adjacent budget or transaction list, hides am
  input('budget-period','period','pay_period');input('budget-period','periodStart','2028-03-03');input('budget-period','periodEnd','2028-03-16');
  await click('transactions');assert.doesNotMatch(panel.render(),/Previous month|Next month/);
  const payReads=reads.length;await click('previous-month');assert.equal(reads.length,payReads);
+});
+
+test('a year lookup reveals only saved months and preserves an existing review',async t=>{
+ const fixture=privateWorkspaceFixture(t,enabled),tab=fixture.tab();await tab.login();
+ const save=async budget=>{
+  await tab.client.manualBudgetOpen({period:budget.period,periodStart:budget.periodStart,periodEnd:budget.periodEnd});
+  const review=await tab.client.manualBudgetReview({budget});await tab.client.manualBudgetSave(review.reviewId);
+ };
+ await save(sample);
+ await save({...sample,...december,transactions:[]});
+ await save({...sample,period:'pay_period',periodStart:'2026-05-01',periodEnd:'2026-05-15',transactions:[]});
+ await save({...sample,periodStart:'2025-03-01',periodEnd:'2025-03-31',transactions:[]});
+ await tab.client.manualBudgetOpen(november);
+ const pending=await tab.client.manualBudgetReview({budget:{...sample,plannedIncomeMinor:70000}});
+ const found=await tab.client.manualBudgetMonths(2026);
+ assert.deepEqual(Object.keys(found).sort(),['expiresAt','months','year']);
+ assert.deepEqual(found.months,[12,11]);assert.equal(found.year,2026);
+ assert.deepEqual((await tab.client.manualBudgetMonths(2025)).months,[3]);
+ assert.deepEqual((await tab.client.manualBudgetMonths(2027)).months,[]);
+ assert.deepEqual(await tab.client.manualBudgetSave(pending.reviewId),{saved:true,version:2});
+ for(const year of ['2026',-1,10000,2026.5])await assert.rejects(tab.client.manualBudgetMonths(year));
+ const disabled=privateWorkspaceFixture(t,{allowManualFinance:true}).tab();await disabled.login();
+ await assert.rejects(disabled.client.manualBudgetMonths(2026));
+});
+
+test('a saved month opens its original budget or transactions without fetching other amounts',async t=>{
+ const tab=privateWorkspaceFixture(t,enabled).tab();await tab.login();
+ await tab.client.manualBudgetOpen(november);
+ const review=await tab.client.manualBudgetReview({budget:sample});await tab.client.manualBudgetSave(review.reviewId);
+ const calls=[];
+ const client={...tab.client,
+  manualBudgetMonths:year=>{calls.push(['list',year]);return tab.client.manualBudgetMonths(year);},
+  manualBudgetOpen:period=>{calls.push(['open',period]);return tab.client.manualBudgetOpen(period);}
+ };
+ const panel=createManualBudgetPanel({client});t.after(()=>panel.reset());
+ const input=(name,value)=>panel.input({target:{form:{id:'budget-period'},name,value,type:'text'}});
+ const click=async action=>{panel.click({target:{closest:()=>({dataset:{budgetAction:action}})}});await new Promise(resolve=>setImmediate(resolve));};
+ input('periodStart','2026-08-01');await click('saved-months');
+ assert.deepEqual(calls,[['list',2026]]);
+ assert.match(panel.render(),/Saved monthly budgets for 2026/);assert.match(panel.render(),/Open November transactions/);
+ assert.doesNotMatch(panel.render(),/Open October|Food|Travel|\$|20000/);
+ await click('saved-budget-10');assert.equal(calls.length,1);
+ await click('saved-transactions-11');assert.deepEqual(calls.at(-1),['open',november]);
+ assert.match(panel.render(),/Manual transactions/);assert.match(panel.render(),/Transaction history/);assert.doesNotMatch(panel.render(),/121\.00/);
+ await click('close');input('periodStart','2026-02-14');await click('saved-months');await click('saved-budget-11');
+ assert.match(panel.render(),/Manual budget/);assert.match(panel.render(),/Show amounts/);
+ await click('amounts');assert.match(panel.render(),/\$57\.50/);
+ await click('close');input('periodStart','2023-02-01');await click('saved-months');
+ assert.match(panel.render(),/No saved monthly budgets for this year/);
+ await click('close-months');assert.match(panel.render(),/Choose a budget period/);
+ input('period','pay_period');await click('saved-months');assert.doesNotMatch(panel.render(),/Find saved months/);
+ assert.equal(calls.at(-1)[1],2023);
+});
+
+test('invalid, expired or late month lists cannot reopen a selected budget',async t=>{
+ let now=Date.parse('2026-11-18T12:00:00Z'),months=[11,11],resolveList,delay=false;
+ const calls=[];
+ const client={manualBudgetMonths:year=>delay?new Promise(resolve=>{resolveList=resolve;}):Promise.resolve({year,months,expiresAt:now+30000}),
+  manualBudgetOpen:async period=>{calls.push(period);}};
+ const panel=createManualBudgetPanel({client,clock:()=>now});t.after(()=>panel.reset());
+ const click=async action=>{panel.click({target:{closest:()=>({dataset:{budgetAction:action}})}});await new Promise(resolve=>setImmediate(resolve));};
+ await click('saved-months');assert.match(panel.render(),/Could not verify/);
+ months=[11];await click('saved-months');now+=30001;await click('saved-budget-11');
+ assert.deepEqual(calls,[]);assert.match(panel.render(),/expired/);
+ delay=true;await click('saved-months');panel.reset();resolveList({year:2026,months:[11],expiresAt:now+30000});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.doesNotMatch(panel.render(),/Open November budget/);await click('saved-transactions-11');assert.deepEqual(calls,[]);
 });

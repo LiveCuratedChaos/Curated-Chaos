@@ -181,6 +181,14 @@ export function createManualFinanceStorage(request, loadKey) {
     if(page.length<100)return rows;
    }
   },
+  async listManualBudgetIds(token,owner,ids){
+   if(!Array.isArray(ids)||ids.length!==12||new Set(ids).size!==12||!ids.every(uuid))throw Error('Choose one budget year.');
+   const path=collection(owner,'manual_finance_budget')+'&select=id&id=in.('+ids.join(',')+')&limit=13';
+   const rows=await request(path,{},token);
+   if(!Array.isArray(rows)||rows.length>12||rows.some(row=>Object.keys(row??{}).join(',')!=='id'||!ids.includes(row.id)))
+    throw Error('Unexpected budget month response.');
+   return rows.map(row=>row.id);
+  },
   async getManualBudget(token,id,owner) {
    if (!uuid(id)) throw Error('Select a budget period.');
    const kind='manual_finance_budget';
