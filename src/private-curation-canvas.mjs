@@ -26,7 +26,7 @@ export function curationWidgetSource(widget,data){
  const matching=widget.filter==='all'?rows:rows.filter(r=>r.section===widget.filter);
  return{available:true,rows:matching.slice(0,widget.limit??6),total:widget.filter==='all'?sourceCount:matching.length,filteredPreview:widget.filter!=='all'&&capped};
 }
-export function renderPrivateCuration({layouts,pageTitle='The Curation',device='desktop',data,expiresAt,now=Date.now(),renderList,links={},schoolReadEnabled=false,schoolBlocked=false,briefRenderer=null,projectReadEnabled=false,projectBlocked=false,financeRenderer=null,emailRenderer=null,favoritesRenderer=null,categoryColors={sections:{},items:{}}}){
+export function renderPrivateCuration({layouts,pageTitle='The Curation',canCustomize=false,device='desktop',data,expiresAt,now=Date.now(),renderList,links={},schoolReadEnabled=false,schoolBlocked=false,briefRenderer=null,projectReadEnabled=false,projectBlocked=false,financeRenderer=null,emailRenderer=null,favoritesRenderer=null,categoryColors={sections:{},items:{}}}){
  if(!DASHBOARD_DEVICES.includes(device)||typeof renderList!=='function')throw Error('Explicit Curation screen and original action renderer required.');
  const saved=validatePrivateWidgetLayouts(layouts);
  if(!Number.isFinite(expiresAt)||expiresAt<=now)return'<section class="panel" aria-label="'+e(pageTitle)+' widgets"><p role="status">Saved widget view expired. Fetch latest to check the current arrangement.</p></section>';
@@ -44,7 +44,7 @@ export function renderPrivateCuration({layouts,pageTitle='The Curation',device='
   else{body=widget.type==='coming_up'?'<p class="tiny muted">Saved tasks and workspace events after '+e(data.day)+'. Other domain sources are not included in this view.</p>':widget.type==='priority_tasks'?'<p class="tiny muted">Open tasks marked High or Urgent. Unverified priorities and suggested emails are not included.</p>':'';body+=source.filteredPreview?'<p class="tiny muted">Filtered preview of loaded titles. More matching saved items may exist in the complete workspace.</p>':'';body+=source.rows.length?renderList(source.rows,source.total,['priority_tasks','coming_up'].includes(widget.type)?'tasks':widget.type):'<p>'+(source.filteredPreview?'No matching titles in this loaded preview.':'No matching saved items.')+'</p>';const route=['tasks','priority_tasks','coming_up'].includes(widget.type)&&links.tasks?'/dev-tasks.html':widget.type==='schedule'&&links.calendar?'/dev-calendar.html':widget.type==='notes'&&links.notes?'/dev-notes.html':null;if(widget.type==='coming_up'&&links.calendar)body+='<a class="btn" href="/dev-calendar.html">Browse all calendar events</a>';if(route)body+='<a class="btn" href="'+route+'">Browse all '+(widget.type==='schedule'?'calendar events':['priority_tasks','coming_up'].includes(widget.type)?'tasks':widget.type)+'</a>';}
   html+='<article class="cc-work-card cc-widget-card '+(widget.width==='full'?'cc-widget-full':'')+'" data-private-curation-widget="'+e(widget.id)+'" aria-label="'+e(widget.title||type.title)+'"><h2>'+e(widget.title||type.title)+'</h2>'+body+'</article>';
  }
- if(!widgets.length)html+='<p>No widgets are visible for this screen. Customize The Curation to add or show widgets.</p>';
+ if(!widgets.length)html+='<p>No widgets are visible on this screen.</p>'+(canCustomize?'<button type="button" class="btn" data-private-canvas-customize>Add or show widgets</button>':'');
  return html+'</div></section>';
 }
 

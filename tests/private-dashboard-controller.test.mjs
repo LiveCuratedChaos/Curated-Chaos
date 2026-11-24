@@ -985,3 +985,17 @@ test('Brief refresh status reports only selected and authorized sources',async t
  assert.match(status(),/Projects · Unavailable/);
  assert.doesNotMatch(status(),/School|Google|Apple/);
 });
+
+test('an empty named canvas opens its own layout editor through its widget prompt',async t=>{
+ const {defaultPageWidgetLayouts}=await import('../src/private-widget-pages.mjs');
+ const layouts=defaultPageWidgetLayouts('work');layouts.desktop=[];
+ const s=await setup(t,{curationWorkspace:true,canvasPage:'work',allowWidgetPages:true,allowWidgetLayouts:true,initialCurationLayouts:layouts});
+ assert.match(s.root.innerHTML,/data-private-canvas-customize/);
+ const reads=[],read=s.client.widgetLayoutRead;
+ s.client.widgetLayoutRead=(page,...args)=>{reads.push(page);return read(page,...args);};
+ s.events.click({target:{closest:selector=>selector==='[data-private-canvas-customize]'?{}:null}});
+ for(let i=0;i<4;i++)await turn();
+ assert.deepEqual(reads,['work']);
+ assert.match(s.root.innerHTML,/Close layout settings/);
+ assert.doesNotMatch(s.root.innerHTML,/data-private-canvas-customize|Customize The Curation/);
+});
