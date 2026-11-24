@@ -325,7 +325,7 @@ test('an expired saved-period view does not block choosing a new budget in a sus
  const calls=[];
  const client={manualBudgetPeriods:async()=>({periods:[],hasMore:false,expiresAt:now+1000}),
   manualBudgetOpen:async period=>{calls.push(period);return {period,budget:null,version:0,expiresAt:now+1000};}};
- const panel=createManualBudgetPanel({client,clock:()=>now});t.after(()=>panel.reset());
+ const panel=createManualBudgetPanel({client,clock:()=>now,canOpen:()=>!panel.blocked()});t.after(()=>panel.reset());
  const turn=()=>new Promise(resolve=>setImmediate(resolve));
  panel.click({target:{closest:()=>({dataset:{budgetAction:'all-periods'}})}});
  await turn();
@@ -337,4 +337,12 @@ test('an expired saved-period view does not block choosing a new budget in a sus
  await turn();
  assert.deepEqual(calls,[{period:'month',periodStart:'2027-01-01',periodEnd:'2027-01-31'}]);
  assert.match(panel.render(),/2027-01-01 through 2027-01-31/);
+ panel.click({target:{closest:()=>({dataset:{budgetAction:'edit'}})}});
+ assert.equal(panel.blocked(),true);
+ now+=1001;
+ assert.equal(panel.blocked(),false);
+ panel.submit({target:{id:'budget-period'},preventDefault(){}});
+ await turn();
+ assert.equal(calls.length,2);
+ assert.deepEqual(calls[1],calls[0]);
 });

@@ -97,3 +97,24 @@ test('launcher scopes bills independently, serves panel and requires signed-in a
   assert.equal((await tab.fetcher('/auth/workspace/manual-bills/candidates',{method:'POST',body:'{}'})).status,404);
  }
 });
+
+test('an expired bill draft stops blocking reopened bills before the timer fires',async t=>{
+ let now=Date.parse('2026-11-18T12:00:00Z'),reads=0;
+ const client={manualBillList:async()=>{reads++;return {bills:[],expiresAt:now+1000};}};
+ const panel=createManualBillPanel({client,clock:()=>now,canOpen:()=>!panel.blocked()});
+ t.after(()=>panel.reset());
+ const click=async billAction=>{
+  panel.click({target:{closest:()=>({dataset:{billAction}})}});
+  await new Promise(resolve=>setImmediate(resolve));
+ };
+ await click('load');
+ await click('add');
+ assert.equal(panel.blocked(),true);
+ assert.match(panel.render(),/Review bill/);
+ now+=1001;
+ assert.equal(panel.blocked(),false);
+ assert.doesNotMatch(panel.render(),/Review bill/);
+ await click('load');
+ assert.equal(reads,2);
+ assert.match(panel.render(),/Add bill/);
+});

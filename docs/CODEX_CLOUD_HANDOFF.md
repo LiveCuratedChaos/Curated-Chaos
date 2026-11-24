@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R32 / R33** Expired budget and bill drafts no longer block reopening Finance controls before their timers run. A current draft or in-flight request still holds its guard. All 342 related checks passed.
+
 - **R32** The budget period chooser now works immediately after the previous budget or directory expires, even if a background timer is delayed. It preserves the visible date controls and clears old amounts, drafts and approvals. All 343 related checks passed.
 
 - **R30 / R31** Personal Life and Home routine streaks now verify that the series contains the same selected occurrence, including its area and completion state. The read refuses inconsistent snapshots even at the same revision. All 354 related checks passed, including signed-in completion and encrypted recovery.

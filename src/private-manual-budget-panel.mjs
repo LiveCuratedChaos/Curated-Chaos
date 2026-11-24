@@ -285,7 +285,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   }
   return heading+group(html+periodControls);
  }
- return {render,reset,blocked:()=>Boolean(draft||review||planner||busy),input(event){
+ return {render,reset,blocked:()=>busy||fresh()&&Boolean(draft||review||planner),input(event){
   const el=event.target,form=el.form?.id;
   if(form==='budget-period'&&expired())resetExpiredChooser();
   if(form==='budget-plan'&&el.name==='reserveAmount'&&planner&&!busy&&!review){planner.reserve=el.value;return true;}

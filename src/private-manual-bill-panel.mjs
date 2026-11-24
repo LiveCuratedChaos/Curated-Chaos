@@ -143,7 +143,7 @@ export function createManualBillPanel({client,clock=Date.now,canOpen=()=>true,on
   }else body=list.bills.map(b=>button('select-'+b.billToken,b.label)).join('')+button('add','Add bill')+button('close','Close bills');
   return heading+'<fieldset '+(busy?'disabled':'')+'>'+body+'</fieldset>';
  }
- return {render,reset,blocked:()=>Boolean(busy||draft||review),input(event){
+ return {render,reset,blocked:()=>busy||fresh()&&Boolean(draft||review),input(event){
   const el=event.target;
   if(el.form?.id==='bill-period'){
    if(!busy&&['from','to'].includes(el.name)&&range[el.name]!==el.value){range[el.name]=el.value;const redraw=Boolean(detail);detail=null;if(redraw)onChange();}
