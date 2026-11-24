@@ -64,7 +64,7 @@ export function createPrivateWorkspaceClient(fetcher=fetch){let csrf='',generati
   brokerageOpen:()=>request('brokerage/open','POST',{}),
   brokerageRead:choices=>request('brokerage/read','POST',{confirmed:true,choices}),
   brokerageClose:()=>request('brokerage/close','POST',{}),
-  briefBills:day=>request('manual-bills/brief-day','POST',{day}),financeWidget:(type,options)=>{
+  briefBills:(day,includeSources=false)=>request('manual-bills/brief-day','POST',{day,...(includeSources?{includeSources:true}:{})}),briefBillSource:billReadToken=>request('manual-bills/brief-read','POST',{billReadToken}),financeWidget:(type,options)=>{
    const path={budget:'manual-budgets',bills:'manual-bills',investments:'manual-holdings'}[type];
    if(typeof path!=='string')throw Error('Choose a supported financial widget.');
    return request(path+'/widget','POST',options);

@@ -1,4 +1,5 @@
 import {escapeHtml as e} from './core.mjs';
+import {BILL_FREQUENCIES} from './private-manual-bills.mjs';
 import {validDay} from './dev-brief-model.mjs';
 import {newYorkTaskDay} from './private-smart-task.mjs';
 
@@ -15,9 +16,12 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
      value.currentDay!==newYorkTaskDay(now)||!Number.isInteger(value.total)||value.total<0||value.total>100||
      !Array.isArray(value.rows)||value.rows.length!==Math.min(10,value.total)||!Number.isFinite(value.expiresAt)||
      value.expiresAt<=now||value.expiresAt>now+300000)throw Error();
+  const tokens=new Set();
   for(const row of value.rows){
-   if(!row||Object.keys(row).sort().join(',')!=='label,status'||typeof row.label!=='string'||!row.label.trim()||
+   if(!row||Object.keys(row).sort().join(',')!=='billReadToken,label,status'||typeof row.billReadToken!=='string'||
+      !/^[A-Za-z0-9_-]{43}$/.test(row.billReadToken)||tokens.has(row.billReadToken)||typeof row.label!=='string'||!row.label.trim()||
       row.label.length>120||!['Paid',day<value.currentDay?'Overdue':'Due'].includes(row.status))throw Error();
+   tokens.add(row.billReadToken);
   }
  }
  async function open(){
@@ -25,7 +29,7 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
   if(!validDay(day)||!available(day)||current?.busy)return;
   reset();const view={day,busy:true};current=view;onChange();
   try{
-   const result=await client.briefBills(day);
+   const result=await client.briefBills(day,true);
    if(current!==view||!available(day))return;
    verify(result,day);
    view.result=result;view.expiresAt=Math.min(result.expiresAt,source.expiresAt);
@@ -33,6 +37,25 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
   }catch{if(current===view)view.failed=true;}
   finally{if(current===view){view.busy=false;if(!available(day))reset();onChange();}}
  }
+ async function openSource(token){
+  const view=current,row=view?.result?.rows.find(r=>r.billReadToken===token);
+  if(!row||view.busy||view.expiresAt<=clock()||!available(view.day))return;
+  view.busy=true;view.detail=null;view.sourceError=false;onChange();
+  try{
+   const d=await client.briefBillSource(token);
+   if(current!==view||!available(view.day)||view.expiresAt<=clock())return;
+   if(!d||Object.keys(d).sort().join(',')!=='day,endDay,expiresAt,firstDueDay,frequency,interval,label,paidDay,scheduleLabel,status'||
+      d.day!==view.day||d.label!==row.label||d.status!==row.status||d.expiresAt!==view.result.expiresAt||
+      typeof d.scheduleLabel!=='string'||!d.scheduleLabel.trim()||d.scheduleLabel.length>120||
+      !validDay(d.firstDueDay)||d.endDay!==''&&(!validDay(d.endDay)||d.endDay<d.firstDueDay)||
+      !BILL_FREQUENCIES.includes(d.frequency)||!Number.isInteger(d.interval)||d.interval<1||d.interval>365||
+      d.frequency==='once'&&(d.interval!==1||d.endDay!=='')||
+      (d.status==='Paid'?(!validDay(d.paidDay)||d.paidDay>view.result.currentDay):d.paidDay!==''))throw Error();
+   view.detail=d;
+  }catch{if(current===view)view.sourceError=true;}
+  finally{if(current===view){view.busy=false;onChange();}}
+ }
+ function closeSource(){if(current){current.detail=null;current.sourceError=false;onChange();}}
  function render(day){
   if(current&&(current.day!==day||!available(day)||current.expiresAt<=clock()||current.result&&current.result.currentDay!==newYorkTaskDay(clock())))reset();
   if(!available(day))return '<p role="status">The bill schedule is unavailable.</p>';
@@ -40,8 +63,14 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
   const button='<button class="btn" type="button" id="private-brief-bills-open"'+(current?.busy?' disabled':'')+'>'+(result?'Refresh bill schedule':'View bills due')+'</button>';
   if(!result)return (current?.failed?'<p role="status">Could not open the saved bill schedule.</p>':'')+button;
   const summary=result.total?'Showing '+result.rows.length+' of '+result.total+' bills due on '+e(day)+'.':'No saved bills are due on '+e(day)+'.';
+  const detail=current.detail;
+  const units={weekly:'week',monthly:'month',yearly:'year'};
+  const frequencyLabels={once:'One time',weekly:'Weekly',monthly:'Monthly',yearly:'Yearly'};
+  const recurrence=detail&&(detail.interval===1?frequencyLabels[detail.frequency]:'Every '+detail.interval+' '+units[detail.frequency]+'s');
+  const original=detail?'<section aria-label="Original bill schedule"><h3>'+e(detail.scheduleLabel)+'</h3><p>'+recurrence+' · First due '+e(detail.firstDueDay)+(detail.endDay?' · Ends '+e(detail.endDay):'')+'</p><p>'+e(detail.label)+' · '+e(detail.day)+' · '+e(detail.status)+(detail.paidDay?' on '+e(detail.paidDay):'')+'</p><button class="btn" type="button" id="private-brief-bill-close">Close schedule</button></section>':'';
   return '<p>'+summary+' Payment status as of '+e(result.currentDay)+'.</p>'+
-   (result.rows.length?'<ul>'+result.rows.map(row=>'<li>'+e(row.label)+' · '+e(row.status)+'</li>').join('')+'</ul>':'')+button;
+   (result.rows.length?'<ul>'+result.rows.map(row=>'<li>'+e(row.label)+' · '+e(row.status)+' <button type="button" class="btn" data-brief-bill-source="'+e(row.billReadToken)+'" aria-label="Open schedule for '+e(row.label)+'"'+(current.busy?' disabled':'')+'>Open schedule</button></li>').join('')+'</ul>':'')+
+   (current.sourceError?'<p role="status">The bill changed or its schedule expired. Refresh bills due.</p>':'')+original+button;
  }
- return {open,render,reset};
+ return {open,openSource,closeSource,render,reset};
 }

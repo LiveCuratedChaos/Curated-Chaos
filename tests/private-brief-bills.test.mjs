@@ -4,7 +4,7 @@ import {createBriefBills} from '../src/private-brief-bills.mjs';
 
 const now=Date.parse('2026-11-19T15:00:00Z');
 const day='2026-11-18';
-const result={day,currentDay:'2026-11-19',total:1,rows:[{label:'Rent <November>',status:'Overdue'}],expiresAt:now+5000};
+const result={day,currentDay:'2026-11-19',total:1,rows:[{label:'Rent <November>',status:'Overdue',billReadToken:'a'.repeat(43)}],expiresAt:now+5000};
 
 test('source change, concealment and expiry remove previously requested bill labels',async t=>{
  let clock=now,context={day,expiresAt:now+1000},complete;
@@ -28,4 +28,21 @@ test('mismatched selected dates and unexpected financial fields cannot enter the
   t.after(()=>panel.reset());await panel.open();
   const html=panel.render(day);assert.match(html,/Could not open/);assert.doesNotMatch(html,/Rent|4500/);
  }
+});
+
+test('original schedule details reject stale, mismatched or amount-bearing responses and clear on concealment',async t=>{
+ let visible=true;
+ const detail={day,label:'Rent <November>',scheduleLabel:'Current rent',status:'Overdue',firstDueDay:'2026-01-18',endDay:'',paidDay:'',frequency:'monthly',interval:1,expiresAt:result.expiresAt};
+ let response=detail,reads=0;
+ const panel=createBriefBills({client:{briefBills:async()=>result,briefBillSource:async()=>{reads++;return response;}},clock:()=>now,context:()=>visible?{day,expiresAt:now+300000}:null,onChange(){}});
+ t.after(()=>panel.reset());await panel.open();
+ await panel.openSource('missing');assert.equal(reads,0);
+ const token=result.rows[0].billReadToken;
+ await panel.openSource(token);assert.match(panel.render(day),/Original bill schedule.*Monthly/);
+ panel.closeSource();assert.doesNotMatch(panel.render(day),/Current rent/);
+ for(response of [{...detail,amount:4500},{...detail,day:'2026-11-17'},{...detail,status:'Paid'},{...detail,expiresAt:now}]){
+  await panel.openSource(token);assert.doesNotMatch(panel.render(day),/Original bill schedule|4500/);
+ }
+ response=detail;await panel.openSource(token);visible=false;
+ assert.doesNotMatch(panel.render(day),/Rent|Current rent/);
 });

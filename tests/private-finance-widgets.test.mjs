@@ -92,3 +92,35 @@ test('selected Brief date reads scheduled and paid bills with current status and
   const off=privateWorkspaceFixture(t,features).tab();await off.login();await assert.rejects(off.client.briefBills(due));
  }
 });
+
+test('identically named Brief bills open their own schedule without replacing a pending payment review',async t=>{
+ const app=privateWorkspaceFixture(t,{allowBriefLayout:true,allowManualFinance:true,allowManualBills:true});
+ const tab=app.tab(),other=app.tab();
+ await tab.login();await other.login();
+ for(const frequency of ['monthly','once']){
+  await tab.client.manualBillList();
+  const review=await tab.client.manualBillReview({bill:{label:'Same bill',dueDay:today,frequency,interval:1,endDay:'',amountMinor:3700,estimated:false}});
+  await tab.client.manualBillSave(review.reviewId);
+ }
+ const manual=await tab.client.manualBillList(),billToken=manual.bills[0].billToken;
+ await tab.client.manualBillRead({billToken,from:today,to:today});
+ const review=await tab.client.manualBillReview({billToken,dueDay:today,paidDay:today,amountMinor:3700});
+ const brief=await tab.client.briefBills(today,true);
+ const titles=brief.rows.map(r=>r.label);assert.deepEqual(titles,['Same bill','Same bill']);
+ const keys=brief.rows.map(r=>r.billReadToken);assert.equal(new Set(keys).size,2);
+ await assert.rejects(other.client.briefBillSource(keys[0]));
+ const frequencies=[];
+ for(const key of keys){
+  const read=await tab.client.briefBillSource(key);
+  frequencies.push(read.frequency);assert.equal(read.firstDueDay,today);assert.equal(read.status,'Due');
+  assert.equal(read.expiresAt,brief.expiresAt);
+  assert.doesNotMatch(JSON.stringify(read),/amount|3700|billToken|account|ownerId/);
+ }
+ assert.deepEqual(frequencies.sort(),['monthly','once']);
+ await tab.client.manualBillSave(review.reviewId);
+ let refused=0;
+ for(const key of keys){try{await tab.client.briefBillSource(key);}catch{refused++;}}
+ assert.equal(refused,1);
+ await tab.client.briefBills(today,true);
+ await assert.rejects(tab.client.briefBillSource(keys[0]));
+});

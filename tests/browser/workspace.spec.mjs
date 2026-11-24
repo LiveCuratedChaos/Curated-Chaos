@@ -897,6 +897,8 @@ test('Daily Brief bills show a reviewed schedule for the day and honor finance c
  await expect(section).not.toContainText('Fictional internet for the Brief');
  await section.getByRole('button',{name:'View bills due'}).click();
  await expect(section).toContainText('Fictional internet for the Brief · Due');
+ await section.getByRole('button',{name:'Open schedule for Fictional internet for the Brief'}).click();
+ await expect(section.getByRole('region',{name:'Original bill schedule'})).toContainText('One time');
  await expect(section).not.toContainText('$45.00');
  await page.getByRole('button',{name:'Hide financial details',exact:true}).click();
  await expect(section).toContainText('Financial details are hidden');
