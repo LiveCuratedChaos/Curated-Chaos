@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R03 / R32 / R33** recovered a reconciled monthly budget into a second database. Its split expense counted once at the original manual amount, the posted debit retained its difference, and the budget widget reopened with the original totals. An immediate replay wrote zero rows. After a later expense, the old archive could not overwrite the newer budget. All 42 related checks passed.
+
 - **R03 / R16 / R33** verified that an encrypted backup restores a recurring bill and its confirmed payment. The weekly counts and original daily schedule reopened correctly. Replaying the backup preserved a later payment. A bank-matched payment required the same saved transaction and amount at the destination. All 38 related checks passed, followed by the expanded bank-match check.
 
 - **R12** added separate earlier-title and earlier-description actions for tasks. Each starts in the current editor, retains the other current fields and requires explicit approval. All 359 related checks passed, including a later rename, unchanged checklist and loss of acknowledgment.
@@ -81,7 +83,7 @@ Playwright 1.65.1 discovered 240 cases. Twenty selected desktop and phone-size c
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. This session cannot open a loopback listener, and a free hosted runner could not be verified. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R03/R32 with encrypted recovery of a manual budget and a reconciled expense. Reopen the original monthly totals and verify an archive replay preserves later spending.
+2. Continue R32 with previous and next month navigation in the manual budget and its transaction history. Preserve open edits and approvals, hide amounts when a new month opens, and test leap-year and year-end transitions.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

@@ -1,4 +1,5 @@
-import {readBriefBillWeek,createBriefBillSources} from '../server/private-finance-widget.mjs';
+import {calculateManualBudget} from '../src/private-finance-manual.mjs';
+import {readFinanceWidget,readBriefBillWeek,createBriefBillSources} from '../server/private-finance-widget.mjs';
 import {createPrivateWorkspaceRestoreRepository} from '../server/private-workspace-restore-repository.mjs';
 import {createPrivateWorkspaceRestoreExecutor} from '../server/private-workspace-restore-executor.mjs';
 import {sealPrivateWorkspace} from '../server/private-workspace-backup.mjs';
@@ -174,9 +175,8 @@ test('isolated PostgreSQL preserves encrypted finance forms, owner isolation, pe
  assert.equal(supportsOrdinaryWorkspaceRestore(sealedHolding,{manualFinanceKey:key}),true);
 });
 
-
-test('a restored bill reopens its paid occurrence and preserves a later payment across archive replay',async t=>{
- const key=Buffer.alloc(32,16),projectRef='fictionalbillrecovery';
+async function financeRecovery(t,projectRef){
+ const key=Buffer.alloc(32,16);
  const source=await createIsolatedDevelopmentDatabase(),destination=await createIsolatedDevelopmentDatabase();
  t.after(async()=>{await source.close();await destination.close();});
  const who={owner:a,session:sa},viewer={ownerId:a,accessToken:'a'};
@@ -186,6 +186,22 @@ test('a restored bill reopens its paid occurrence and preserves a later payment 
  });
  const sourceRepo=repository(source),destinationRepo=repository(destination);
  const api=financeStorage(source,key),restored=financeStorage(destination,key);
+ const executor=createPrivateWorkspaceRestoreExecutor({projectRef,key,repository:destinationRepo,allowManualFinanceRestore:true,
+  resolveActor:async identity=>({ownerId:identity.owner,sessionBinding:identity.session,expiresAt:Date.now()+300000}),authorizeWrite:async()=>true});
+ t.after(()=>executor.dispose());
+ return {key,projectRef,source,destination,who,viewer,sourceRepo,destinationRepo,api,restored,executor};
+}
+
+async function insertSavedTransaction(db,key,transactionId,fields){
+ const payload={scheme:'chase-private-v1',version:1,encrypted:createTokenSealer(key).seal(fields,'finance-record:'+a+':'+transactionId)};
+ await actor(db,a,sa);
+ return (await db.query("insert into public.cc_records (id,owner_id,visibility,section,item_type,origin,payload) values($1,$2,'private','Finances','provider_bank_transaction','plaid_readonly',$3) returning *",
+  [transactionId,a,JSON.stringify(payload)])).rows[0];
+}
+
+
+test('a restored bill reopens its paid occurrence and preserves a later payment across archive replay',async t=>{
+ const {key,projectRef,source,destination,who,viewer,sourceRepo,destinationRepo,api,restored,executor}=await financeRecovery(t,'fictionalbillrecovery');
  const billId=nextFinanceSlot(a,billType,[]),dueDay='2026-02-13',nextDay='2026-03-13';
  const bill={label:'Fictional monthly bill',dueDay,endDay:'',frequency:'monthly',interval:1,estimated:false,amountMinor:4300};
  const draft=(id,item_type,fields)=>({id,owner_id:a,visibility:'private',household_id:null,section:'Finances',origin:'PRIVATE_MANUAL_FINANCE',item_type,
@@ -199,9 +215,6 @@ test('a restored bill reopens its paid occurrence and preserves a later payment 
  assert.equal(original.length,2);
  const archive=rows=>sealPrivateWorkspace({projectRef,ownerId:a,key,rows}).bytes;
  const bytes=archive(original);
- const executor=createPrivateWorkspaceRestoreExecutor({projectRef,key,repository:destinationRepo,allowManualFinanceRestore:true,
-  resolveActor:async identity=>({ownerId:identity.owner,sessionBinding:identity.session,expiresAt:Date.now()+300000}),authorizeWrite:async()=>true});
- t.after(()=>executor.dispose());
  const missingBill=await executor.prepare(who,{bytes:archive(original.filter(row=>row.id!==billId))});
  assert.equal(missingBill.canRestore,false);assert.equal(missingBill.reviewId,undefined);
  const review=await executor.prepare(who,{bytes});assert.equal(review.canRestore,true);assert.equal(review.insertCount,2);
@@ -228,13 +241,7 @@ test('a restored bill reopens its paid occurrence and preserves a later payment 
  const savedTransaction={connectionId:randomUUID(),sourceId:'fixture-april-payment',provider:'plaid',institution:'Chase',fictional:false,
   content:{currency:'USD',name:'Fictional merchant',merchant:'Fictional biller',date:matchedDay,accountId:'fixture-account',
    amountMinor:4300,pending:false,pendingTransactionId:null}};
- async function insertSavedTransaction(db,fields){
-  const payload={scheme:'chase-private-v1',version:1,encrypted:createTokenSealer(key).seal(fields,'finance-record:'+a+':'+transactionId)};
-  await actor(db,a,sa);
-  return (await db.query("insert into public.cc_records (id,owner_id,visibility,section,item_type,origin,payload) values($1,$2,'private','Finances','provider_bank_transaction','plaid_readonly',$3) returning *",
-   [transactionId,a,JSON.stringify(payload)])).rows[0];
- }
- const snapshot=await insertSavedTransaction(source,savedTransaction);
+ const snapshot=await insertSavedTransaction(source,key,transactionId,savedTransaction);
  const {match}=billMatchCandidate({...snapshot,payload:savedTransaction},a,matchedDay);
  const bankPayment=payment(matchedDay);bankPayment.payload.match=match;bankPayment.payload.confirmation.source='saved_transaction';
  await api.confirmBill('a',a,bankPayment,schedule);
@@ -244,11 +251,11 @@ test('a restored bill reopens its paid occurrence and preserves a later payment 
  assert.equal((await executor.prepare(who,{bytes:matchedArchive})).canRestore,false);
  await destination.exec('begin');
  try{
-  await insertSavedTransaction(destination,{...savedTransaction,content:{...savedTransaction.content,amountMinor:4400}});
+  await insertSavedTransaction(destination,key,transactionId,{...savedTransaction,content:{...savedTransaction.content,amountMinor:4400}});
   const changed=await executor.prepare(who,{bytes:matchedArchive});
   assert.equal(changed.canRestore,false);assert.equal(changed.reviewId,undefined);
  }finally{await destination.exec('rollback');}
- await insertSavedTransaction(destination,savedTransaction);
+ await insertSavedTransaction(destination,key,transactionId,savedTransaction);
  const ready=await executor.prepare(who,{bytes:matchedArchive});
  assert.equal(ready.canRestore,true);assert.equal(ready.insertCount,1);
  assert.equal((await executor.execute(who,{reviewId:ready.reviewId,approved:true})).restored,1);
@@ -258,4 +265,59 @@ test('a restored bill reopens its paid occurrence and preserves a later payment 
  assert.equal(matchedReplay.insertCount,0);
  assert.equal((await executor.execute(who,{reviewId:matchedReplay.reviewId,approved:true})).restored,0);
  assert.deepEqual(await restored.listBills('b',a),[]);
+});
+
+test('recovering a reconciled budget counts its split expense once and preserves newer spending',async t=>{
+ const {key,projectRef,source,destination,who,viewer,sourceRepo,destinationRepo,api,restored,executor}=await financeRecovery(t,'fictionalbudgetrestore');
+ const day='2026-04-03',postedDay='2026-04-04',transactionId=randomUUID();
+ const plain={connectionId:randomUUID(),sourceId:'fixture-april-budget',provider:'plaid',institution:'Chase',fictional:false,
+  content:{currency:'USD',name:'Fictional merchant',merchant:'Fictional shop',date:postedDay,accountId:'fixture-account',
+   amountMinor:4550,pending:false,pendingTransactionId:null}};
+ const snapshot=await insertSavedTransaction(source,key,transactionId,plain);
+ const period={period:'month',periodStart:'2026-04-01',periodEnd:'2026-04-30'};
+ const budget={...period,plannedIncomeMinor:20000,allocations:[{category:'Food',plannedMinor:8000},{category:'Household',plannedMinor:6000}],
+  transactions:[{day,label:'Fictional groceries',category:'',amountMinor:4500,splits:[{category:'Food',amountMinor:3500},{category:'Household',amountMinor:1000}]}]};
+ const budgetId=manualBudgetId(a,period);
+ const draft={id:budgetId,owner_id:a,visibility:'private',household_id:null,section:'Finances',origin:'PRIVATE_MANUAL_FINANCE',item_type:'manual_finance_budget',
+  payload:{fictional:true,ownerId:a,version:1,budget}};
+ const [initial]=await api.saveManualBudget('a',a,draft,null);
+ const plan=prepareExpenseReconciliation(a,categorySource({...snapshot,payload:plain},a),initial,0);
+ const [match]=await api.matchExpense('a',a,plan,initial);
+ const rows=(await sourceRepo.readPrivateRows(who,a)).filter(row=>row.id===budgetId||row.id===match.id);
+ assert.equal(rows.length,2);
+ const archive=entries=>sealPrivateWorkspace({projectRef,ownerId:a,key,rows:entries}).bytes;
+ const bytes=archive(rows);
+ const missingSource=await executor.prepare(who,{bytes});
+ assert.equal(missingSource.canRestore,false);assert.equal(missingSource.reviewId,undefined);
+ await insertSavedTransaction(destination,key,transactionId,plain);
+ for(const row of rows){
+  const incomplete=await executor.prepare(who,{bytes:archive([row])});
+  assert.equal(incomplete.canRestore,false);assert.equal(incomplete.reviewId,undefined);
+ }
+ const review=await executor.prepare(who,{bytes});
+ assert.equal(review.canRestore,true);assert.equal(review.insertCount,2);
+ assert.equal((await executor.execute(who,{reviewId:review.reviewId,approved:true})).restored,2);
+ assert.deepEqual((await destinationRepo.readPrivateRows(who,a)).filter(row=>row.id===budgetId||row.id===match.id),rows);
+ const [recovered]=await restored.getManualBudget('a',budgetId,a);
+ const [receipt]=await restored.getExpenseMatch('a',a,match.id);
+ assert.equal(recovered.payload.budget.transactions[0].reconciliationId,receipt.id);
+ assert.equal(receipt.payload.expense.amountMinor,4500);assert.equal(receipt.payload.source.amountMinor,4550);
+ const totals=calculateManualBudget(recovered.payload.budget);
+ assert.deepEqual(totals.categories.map(({category,actualMinor})=>[category,actualMinor]),[['Food',3500],['Household',1000]]);
+ const now=Date.parse('2026-04-22T12:00:00Z');
+ const widget=showAmounts=>readFinanceWidget({api:restored,actor:viewer,type:'budget',now,expiresAt:now+300000,options:{showAmounts,showPercentages:false,limit:2}});
+ assert.deepEqual((await widget(true)).rows.map(({label,amount})=>[label,amount]),[['Recorded expenses',4500],['Left to spend',15500]]);
+ assert.ok((await widget(false)).rows.every(row=>!Object.hasOwn(row,'amount')));
+ const idempotent=await executor.prepare(who,{bytes});
+ assert.equal(idempotent.insertCount,0);
+ assert.equal((await executor.execute(who,{reviewId:idempotent.reviewId,approved:true})).restored,0);
+ const transactions=[...recovered.payload.budget.transactions,{day:'2026-04-12',category:'Food',amountMinor:2100}];
+ const updated={...recovered,payload:{...recovered.payload,budget:{...recovered.payload.budget,transactions}}};
+ const [later]=await restored.saveManualBudget('a',a,updated,recovered);
+ const replay=await executor.prepare(who,{bytes});
+ assert.equal(replay.canRestore,false);assert.equal(replay.conflictCount,1);assert.equal(replay.reviewId,undefined);
+ assert.deepEqual((await restored.getManualBudget('a',budgetId,a))[0],later);
+ assert.deepEqual((await restored.getExpenseMatch('a',a,match.id))[0],receipt);
+ assert.deepEqual((await widget(true)).rows.map(row=>row.amount),[6600,13400]);
+ assert.deepEqual(await restored.getManualBudget('b',budgetId,a),[]);
 });

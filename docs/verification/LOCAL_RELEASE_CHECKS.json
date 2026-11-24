@@ -874,6 +874,13 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "recoveredReconciledMonthlyBudget": {
+      "date": "2026-11-24",
+      "node": "24.22.3",
+      "passed": 42,
+      "failed": 0,
+      "scope": "Encrypted budget, match receipt and original posted debit dependencies, exact split and widget amounts, default concealment, unchanged archive replay and protection of a later expense."
+    },
     "recoveredBillScheduleAndPayments": {
       "date": "2026-11-24",
       "node": "24.22.3",
