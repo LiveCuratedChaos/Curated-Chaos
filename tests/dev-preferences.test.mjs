@@ -5,6 +5,7 @@ import { createDevApi } from '../src/dev-api.mjs';
 import { DEFAULT_BRIEF_PREFERENCES,normalizeBriefPreferences,makeBriefPreferencesRecord,readOwnerBriefPreferences,maySuggest } from '../src/dev-preferences-model.mjs';
 import { allowedPublicPath } from '../tools/local-server.mjs';
 import { renderConnectedShell } from '../src/dev-cloud-shell.mjs';
+import {categoryColorFor,normalizeCategoryColors} from '../src/private-category-colors.mjs';
 const a='bb8f4c56-a302-48d3-8c40-dc2838a97221';
 const b='aa8f4c56-a302-48d3-8c40-dc2838a97222';
 const id='cc8f4c56-a302-48d3-8c40-dc2838a97223';
@@ -14,7 +15,7 @@ const fixture=(owner=a, payload=makeBriefPreferencesRecord({},owner).payload)=>(
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('M1F secure defaults preserve all fictional sources, hide financial amounts and require review',()=>{
  const d=normalizeBriefPreferences();
- assert.equal(d.palette,'neutral');assert.equal(d.density,'balanced');assert.equal(d.hideAmounts,true);
+ assert.equal(d.palette,'neutral');assert.equal(d.density,'balanced');assert.equal(d.hideAmounts,true);assert.equal(d.automationMode,'ask');
  assert.deepEqual(d.sources,{calendar:true,email:true,school:true,finances:true,household:true});
  assert.deepEqual(d.suggestions,{email:true,school:true,household:true});
  assert.equal(d.quietHours.enabled,false);
@@ -22,7 +23,7 @@ test('M1F secure defaults preserve all fictional sources, hide financial amounts
 });
 test('malformed source/visual inputs do not escalate fictional permissions',()=>{
  const n=normalizeBriefPreferences({palette:'heritage',density:'oversize',hideAmounts:'false',sources:{school:'false'},suggestions:{email:'false'},quietHours:{enabled:'yes',start:'40:70',end:'25:24'}});
- assert.equal(n.palette,'neutral');assert.equal(n.density,'balanced');assert.equal(n.hideAmounts,true);
+ assert.equal(n.palette,'neutral');assert.equal(n.density,'balanced');assert.equal(n.hideAmounts,true);assert.equal(normalizeBriefPreferences({automationMode:'execute'}).automationMode,'ask');
  assert.equal(n.sources.school,true);assert.equal(n.suggestions.email,true);
  assert.deepEqual(n.quietHours,{enabled:false,start:'22:00',end:'07:00'});
 });
@@ -30,6 +31,21 @@ test('valid personal theme, source, density and quiet-hour settings are normaliz
  const n=normalizeBriefPreferences({palette:'academia',density:'compact',hideAmounts:false,sources:{email:false,calendar:false},suggestions:{email:false,school:false},quietHours:{enabled:true,start:'21:30',end:'08:05'}});
  assert.equal(n.palette,'academia');assert.equal(n.density,'compact');assert.equal(n.hideAmounts,false);
  assert.equal(n.sources.calendar,false);assert.equal(n.suggestions.email,false);assert.equal(n.quietHours.start,'21:30');
+});
+test('automation mode is private preference state and Disabled suppresses suggestions only',()=>{
+ const automatic=normalizeBriefPreferences({automationMode:'automatic'}),disabled=normalizeBriefPreferences({automationMode:'disabled'}),suggestion={source:'email'};
+ assert.equal(automatic.automationMode,'automatic');assert.equal(maySuggest(suggestion,automatic),true);assert.equal(maySuggest(suggestion,disabled),false);
+ assert.equal(makeBriefPreferencesRecord({automationMode:'automatic'},a).payload.automationMode,'automatic');
+});
+test('category colors inherit by section and exact item overrides without changing source access',()=>{
+ const prefs={categoryColors:{sections:{Work:'positive',Home:'warning',Finance:'accent',School:'invalid'},items:{[id]:'warning','not-a-record-id':'positive'}}};
+ assert.equal(categoryColorFor({section:'Work',preferences:prefs}), 'positive');
+ assert.equal(categoryColorFor({section:'Work',recordId:id,preferences:prefs}), 'warning');
+ assert.equal(categoryColorFor({section:'School',preferences:prefs}), 'inherit');
+ assert.equal(categoryColorFor({section:'Calendar',preferences:prefs}), 'inherit');
+ const normalized=normalizeCategoryColors(prefs.categoryColors);assert.deepEqual(normalized.sections,{Work:'positive',Home:'warning'});assert.deepEqual(normalized.items,{[id]:'warning'});
+ assert.deepEqual(normalizeBriefPreferences({categoryColors:normalized}).categoryColors,normalized);
+ assert.deepEqual(normalizeBriefPreferences().categoryColors,{sections:{},items:{}});
 });
 test('preferences saved only as fictional owner-private record, not as authorization',()=>{
  const result=makeBriefPreferencesRecord({sources:{email:false}},a);
@@ -85,5 +101,11 @@ test('preferences remain fictional UI preferences; never automatically approve m
  const settings=read('src/dev-settings.mjs');assert.match(settings,/makeBriefPreferencesRecord/);
  assert.match(settings,/settings were created elsewhere|Settings were created elsewhere/);
  assert.doesNotMatch(settings,/localStorage|service_role|sb_secret_/);
- assert.match(settings,/never changes|without explicit approval|No task, message/);
+ assert.match(settings,/never changes|without explicit approval|No task, message|still requires explicit approval/);
+});
+test('Smart Independence exposes the selected mode while the Brief keeps approval gates',()=>{
+ const settings=read('src/dev-settings.mjs'),brief=read('src/dev-brief.mjs');
+ assert.match(settings,/Automatic · prepare suggestions only/);assert.match(settings,/Ask · review each suggestion/);assert.match(settings,/Disabled · hide suggestions/);
+ assert.match(brief,/suggestions ranked by confidence; record changes still need approval/);assert.match(brief,/Every create\/edit\/send\/payment\/import remains behind its explicit approval/);
+ assert.match(brief,/reviewAutomationSuggestion/);
 });

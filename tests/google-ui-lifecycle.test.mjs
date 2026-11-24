@@ -26,6 +26,10 @@ test('late saved Google records are discarded on page exit or expired session',a
 test('already-expired Google sign-in does not display private connection controls',async()=>{
  const h=harness(async()=>response({...state,expiresAt:999,connections:[{provider:'gmail',accountLabel:'PRIVATE FIXTURE'}]}));await vm.runInContext('boot',h.context);assert.equal(h.controls.innerHTML,'');assert.match(h.status.textContent,/Session ended/);
 });
+test('connection cards show the exact read-only grant boundary and unknown freshness without claiming a live check',async()=>{
+ const connection={connectionId:'fixture-connection',provider:'gmail',accountLabel:'Fictional mailbox',permission:'Gmail read-only mailbox scope',status:'authorized',selectionRequired:true,sourceSelection:null};
+ const h=harness(async()=>response({...state,connections:[connection]}));await vm.runInContext('boot',h.context);assert.match(h.controls.innerHTML,/Gmail read-only mailbox scope/);assert.match(h.controls.innerHTML,/last successful provider check is unknown/);assert.match(h.controls.innerHTML,/No automatic refresh runs/);assert.match(h.controls.innerHTML,/can cover the mailbox/);assert.match(h.controls.innerHTML,/Inbox dates and subject\/sender metadata/);assert.doesNotMatch(h.controls.innerHTML,/authorized/i);
+});
 test('saved source search combines provider and title/sender, orders dates, and preserves originals',async()=>{
  const h=harness(async()=>response(state));await vm.runInContext('boot',h.context);
  const fixture=[{id:'b',provider:'gmail',title:'Trip',sender:'Taylor',receivedAt:'2026-11-01T10:00:00Z'},{id:'a',provider:'google_calendar',title:'TRIP planning',startDate:'2026-11-03'},{id:'c',provider:'gmail',title:'Another subject',sender:'TAYLOR',receivedAt:'2026-11-02T10:00:00Z'}];

@@ -1,13 +1,14 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {plainTextFromGmail,readOneGmailTextPreview} from '../server/gmail-text-preview.mjs';
 import {GMAIL_READ_SCOPE} from '../server/gmail.mjs';
+import {suggestGmailMessageCategories} from '../server/gmail-message-candidates.mjs';
 const ownerId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',connectionId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const part=text=>({mimeType:'text/plain',body:{data:Buffer.from(text).toString('base64url')}});
 const savedMessage={ownerId,connectionId,provider:'gmail',visibility:'private',messageId:'fixture-message',receivedAt:'2026-11-07T12:00:00.000Z',subject:'Fixture subject',sender:'Fixture Sender',labelIds:['INBOX']};
 const message=()=>({id:'fixture-message',threadId:'fixture-thread',internalDate:String(Date.parse(savedMessage.receivedAt)),labelIds:['INBOX'],payload:{...part('Please review this fictional appointment.'),headers:[{name:'Subject',value:'Fixture subject'},{name:'From',value:'Fixture Sender'}]}});
 const args=()=>({approved:true,ownerId,connectionId,grant:{ownerId,connectionId,provider:'gmail',scopes:[GMAIL_READ_SCOPE]},accessToken:'fixture-token',savedMessage,confirmCurrent:async()=>true});
 test('Gmail text preview is explicit and exactly one GET, with no identifiers/tokens or actions in output',async()=>{
- let calls=0;const result=await readOneGmailTextPreview(args(),async(url,options)=>{calls++;const u=new URL(url);assert.equal(u.pathname,'/gmail/v1/users/me/messages/fixture-message');assert.equal(u.searchParams.get('format'),'full');assert.equal(options.method,'GET');assert.equal(options.redirect,'error');return Response.json(message());});assert.equal(calls,1);assert.equal(result.persisted,false);assert.equal(result.automaticActions,false);assert.match(result.text,/fictional appointment/);assert.doesNotMatch(JSON.stringify(result),/fixture-token|fixture-message|fixture-thread|ownerId/);
+ let calls=0;const result=await readOneGmailTextPreview(args(),async(url,options)=>{calls++;const u=new URL(url);assert.equal(u.pathname,'/gmail/v1/users/me/messages/fixture-message');assert.equal(u.searchParams.get('format'),'full');assert.equal(options.method,'GET');assert.equal(options.redirect,'error');return Response.json(message());});assert.equal(calls,1);assert.equal(result.persisted,false);assert.equal(result.automaticActions,false);assert.match(result.text,/fictional appointment/);assert.deepEqual(result.candidates,[{category:'Appointment',basis:'message text'}]);assert.doesNotMatch(JSON.stringify(result),/fixture-token|fixture-message|fixture-thread|ownerId/);
 });
 test('unapproved, mismatched or expired selections stop before message requests',async()=>{
  for(const options of [{approved:false},{ownerId:connectionId},{savedMessage:{...savedMessage,labelIds:['TRASH']}},{confirmCurrent:async()=>false}]){let calls=0;await assert.rejects(readOneGmailTextPreview({...args(),...options},async()=>{calls++;return Response.json(message());}));assert.equal(calls,0);}
@@ -28,4 +29,10 @@ test('provider failures expose only safe status categories, never source or toke
 });
 test('common legacy Western text encodings decode without enabling HTML or attachments',()=>{
  for(const charset of ['iso-8859-1','windows-1252']){const payload={mimeType:'text/plain',headers:[{name:'Content-Type',value:'text/plain; charset='+charset}],body:{data:Buffer.from([67,97,102,233]).toString('base64url')}};assert.equal(plainTextFromGmail(payload).text,'Café');}
+});
+test('category candidates are bounded keyword matches and keep ambiguity visible for review',()=>{
+ assert.deepEqual(suggestGmailMessageCategories({subject:'Invoice due · Job application received'}),[{category:'Bill',basis:'subject'},{category:'Application',basis:'subject'}]);
+ assert.deepEqual(suggestGmailMessageCategories({subject:'Update',text:'Your package was shipped. Appointment scheduled for tomorrow.'}),[{category:'Appointment',basis:'message text'},{category:'Delivery',basis:'message text'}]);
+ assert.deepEqual(suggestGmailMessageCategories({subject:'Personal note',text:'Please call when you have time.'}),[]);
+ assert.throws(()=>suggestGmailMessageCategories({subject:'x'.repeat(301)}),/could not be verified/);
 });

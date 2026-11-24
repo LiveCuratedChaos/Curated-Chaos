@@ -1,5 +1,6 @@
 // Server-only Chase preparation through Plaid. No credentials, routes or live connections enabled.
 import {createHash} from 'node:crypto';
+import {ProviderReadError} from './provider-read-error.mjs';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const id=value=>typeof value==='string'&&value.length>0&&value.length<=256&&!/[\u0000-\u0020\u007f]/.test(value);
 const clean=(value,max)=>String(value??'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,max);
@@ -23,9 +24,14 @@ export function createPlaidChaseRead({clientId,secret,environment='sandbox',prod
  async function request(path,ctx,body){
   let response,data;
   try{response=await fetcher(origin+path,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json','Plaid-Version':'2020-09-14'},body:JSON.stringify({client_id:clientId,secret,access_token:ctx.accessToken,...body}),cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)});data=await response.json();}
-  catch{throw Error('Bank preview could not be reached. No partial snapshot was accepted.');}
-  if(!response.ok||!data||typeof data!=='object'||Array.isArray(data))throw Error('Bank preview failed. Review connection permissions before retrying.');
-  if(data.item?.item_id!==ctx.grant.itemId||data.item.institution_id!==ctx.grant.institutionId||data.item.error)throw Error('Bank connection identity or status could not be verified.');
+  catch{throw new ProviderReadError('source-unavailable','Bank preview could not be reached. No partial snapshot was accepted.');}
+  const code=data?.error_code||data?.item?.error?.error_code;
+  if(response.status===401||['ITEM_LOGIN_REQUIRED','INVALID_ACCESS_TOKEN'].includes(code))throw new ProviderReadError('reconnect-required','Bank authorization needs reconnection. No partial snapshot was accepted.');
+  if(response.status===403||code==='PRODUCT_NOT_ENABLED')throw new ProviderReadError('access-denied','The bank denied the approved read request. No partial snapshot was accepted.');
+  if(code==='INVALID_ACCOUNT_ID')throw new ProviderReadError('selection-changed','The saved bank account selection changed. Reload it before previewing.');
+  if(!response.ok||code)throw new ProviderReadError('source-unavailable','Bank preview failed. No partial snapshot was accepted.');
+  if(!data||typeof data!=='object'||Array.isArray(data))throw new ProviderReadError('incomplete-read','Bank response could not be verified. No partial snapshot was accepted.');
+  if(data.item?.item_id!==ctx.grant.itemId||data.item.institution_id!==ctx.grant.institutionId||data.item.error)throw new ProviderReadError('reconnect-required','Bank connection identity or status could not be verified.');
   return data;
  }
  function account(row,ctx){
@@ -42,7 +48,7 @@ export function createPlaidChaseRead({clientId,secret,environment='sandbox',prod
  return {
   async accounts(input){
    const ctx=context(input),data=await request('/accounts/get',ctx,{options:{account_ids:ctx.selectedAccountIds}});
-   if(!Array.isArray(data.accounts)||data.accounts.length!==ctx.selectedAccountIds.length||new Set(data.accounts.map(a=>a.account_id)).size!==data.accounts.length)throw Error('Complete selected account list could not be verified.');
+   if(!Array.isArray(data.accounts)||data.accounts.length!==ctx.selectedAccountIds.length||new Set(data.accounts.map(a=>a.account_id)).size!==data.accounts.length)throw new ProviderReadError('incomplete-read','Complete selected account list could not be verified.');
    return {provider:'plaid',institution:'Chase',environment,ownerId:ctx.ownerId,connectionId:ctx.connectionId,complete:true,retrievedAt:new Date(now()).toISOString(),sourceUpdatedAt:null,freshness:'provider-cached',accounts:data.accounts.map(row=>account(row,ctx))};
   },
   async transactions(input){
@@ -51,12 +57,12 @@ export function createPlaidChaseRead({clientId,secret,environment='sandbox',prod
    const inclusiveEnd=new Date(end-86400000).toISOString().slice(0,10),transactions=[],seen=new Set();let expectedTotal;
    for(let page=0;page<10;page++){
     const data=await request('/transactions/get',ctx,{start_date:input.startDate,end_date:inclusiveEnd,options:{account_ids:ctx.selectedAccountIds,count:100,offset:transactions.length}});
-    if(!Number.isInteger(data.total_transactions)||data.total_transactions<0||data.total_transactions>500||!Array.isArray(data.transactions)||data.transactions.length>100||expectedTotal!==undefined&&expectedTotal!==data.total_transactions)throw Error('Bank transaction window changed or exceeds the preview limit. No partial snapshot was accepted.');
+    if(!Number.isInteger(data.total_transactions)||data.total_transactions<0||data.total_transactions>500||!Array.isArray(data.transactions)||data.transactions.length>100||expectedTotal!==undefined&&expectedTotal!==data.total_transactions)throw new ProviderReadError('incomplete-read','Bank transaction window changed or exceeds the preview limit. No partial snapshot was accepted.');
     expectedTotal=data.total_transactions;
     for(const row of data.transactions){const normalized=transaction(row,ctx,input.startDate,input.endDateExclusive);if(seen.has(normalized.transactionId))throw Error('Bank pagination changed. Retry the complete preview.');seen.add(normalized.transactionId);transactions.push(normalized);}
-    if(transactions.length>expectedTotal)throw Error('Bank transaction counts could not be verified.');
+    if(transactions.length>expectedTotal)throw new ProviderReadError('incomplete-read','Bank transaction counts could not be verified.');
     if(transactions.length===expectedTotal)return {provider:'plaid',institution:'Chase',environment,ownerId:ctx.ownerId,connectionId:ctx.connectionId,complete:true,startDate:input.startDate,endDateExclusive:input.endDateExclusive,retrievedAt:new Date(now()).toISOString(),sourceUpdatedAt:null,freshness:'provider-cached',transactions};
-    if(!data.transactions.length)throw Error('Bank pagination ended before the complete window.');
+    if(!data.transactions.length)throw new ProviderReadError('incomplete-read','Bank pagination ended before the complete window.');
    }throw Error('Bank preview requires too many pages. Choose a smaller window.');
   }
  };

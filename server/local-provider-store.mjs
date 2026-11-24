@@ -3,6 +3,8 @@ import {mkdir,lstat,writeFile,readFile,rename,unlink,readdir} from 'node:fs/prom
 import {join} from 'node:path';
 import {randomUUID,randomBytes} from 'node:crypto';
 import {validateGoogleSourceSelection} from './google-source-selection.mjs';
+import {GMAIL_READ_SCOPE} from './gmail.mjs';
+import {GOOGLE_CALENDAR_READ_SCOPE} from './google-calendar.mjs';
 import {createTokenSealer} from './token-sealer.mjs';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export async function createLocalProviderStore(directory){
@@ -94,7 +96,9 @@ export async function createLocalProviderStore(directory){
     const row=JSON.parse(await readFile(path,'utf8'));if(row.ownerId!==ownerId)continue;
     const privateData=sealer.unseal(row.encrypted,'provider:'+ownerId+':'+row.connectionId);
     const paused=await isPaused(ownerId,row.connectionId);
-    result.push({connectionId:row.connectionId,provider:row.provider,accountLabel:privateData.email,status:paused?'paused':'authorized',selectionRequired:!selections.has(row.connectionId),sourceSelection:selections.get(row.connectionId)||null});
+    const permission=row.provider==='gmail'&&row.scope===GMAIL_READ_SCOPE?'Gmail read-only mailbox scope':row.provider==='google_calendar'&&row.scope===GOOGLE_CALENDAR_READ_SCOPE?'Google Calendar events read-only scope':null;
+    if(!permission)throw Error('Provider authorization scope requires review.');
+    result.push({connectionId:row.connectionId,provider:row.provider,accountLabel:privateData.email,status:paused?'paused':'authorized',permission,selectionRequired:!selections.has(row.connectionId),sourceSelection:selections.get(row.connectionId)||null});
    }
    return result;
   }

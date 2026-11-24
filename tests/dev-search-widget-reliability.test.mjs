@@ -1,9 +1,11 @@
+import {createPrivateClockTicker} from '../src/private-clock-widget.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import * as search from '../src/dev-search-model.mjs';
 import * as widgets from '../src/dev-widget-layout-model.mjs';
+import {validatePrivateWidgetLayouts} from '../src/private-widget-layout.mjs';
 import {escapeHtml} from '../src/core.mjs';
 const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const turn=()=>new Promise(resolve=>setImmediate(resolve));
@@ -17,7 +19,7 @@ function harness(name,globals){
 }
 function searchScreen(){return harness('search',search);}
 function widgetScreen(){
- const s=harness('workspace',{...widgets,safeWorkspacePage:()=> 'curation',workspaceHeading:()=>({title:'The Curation',description:'Fixture'}),normalizeCloudRecords:()=>({}),normalizeFictionalLife:()=>({}),normalizeFictionalEmails:()=>[],normalizeOrganizerRows:()=>({projects:[]}),readOwnerBriefPreferences:()=>({preferences:{hideAmounts:true,palette:'neutral',density:'balanced'}})});
+ const s=harness('workspace',{...widgets,createPrivateClockTicker,validatePrivateWidgetLayouts,safeWorkspacePage:()=> 'curation',workspaceHeading:()=>({title:'The Curation',description:'Fixture'}),normalizeCloudRecords:()=>({}),normalizeFictionalLife:()=>({}),normalizeFictionalEmails:()=>[],normalizeOrganizerRows:()=>({projects:[]}),readOwnerBriefPreferences:()=>({preferences:{hideAmounts:true,palette:'neutral',density:'balanced'}})});
  vm.runInContext(`show=()=>{};snapshot={};layoutDirty=true;api={};`,s.c);
  return s;
 }

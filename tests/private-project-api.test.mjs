@@ -1,0 +1,34 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {createDevApi} from '../src/dev-api.mjs';import {createPrivateProjectApi} from '../src/private-project-api.mjs';
+const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',config={supabaseUrl:'https://fictionaldevproject.supabase.co',projectRef:'fictionaldevproject',publishableKey:'sb_publishable_fictional'};
+const record=()=>({id,owner_id:owner,household_id:null,visibility:'private',section:'Work',item_type:'project',origin:'PRIVATE_COOKIE_PROJECT',payload:{fictional:true,schemaVersion:1,title:'Fictional project',description:'Private details',status:'Active'}});
+function setup(handler=()=>[]){const calls=[],api=createPrivateProjectApi(async(path,options,token)=>{calls.push({url:new URL(path,'https://fictional.example.test'),options,token});return handler(calls.at(-1));});return{calls,api};}
+test('project API is opt-in and selected reads are scoped to private project namespace',async()=>{const api=createDevApi(config,async()=>{throw Error('No transport');});assert.equal(api.getPrivateProject,undefined);assert.equal(typeof createDevApi(config,async()=>{},{includeProjects:true}).getPrivateProject,'function');const s=setup();await s.api.getPrivateProject('fictional',id,owner);for(const [k,v]of Object.entries({id:'eq.'+id,owner_id:'eq.'+owner,visibility:'eq.private',household_id:'is.null',item_type:'eq.project',origin:'eq.PRIVATE_COOKIE_PROJECT',deleted_at:'is.null',limit:'2'}))assert.equal(s.calls[0].url.searchParams.get(k),v);await assert.rejects(s.api.getPrivateProject('x','bad',owner));assert.equal(s.calls.length,1);});
+test('project listing never requests details and enforces ordered bounded pagination',async()=>{let n=0;const s=setup(()=>n++?[]:Array.from({length:100},(_,j)=>({id:(j+1).toString(16).padStart(8,'0')+'-bbbb-4bbb-8bbb-bbbbbbbbbbbb',project_title:'Title',project_status:'Active',project_schema:1,project_fictional:true})));const rows=await s.api.listPrivateProjects('x',owner);assert.equal(rows.length,100);assert.equal(s.calls.length,2);assert.doesNotMatch(s.calls[0].url.searchParams.get('select'),/description|\*/);assert.equal(s.calls[1].url.searchParams.get('id'),'gt.'+rows.at(-1).id);assert.deepEqual(rows[0].payload,{title:'Title',status:'Active',schemaVersion:1,fictional:true});for(const response of [null,Array(101).fill({id}),[{id},{id}],[{id:'bad'}]])await assert.rejects(setup(()=>response).api.listPrivateProjects('x',owner));});
+test('project insert never upserts and rejects widened scope or unrecognized payload',async()=>{const s=setup(),r=record();await s.api.addPrivateProject('x',r);assert.equal(s.calls[0].options.method,'POST');assert.equal(s.calls[0].options.headers.Prefer,'return=representation');assert.equal(s.calls[0].url.searchParams.has('on_conflict'),false);for(const patch of [{version:1},{item_type:'task'},{household_id:id},{visibility:'household'},{payload:{...r.payload,taskIds:[]}},{payload:{...r.payload,status:'bad'}}])await assert.rejects(async()=>s.api.addPrivateProject('x',{...r,...patch}));assert.equal(s.calls.length,1);});
+test('project updates guard owner version and deletion state and patch only editable fields',async()=>{const s=setup(),r={...record(),version:3,deleted_at:null},p={...record(),section:'Home',payload:{...r.payload,title:'Changed'}};await s.api.updatePrivateProject('x',r,owner,p);assert.equal(s.calls[0].url.searchParams.get('version'),'eq.3');assert.equal(s.calls[0].url.searchParams.get('deleted_at'),'is.null');assert.deepEqual(JSON.parse(s.calls[0].options.body),{payload:p.payload,section:'Home'});for(const patch of [{owner_id:id},{item_type:'task'},{version:0},{deleted_at:'2026-11-01'}])await assert.rejects(async()=>s.api.updatePrivateProject('x',{...r,...patch},owner,p));assert.equal(s.calls.length,1);});
+test('project transport preserves the reviewed progress choice and rejects nonboolean option values',async()=>{const s=setup(),r=record();delete r.version;delete r.deleted_at;r.payload={fictional:true,schemaVersion:1,title:'Fictional project',description:'Exact details',status:'Active',separateRecurring:false};await s.api.addPrivateProject('x',r);assert.equal(JSON.parse(s.calls[0].options.body).payload.separateRecurring,false);for(const value of ['yes',null,0])await assert.rejects(async()=>s.api.addPrivateProject('x',{...r,payload:{...r.payload,separateRecurring:value}}));assert.equal(s.calls.length,1);});
+
+test('Home widget projection selects the last reading and omits receipt and reading notes',async()=>{
+ const projected={id,section:'Home',asset_kind:'vehicle',asset_make:'Honda',asset_model:'Fit',asset_year:'2018',
+  asset_unit:'miles',asset_day:'2026-11-01',asset_value:42000,asset_warranty:''};
+ const s=setup(()=>[projected]);
+ const [row]=await s.api.listPrivateProjects('x',owner,{homeSummary:true});
+ const columns=s.calls[0].url.searchParams.get('select');
+ assert.match(columns,/asset_value:payload->homeAsset->usageEntries->-1->value/);
+ assert.doesNotMatch(columns,/receiptNote|->note|description/);
+ assert.deepEqual(row.homeAssetSummary,{kind:'vehicle',label:'2018 Honda Fit',usageUnit:'miles',latestUsageDay:'2026-11-01',latestUsageValue:42000,warrantyEndDay:''});
+});
+test('Home delivery projection is opt-in in both Brief and selected task queries',async()=>{
+ for(const enabled of [false,true]){
+  const calls=[],delivery={status:'shipped'};
+  const api=createDevApi(config,async url=>{
+   const fields=new URL(url).searchParams.get('select');
+   calls.push(fields);
+   return {ok:true,text:async()=>JSON.stringify([{id,section:'Home',item_type:'task',brief_home_delivery:delivery,task_home_delivery:delivery}])};
+  },{includeHomeDeliveries:enabled});
+  for(const rows of [await api.listPrivateBriefRecords('x',owner),await api.getPrivateTaskDetails('x',id,owner)]){
+   assert.deepEqual(rows[0].payload.homeDelivery,enabled?delivery:undefined);
+  }
+  assert.deepEqual(calls.map(select=>select.includes(':payload->homeDelivery')),[enabled,enabled]);
+ }
+});

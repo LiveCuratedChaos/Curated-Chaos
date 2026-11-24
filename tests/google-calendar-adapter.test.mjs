@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeGoogleEvent,readGoogleCalendarWindow} from '../server/google-calendar.mjs';
+import {ProviderReadError} from '../server/provider-read-error.mjs';
 import {allowedPublicPath} from '../tools/local-server.mjs';
 const ownerId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const config={ownerId,calendarId:'primary',authorizedCalendarIds:['primary'],accessToken:'fictional-token',timeMin:'2026-11-01T00:00:00Z',timeMax:'2026-12-01T00:00:00Z'};
@@ -43,6 +44,9 @@ test('paginated reads use only GET and return a complete minimal snapshot withou
 test('failure on a later page returns no partial result and does not echo provider error content',async()=>{
  let count=0;
  await assert.rejects(readGoogleCalendarWindow(config,async()=>++count===1?response({items:[event()],nextPageToken:'next'}):{ok:false,status:500,json:async()=>({error:'secret-provider-body'})}),err=>/No partial/.test(err.message)&&!err.message.includes('secret-provider-body'));
+});
+test('expired Calendar authorization has a typed reconnect outcome without echoing provider details',async()=>{
+ await assert.rejects(readGoogleCalendarWindow(config,async()=>({ok:false,status:401,json:async()=>({error:'private-provider-secret'})})),error=>error instanceof ProviderReadError&&error.outcome==='reconnect-required'&&!error.message.includes('private-provider-secret'));
 });
 test('pagination loops and inconsistent duplicate events fail closed',async()=>{
  await assert.rejects(readGoogleCalendarWindow(config,async()=>response({items:[event()],nextPageToken:'same'})),/pagination/);

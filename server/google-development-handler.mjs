@@ -11,6 +11,7 @@ import {randomBytes,createHash} from 'node:crypto';
 import {createGoogleImportReview} from './google-import-review.mjs';
 import {createGoogleSourcePreview} from './google-source-preview.mjs';
 import {createGoogleConnectionFlow} from './google-connection-flow.mjs';
+import {providerReadFailure} from './provider-read-error.mjs';
 import {readFile} from 'node:fs/promises';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const html=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Curated Chaos · Development connections</title><link rel="stylesheet" href="/src/styles.css"></head><body data-theme="neutral"><main class="content cc-connections-page"><p class="eyebrow">CURATED CHAOS · ON THIS MAC</p><h1>Google connections</h1><p>Connect your Google account, choose sources and dates, and review a read-only preview. Nothing is automatically added to your workspace.</p><p id="connection-status" role="status">Checking setup…</p><section id="connection-controls"></section><p><a class="btn" href="/dev-account.html">My Account</a> <a class="btn" href="/dev-integration.html">Integration checks</a></p></main><script type="module" src="/auth/google/ui.mjs"></script></body></html>`;
@@ -152,10 +153,13 @@ export function makeGoogleDevelopmentHandler({origin,devApi,oauthClient,clientId
     }
     if(url.pathname==='/auth/google/preview'){
      if(!preview){send(res,503,{error:'Preview is unavailable.'});return true;}
-     const values=await body(req);
-     const data=await preview({ownerId:s.ownerId,binding:hash(s.id),connectionId:values.connectionId,selectionId:values.selectionId,confirmed:values.confirmed});
-     const review=importReview.remember({ownerId:s.ownerId,binding:hash(s.id),connectionId:values.connectionId,preview:data});
-     send(res,200,{...data,...review});return true;
+     try{
+      const values=await body(req);
+      const data=await preview({ownerId:s.ownerId,binding:hash(s.id),connectionId:values.connectionId,selectionId:values.selectionId,confirmed:values.confirmed});
+      const review=importReview.remember({ownerId:s.ownerId,binding:hash(s.id),connectionId:values.connectionId,preview:data});
+      send(res,200,{...data,...review});
+     }catch(error){const failure=providerReadFailure(error);send(res,failure.status,{outcome:failure.outcome,error:failure.error});}
+     return true;
     }
     if(url.pathname==='/auth/google/pause'){
      if(!await confirmSession(s.ownerId,hash(s.id))){sessions.delete(s.id);send(res,401,{error:'Sign in again before changing connections.'});return true;}

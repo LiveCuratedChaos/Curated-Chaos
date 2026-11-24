@@ -1,6 +1,9 @@
 name: App checks
 on:
+  # Feature work is checked once through its PR, rather than on both push and PR.
+  # Unopened branches can still be checked explicitly with workflow_dispatch.
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -27,9 +30,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zsh
       - run: npm run check:offline
-      - name: Diagnose fictional test failures
-        if: failure()
-        run: npm test
   browser:
     name: Browser workflows
     runs-on: ubuntu-24.04

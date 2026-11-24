@@ -1,0 +1,13 @@
+// Read-only event versions reuse original event validation and display, without edit authority.
+import {escapeHtml as e} from './core.mjs';
+import {validDay} from './dev-brief-model.mjs';
+import {createPrivateRecordVersionPanel} from './private-record-version-panel.mjs';
+const exact=(v,keys)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).sort().join(',')===keys.slice().sort().join(',');
+const time=v=>typeof v==='string'&&/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v);
+export function verifyEventHistoricalDetails(v,{entry,now=Date.now(),maxExpiry=now+300000}={}){
+ const r=v?.record;
+ if(!entry||!exact(v,['readOnly','historical','expiresAt','version','operation','capturedAt','wasDeleted','record',...(Object.hasOwn(v??{},'recoveredAt')?['recoveredAt']:[])])||v.readOnly!==true||v.historical!==true||typeof v.wasDeleted!=='boolean'||!Number.isFinite(v.expiresAt)||v.expiresAt<=now||v.expiresAt>Math.min(now+300000,maxExpiry)||['version','operation','capturedAt','recoveredAt'].some(k=>v[k]!==entry[k])||!exact(r,['title','day','time','end_time','end_day','all_day','section','location','description','expiresAt','readOnly'])||r.readOnly!==true||typeof r.title!=='string'||!r.title.trim()||r.title.length>200||r.section!=='Calendar'||!validDay(r.day)||!time(r.time)||typeof r.end_time!=='string'||r.end_time!==''&&!time(r.end_time)||typeof r.end_day!=='string'||r.end_day!==''&&(!validDay(r.end_day)||r.end_day<r.day||Date.parse(r.end_day+'T00:00:00Z')-Date.parse(r.day+'T00:00:00Z')>366*86400000)||typeof r.all_day!=='boolean'||r.all_day&&(r.time!=='00:00'||r.end_time!=='')||!r.all_day&&(r.end_day>r.day?!time(r.end_time):r.end_time!==''&&r.end_time<=r.time)||typeof r.location!=='string'||r.location.length>500||typeof r.description!=='string'||r.description.length>10000||!Number.isFinite(r.expiresAt)||r.expiresAt<=now||r.expiresAt>v.expiresAt)throw Error('Earlier event could not be verified.');return v;
+}
+function renderEvent(v){return '<h4>'+e(v.title)+'</h4><p>'+e(v.day)+(v.end_day?' through '+e(v.end_day):'')+' · '+(v.all_day?'All day':e(v.time)+(v.end_time?'–'+e(v.end_time):''))+' · Read only</p><p>'+e(v.location||'No location saved.')+'</p><pre class="private-note-body" tabindex="0" aria-label="Earlier event details">'+e(v.description||'No details saved.')+'</pre>';}
+
+export function createPrivateEventVersionPanel(options){return createPrivateRecordVersionPanel({...options,kind:'event',verifyDetails:verifyEventHistoricalDetails,renderDetails:detail=>'<h3>Earlier event</h3><p>Read only \u00b7 Version '+detail.version+(detail.wasDeleted?' \u00b7 Deleted at capture':'')+'</p>'+renderEvent(detail.record)});}

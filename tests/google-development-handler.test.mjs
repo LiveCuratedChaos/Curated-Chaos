@@ -118,7 +118,7 @@ test('saved source choices survive reopening the store and cannot load for anoth
  await s.stores.connectionStore.insert({ownerId,connectionId,provider:'gmail',scope:GMAIL_READ_SCOPE,encrypted:s.stores.sealer.seal({refreshToken:'fixture-refresh',email:'fixture@example.test'},'provider:'+ownerId+':'+connectionId)});
  const saved=await s.stores.connectionStore.saveSelection(ownerId,connectionId,{source:'INBOX',startDate:'2026-11-01',endDate:'2026-11-08'});
  const reopened=await createLocalProviderStore(s.dir),rows=await reopened.connectionStore.listOwner(ownerId);
- assert.equal(rows[0].selectionRequired,false);assert.equal(rows[0].sourceSelection.selectionId,saved.selectionId);
+ assert.equal(rows[0].selectionRequired,false);assert.equal(rows[0].sourceSelection.selectionId,saved.selectionId);assert.equal(rows[0].permission,'Gmail read-only mailbox scope');
  assert.equal((await reopened.connectionStore.loadSelected(ownerId,connectionId,saved.selectionId)).selection.timeMin,'2026-11-01T00:00:00.000Z');
  await assert.rejects(reopened.connectionStore.loadSelected('dddddddd-dddd-4ddd-8ddd-dddddddddddd',connectionId,saved.selectionId));
  assert.deepEqual(await reopened.connectionStore.listOwner('dddddddd-dddd-4ddd-8ddd-dddddddddddd'),[]);
@@ -183,6 +183,14 @@ test('real-source save routes compare cached items but cannot write without exac
  const login=await call(approved,'/auth/google/session',{method:'POST',headers:{origin,'content-type':'application/json',authorization:'Bearer fixture-access'}});
  const headers={origin,'content-type':'application/json',cookie:login.headers['Set-Cookie'].split(';')[0],'x-cc-csrf':JSON.parse(login.body).csrf};
  const saved=await prepareAndSave(approved,headers,true);assert.equal(saved.status,200);assert.equal(writes,1);assert.equal(rows.length,1);
+});
+test('failed provider preview returns a sanitized lifecycle outcome and leaves no review snapshot',async t=>{
+ const s=await configured(t,{refreshAccessToken:async()=>{throw {response:{status:400,data:{error:'invalid_grant',error_description:'provider-private-secret'}}};}}),connectionId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ await s.stores.connectionStore.insert({ownerId,connectionId,provider:'gmail',scope:GMAIL_READ_SCOPE,encrypted:s.stores.sealer.seal({refreshToken:'fixture-refresh',email:'fixture@example.test'},'provider:'+ownerId+':'+connectionId)});
+ const selection=await s.stores.connectionStore.saveSelection(ownerId,connectionId,{source:'INBOX',startDate:'2026-11-01',endDate:'2026-11-08'});
+ const failed=await call(s.handler,'/auth/google/preview',{method:'POST',headers:s.headers,body:{connectionId,selectionId:selection.selectionId,confirmed:true}});
+ assert.equal(failed.status,409);assert.deepEqual(JSON.parse(failed.body),{outcome:'reconnect-required',error:'Provider authorization needs reconnection. No snapshot was accepted.'});assert.doesNotMatch(failed.body,/provider-private-secret|invalid_grant|fixture-refresh/);
+ const review=await call(s.handler,'/auth/google/save-review',{method:'POST',headers:s.headers,body:{previewId:'missing-preview',selectedKeys:['fixture-key']}});assert.notEqual(review.status,200);assert.equal((await s.stores.connectionStore.listOwner(ownerId)).length,1);
 });
 test('saved financial endpoint requires verified owner and keeps finance separate from Google records',async t=>{
  let calls=0;const repository={listSavedFinance:async(actor,owner)=>{calls++;assert.equal(actor.accessToken,'fixture-access');assert.equal(owner,ownerId);return [];}};

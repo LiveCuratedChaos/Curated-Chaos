@@ -1,11 +1,13 @@
 // M1F: fictional, owner-private UI preferences. Display controls are NOT authorization policies.
 // Never use UI toggles to grant access or revoke RLS, OAuth or database permissions.
+import {accessibleAppearance} from './private-accessible-appearance.mjs';
 import { QA_PALETTES } from './dev-theme.mjs';
 import {normalizeNavigation} from './dev-navigation-model.mjs';
 import { INTEGRATION_SOURCES } from './dev-intelligence-model.mjs';
+import {normalizeCategoryColors,defaultCategoryColors} from './private-category-colors.mjs';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const DEFAULT_BRIEF_PREFERENCES=Object.freeze({
-  palette:'neutral',density:'balanced',hideAmounts:true,
+  palette:'neutral',density:'balanced',hideAmounts:true,automationMode:'ask',categoryColors:defaultCategoryColors(),
   sources:Object.freeze(Object.fromEntries(INTEGRATION_SOURCES.map(k=>[k,true]))),
   suggestions:Object.freeze({email:true,school:true,household:true}),
   quietHours:Object.freeze({enabled:false,start:'22:00',end:'07:00'})
@@ -17,9 +19,12 @@ export function normalizeBriefPreferences(data){
   const sources=Object.fromEntries(INTEGRATION_SOURCES.map(k=>[k,isBoolean(d.sources?.[k])?d.sources[k]:true]));
   const suggestions=Object.fromEntries(['email','school','household'].map(k=>[k,isBoolean(d.suggestions?.[k])?d.suggestions[k]:true]));
   return {
+    ...Object.fromEntries(Object.entries(accessibleAppearance(d)).filter(([key])=>Object.hasOwn(d,key))),
     palette:QA_PALETTES.includes(d.palette)?d.palette:'neutral',
     density:['balanced','compact','spacious'].includes(d.density)?d.density:'balanced',
     hideAmounts:isBoolean(d.hideAmounts)?d.hideAmounts:true,
+    automationMode:['automatic','ask','disabled'].includes(d.automationMode)?d.automationMode:'ask',
+    categoryColors:normalizeCategoryColors(d.categoryColors),
     navigation:normalizeNavigation(d.navigation),
     sources,suggestions,
     quietHours:{enabled:isBoolean(d.quietHours?.enabled)?d.quietHours.enabled:false,
@@ -42,5 +47,5 @@ export function readOwnerBriefPreferences(rows,ownerId){
 }
 export function maySuggest(suggestion,prefs){
   const p=normalizeBriefPreferences(prefs);
-  return !!(suggestion&&p.sources[suggestion.source]&&p.suggestions[suggestion.source]);
+  return !!(p.automationMode!=='disabled'&&suggestion&&p.sources[suggestion.source]&&p.suggestions[suggestion.source]);
 }

@@ -1,3 +1,5 @@
+import {CALENDAR_FILTER_KEYS,validCalendarShortcut} from '../src/private-calendar-filters.mjs';
+import {documentShortcutFilters,isDocumentShortcut} from '../src/private-document-fields.mjs';
 // Prepared storage component only; no routes, startup flag or automatic history collection.
 import {randomBytes,randomUUID} from 'node:crypto';
 import {privateSearchFields} from './private-workspace-search.mjs';
@@ -14,7 +16,10 @@ function sameStamp(a,b){return a===null?b===null:b!==null&&stamp(a)===stamp(b);}
 export function savedSearchName(name){if(typeof name!=='string'||!name.trim()||name.trim().length>80||/[\u0000-\u001f\u007f]/.test(name))throw Error('Enter a search name up to 80 characters.');return name.trim();}
 export function savedSearchFilters(values){
  if(!plain(values)||Object.hasOwn(values,'offset'))throw Error('Only reusable search filters may be saved.');
- const fields=privateSearchFields(values,{allowPriority:true,allowDateRange:true,allowUndated:true});
+ if(isDocumentShortcut(values))return documentShortcutFilters(values);
+ const calendar=CALENDAR_FILTER_KEYS.some(k=>Object.hasOwn(values,k));
+ if(calendar&&!validCalendarShortcut(values))throw Error('Choose supported Calendar filters.');
+ const fields=privateSearchFields(values,{allowEventKind:calendar,allowPriority:true,allowDateRange:true,allowUndated:true,allowProjects:true,allowSchool:true});
  if(/[\u0000-\u001f\u007f]/.test(fields.query))throw Error('Enter a supported title search.');
  return fields;
 }
@@ -25,8 +30,8 @@ export function privateSavedSearchState(row,ownerId){
 }
 function sameSelection(a,b){return same({...a,payload:{title:a.payload.title,filters:a.payload.filters}},{...b,payload:{title:b.payload.title,filters:b.payload.filters}});}
 function same(a,b){return a.id===b.id&&a.owner_id===b.owner_id&&a.version===b.version&&sameStamp(a.deleted_at,b.deleted_at)&&stamp(a.created_at)===stamp(b.created_at)&&equal(a.payload,b.payload);}
-export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUID}){
- if(typeof now!=='function'||typeof idFactory!=='function'||['getPrivateSavedSearch','listPrivateSavedSearches','addPrivateSavedSearch','updatePrivateSavedSearch','setPrivateSavedSearchDeletedAt'].some(k=>typeof api?.[k]!=='function'))throw Error('Explicit saved-search API required.');
+export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUID,allowSchool=false,allowDocuments=false}){
+ if(typeof allowDocuments!=='boolean'||typeof allowSchool!=='boolean'||typeof now!=='function'||typeof idFactory!=='function'||['getPrivateSavedSearch','listPrivateSavedSearches','addPrivateSavedSearch','updatePrivateSavedSearch','setPrivateSavedSearchDeletedAt'].some(k=>typeof api?.[k]!=='function'))throw Error('Explicit saved-search API required.');
  const contexts=new Map();let disposed=false;
  function clear(id){clearTimeout(contexts.get(id)?.timer);contexts.delete(id);}
  function alive(s){return !disposed&&contexts.get(s.contextId)===s&&s.expiresAt>now();}
@@ -34,16 +39,16 @@ export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUI
  function eligible(row){if(row.deleted_at!==null&&(stamp(row.deleted_at)>now()||stamp(row.deleted_at)<now()-retention))throw Error('The 90-day recovery period has ended.');}
  function selected(contextId,actor,key){const s=contexts.get(contextId),row=s?.actions.get(key);if(!s||!alive(s)||s.ownerId!==actor.ownerId||!row)throw Error('Fetch saved searches again.');return{s,row};}
  async function get(actor,id){const rows=await api.getPrivateSavedSearch(actor.accessToken,id,actor.ownerId);if(!Array.isArray(rows)||rows.length!==1)throw Error('Saved search unavailable.');const row=privateSavedSearchState(rows[0],actor.ownerId);if(row.id!==id)throw Error('Saved search identity changed.');return row;}
- function offer(contextId,ownerId,values,expiresAt){const filters=savedSearchFilters(values),s=begin(contextId,ownerId,expiresAt);s.offer={key:token(),filters};return{saveSearchToken:s.offer.key,saveSearchExpiresAt:s.expiresAt};}
+ function offer(contextId,ownerId,values,expiresAt){const filters=savedSearchFilters(values);if(isDocumentShortcut(filters)&&!allowDocuments)throw Error('Document search scope required.');if(filters.type==='school'&&!allowSchool)throw Error('School search scope required.');const s=begin(contextId,ownerId,expiresAt);s.offer={key:token(),filters};return{saveSearchToken:s.offer.key,saveSearchExpiresAt:s.expiresAt};}
  async function list(contextId,actor,expiresAt,{removed=false,offset=0}={}){
   if(typeof removed!=='boolean'||!Number.isInteger(offset)||offset<0||offset>1950||offset%50)throw Error('Choose a valid saved-search page.');
   const s=begin(contextId,actor.ownerId,expiresAt),rows=await api.listPrivateSavedSearches(actor.accessToken,actor.ownerId,removed);
   if(!alive(s)||!Array.isArray(rows)||rows.length>2000||new Set(rows.map(r=>r?.id)).size!==rows.length)throw Error('Saved-search list unverified.');
   const checked=rows.map(r=>privateSavedSearchState(r,actor.ownerId));if(checked.some(r=>(r.deleted_at!==null)!==removed))throw Error('Saved-search list scope changed.');
-  const items=checked.filter(r=>!removed||stamp(r.deleted_at)<=now()&&stamp(r.deleted_at)>=now()-retention).sort((a,b)=>a.payload.title.localeCompare(b.payload.title)||a.id.localeCompare(b.id));
+  const items=checked.filter(r=>allowDocuments||!isDocumentShortcut(r.payload.filters)).filter(r=>!removed||stamp(r.deleted_at)<=now()&&stamp(r.deleted_at)>=now()-retention).sort((a,b)=>a.payload.title.localeCompare(b.payload.title)||a.id.localeCompare(b.id));
   return{viewId:s.viewId,removed,offset,limit:50,matchCount:items.length,retentionDays:90,expiresAt:s.expiresAt,records:items.slice(offset,offset+50).map(row=>{const key=token();s.actions.set(key,row);return{name:row.payload.title,filters:structuredClone(row.payload.filters),...(removed?{deletedAt:new Date(stamp(row.deleted_at)).toISOString()}:{}),savedSearchToken:key};})};
  }
- async function load(contextId,actor,key){const{s,row}=selected(contextId,actor,key);if(row.deleted_at!==null)throw Error('Restore this saved search before running it.');const current=await get(actor,row.id);if(!alive(s)||!sameSelection(current,row)||current.deleted_at!==null)throw Error('Saved search changed. Fetch again.');return{name:current.payload.title,filters:structuredClone(current.payload.filters)};}
+ async function load(contextId,actor,key){const{s,row}=selected(contextId,actor,key);if(row.deleted_at!==null)throw Error('Restore this saved search before running it.');const current=await get(actor,row.id);if(!alive(s)||!sameSelection(current,row)||current.deleted_at!==null)throw Error('Saved search changed. Fetch again.');if(isDocumentShortcut(current.payload.filters)&&!allowDocuments)throw Error('Document search scope required.');if(current.payload.filters.type==='school'&&!allowSchool)throw Error('School search scope required.');return{name:current.payload.title,filters:structuredClone(current.payload.filters)};}
  async function prepare(contextId,actor,values){
   const s=contexts.get(contextId);if(!s||!alive(s)||s.ownerId!==actor.ownerId||!plain(values)||!['create','rename','remove','restore'].includes(values.action))throw Error('Saved-search review unavailable.');
   const creating=values.action==='create',naming=creating||values.action==='rename',allowed=['action',creating?'saveSearchToken':'savedSearchToken',...(naming?['name']:[])];

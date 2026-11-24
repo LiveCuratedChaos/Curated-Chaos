@@ -10,3 +10,33 @@ test('private HTTP search offer, nonwriting review, explicit approval and replay
 test('HTTP run/rename/remove/restore preserve filters and do not execute saved search during review',async t=>{const s=await setup(t);await create(s);let list=(await s.send('list')).data,key=list.records[0].savedSearchToken;assert.deepEqual((await s.send('load',{savedSearchToken:key})).data.filters,filters);let view=await s.send('review',{action:'rename',name:'Renamed shortcut',savedSearchToken:key});assert.equal((await s.send('save',{reviewId:view.data.reviewId,approved:true})).status,200);list=(await s.send('list')).data;assert.equal(list.records[0].name,'Renamed shortcut');view=await s.send('review',{action:'remove',savedSearchToken:list.records[0].savedSearchToken});assert.equal((await s.send('save',{reviewId:view.data.reviewId,approved:true})).status,200);assert.equal((await s.send('list')).data.records.length,0);list=(await s.send('list',{removed:true})).data;key=list.records[0].savedSearchToken;assert.equal((await s.send('load',{savedSearchToken:key})).status,409);view=await s.send('review',{action:'restore',savedSearchToken:key});assert.equal((await s.send('save',{reviewId:view.data.reviewId,approved:true})).status,200);list=(await s.send('list')).data;assert.deepEqual(list.records[0].filters,filters);assert.equal((await s.call('/dev-config.json')).data.privateSavedSearches,true);});
 test('wrong origins/CSRF and extra fields fail before saved-search storage actions',async t=>{const s=await setup(t),key=await offer(s);for(const headers of [{origin:'https://evil.test'},{'x-cc-csrf':'bad'},{host:'evil.test'},{'content-type':'text/plain'}])assert.equal((await s.call('/auth/workspace/saved-searches/review',{action:'create',name:'Forbidden',saveSearchToken:key},headers)).status,403);assert.equal((await s.send('review',{action:'create',name:'Forbidden',saveSearchToken:key,owner_id:'bad'})).status,409);assert.equal((await s.send('list')).data.matchCount,0);});
 test('Brief refresh, cancellation and sign-out retire old saved-search reviews',async t=>{for(const action of ['refresh','cancel','logout']){const s=await setup(t),key=await offer(s),v=await s.send('review',{action:'create',name:'Fictional',saveSearchToken:key});if(action==='refresh')await s.call('/auth/workspace/brief');if(action==='cancel')await s.send('cancel');if(action==='logout')await s.call('/auth/workspace/logout',{});assert.notEqual((await s.send('save',{reviewId:v.data.reviewId,approved:true})).status,200);}});
+
+test('the full workspace Calendar can save and rerun its exact date, category, source and event-kind selections',async t=>{
+ const {privateWorkspaceFixture}=await import('./support/private-workspace-fixture.mjs');
+ const {calendarWorkspaceFields,verifyCalendarWorkspaceList}=await import('../src/private-calendar-workspace.mjs');
+ const {validSavedSearchFilters,savedSearchSummary}=await import('../src/private-saved-search-panel.mjs');
+ const f=privateWorkspaceFixture(t,{...features,allowSavedSearches:true,allowCalendarWorkspace:true,allowCalendarDayRead:true,allowEventCreate:true,allowEventEdit:true,allowEventDetails:true});
+ const b=f.tab();await b.login();const client=b.client;
+ const defaultMonth=calendarWorkspaceFields({allowPriority:true,allowUndated:true});
+ const month=await client.calendar(defaultMonth);verifyCalendarWorkspaceList(month,defaultMonth);
+ const day=(await client.brief()).day;
+ for(const [title,calendarCategory] of [['On shift','Uncategorized'],['Off shift','Other']]){
+  const review=await client.reviewNewEvent({title,day,time:'09:00',end_time:'',location:'',description:'',calendarCategory});
+  await client.createEvent(review.reviewId);
+ }
+ const narrowed={...defaultMonth,eventKind:'timed',eventSource:'manual',eventCategory:'Uncategorized'};
+ const result=await client.calendar(narrowed);verifyCalendarWorkspaceList(result,narrowed);
+ assert.ok(validSavedSearchFilters(narrowed));assert.match(savedSearchSummary(narrowed),/Timed events.*Manual calendar.*Uncategorized/);
+ const review=await client.reviewSavedSearch({action:'create',name:'Timed manual appointments',saveSearchToken:result.saveSearchToken});
+ await client.saveSavedSearch(review.reviewId);
+ const list=await client.savedSearches({removed:false,offset:0});
+ const saved=list.records.find(r=>r.name==='Timed manual appointments');assert.deepEqual(saved.filters,narrowed);
+ const loaded=await client.loadSavedSearch(saved.savedSearchToken);assert.deepEqual(loaded.filters,narrowed);
+ const rerun=await client.calendar(loaded.filters);verifyCalendarWorkspaceList(rerun,narrowed);
+ const {eventKind,eventSource,eventCategory,query}=rerun;
+ const schedule=await client.calendarDayList({day,query,eventKind,eventSource,eventCategory,offset:0});
+ assert.ok(schedule.events.some(row=>row.title==='On shift'));
+ assert.ok(schedule.events.every(row=>row.title!=='Off shift'));
+
+ assert.equal(validSavedSearchFilters({...narrowed,eventKind:'unsupported'}),false);
+});

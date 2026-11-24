@@ -1,6 +1,7 @@
 // Server-only preparation. No routes, OAuth flow, storage, or live connection are enabled.
 // Call only after verifying the app user and reading that user's explicit calendar grants.
 import {createHash} from 'node:crypto';
+import {ProviderReadError} from './provider-read-error.mjs';
 
 export const GOOGLE_CALENDAR_READ_SCOPE='https://www.googleapis.com/auth/calendar.events.readonly';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -55,15 +56,15 @@ export async function readGoogleCalendarWindow({ownerId,calendarId,authorizedCal
   if(pageToken)url.searchParams.set('pageToken',pageToken);
   let response;
   try{response=await fetcher(url.href,{method:'GET',headers:{Authorization:'Bearer '+accessToken,Accept:'application/json'},redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});}
-  catch{throw Error('Calendar could not be reached. No partial snapshot was accepted.');}
+  catch{throw new ProviderReadError('source-unavailable','Calendar could not be reached. No partial snapshot was accepted.');}
   // Do not echo provider response bodies or credentials into logs/UI errors.
-  if(!response.ok)throw Error(response.status===401?'Calendar authorization expired. Reconnect to continue.':response.status===403?'Calendar access was denied. Review the approved permissions.':'Calendar refresh failed. No partial snapshot was accepted.');
-  let data;try{data=await response.json();}catch{throw Error('Calendar response could not be verified.');}
-  if(!data||typeof data!=='object'||Array.isArray(data)||(data.items!==undefined&&!Array.isArray(data.items)))throw Error('Calendar response could not be verified.');
+  if(!response.ok)throw response.status===401?new ProviderReadError('reconnect-required','Calendar authorization expired. Reconnect to continue.'):response.status===403?new ProviderReadError('access-denied','Calendar access was denied. Review the approved permissions.'):new ProviderReadError('source-unavailable','Calendar refresh failed. No partial snapshot was accepted.');
+  let data;try{data=await response.json();}catch{throw new ProviderReadError('incomplete-read','Calendar response could not be verified.');}
+  if(!data||typeof data!=='object'||Array.isArray(data)||(data.items!==undefined&&!Array.isArray(data.items)))throw new ProviderReadError('incomplete-read','Calendar response could not be verified.');
   for(const event of data.items||[]){
    const record=normalizeGoogleEvent(event,{ownerId,calendarId});if(!record)continue;
    const previous=records.get(record.key);
-   if(previous&&JSON.stringify(previous)!==JSON.stringify(record))throw Error('Calendar changed while loading. Refresh again before accepting this snapshot.');
+   if(previous&&JSON.stringify(previous)!==JSON.stringify(record))throw new ProviderReadError('incomplete-read','Calendar changed while loading. Refresh again before accepting this snapshot.');
    records.set(record.key,record);
    if(records.size>10000)throw Error('Calendar window contains too many events. Choose a smaller window.');
   }

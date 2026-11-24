@@ -1,3 +1,6 @@
+import {readHomeGrocery} from './private-home-grocery.mjs';
+import {readHomeCleaning} from './private-home-cleaning.mjs';
+import {readHomeDelivery} from './private-home-delivery.mjs';
 // Milestone 0D: PLAIN fictional private records, separated from the local fixture.
 // No provider tokens, financial details, or real personal information are supported.
 import { AREAS, dayString } from './core.mjs';
@@ -20,12 +23,12 @@ export function makeFictionalTask({title,day=dayString(),section='Personal Life'
   if(!TASK_SECTIONS.includes(section) || !AREAS.includes(section)) throw Error('Choose a permitted section.');
   return {owner_id:ownerId,household_id:null,visibility:'private',section,item_type:'task',origin:'manual-test',payload:{title,day:day===''?null:day,done:false,fictional:true,source:'M0D_DEV_BRIEF_TEST'}};
 }
-export function normalizeCloudRecords(raw,ownerId,{allowUndated=false}={}){
-  if(typeof allowUndated!=='boolean')throw Error('Explicit undated-task read scope required.');
+export function normalizeCloudRecords(raw,ownerId,{allowUndated=false,allowHomeCleaning=false,allowHomeGroceries=false,allowHomeDeliveries=false}={}){
+  if(typeof allowUndated!=='boolean'||typeof allowHomeCleaning!=='boolean'||typeof allowHomeGroceries!=='boolean'||typeof allowHomeDeliveries!=='boolean')throw Error('Explicit undated-task read scope required.');
   if(!Array.isArray(raw) || !UUID.test(ownerId||''))return {tasks:[],notes:[],events:[]};
   // Defense in depth in the UI; Supabase RLS enforces isolation server-side.
   const own=raw.filter(r=>r && r.owner_id===ownerId && r.visibility==='private' && r.household_id===null && r.payload?.fictional===true && r.deleted_at==null);
-  const tasks=own.filter(r=>r.item_type==='task' && TASK_SECTIONS.includes(r.section) && typeof r.payload?.title==='string' && r.payload.title.trim().length>0 && r.payload.title.length<=140 && typeof r.payload.done==='boolean' && (typeof r.payload?.day==='string'&&validDay(r.payload.day)||allowUndated&&isUndatedTaskDay(r.payload?.day)));
+  const tasks=own.filter(r=>r.item_type==='task' && TASK_SECTIONS.includes(r.section) && (!allowHomeCleaning||!Object.hasOwn(r.payload,'homeCleaning')||r.section==='Home'&&readHomeCleaning(r.payload.homeCleaning)!==null) && (!allowHomeGroceries||!Object.hasOwn(r.payload,'homeGrocery')||r.section==='Home'&&readHomeGrocery(r.payload.homeGrocery)!==null) && (!allowHomeDeliveries||!Object.hasOwn(r.payload,'homeDelivery')||r.section==='Home'&&readHomeDelivery(r.payload.homeDelivery)!==null) && typeof r.payload?.title==='string' && r.payload.title.trim().length>0 && r.payload.title.length<=140 && typeof r.payload.done==='boolean' && (typeof r.payload?.day==='string'&&validDay(r.payload.day)||allowUndated&&isUndatedTaskDay(r.payload?.day)));
   const notes=own.filter(r=>r.item_type==='note' && r.section==='Personal Life' && typeof r.payload?.title==='string');
   const events=own.filter(r=>r.item_type==='event' && r.section==='Calendar'
     && typeof r.payload?.title==='string' && r.payload.title.trim().length>0 && r.payload.title.length<=140

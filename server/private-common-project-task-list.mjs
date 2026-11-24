@@ -1,0 +1,28 @@
+// Server-owned typed task inventory and one-use original-record handoffs.
+import {randomBytes} from 'node:crypto';
+import {readPrivateCommonProjectTasks} from './private-common-project-task-reader.mjs';
+import {resolveCommonTaskSource} from './private-common-task-targets.mjs';
+import {commonTaskSourceKey} from '../src/private-common-task-reference.mjs';
+import {ongoingRecurringTask} from '../src/project-progress.mjs';
+import {stableStringify} from './stable-json.mjs';
+const random=()=>randomBytes(32).toString('base64url'),fail=()=>{throw Error('Current project task sources could not be verified. Fetch the task list again.');};
+export function createPrivateCommonProjectTaskList({api,now=Date.now,allowHierarchy=false}={}){
+ if(typeof now!=='function'||typeof allowHierarchy!=='boolean')fail();const contexts=new Map();let disposed=false;
+ const alive=s=>Boolean(s)&&!disposed&&contexts.get(s.id)===s&&Number.isFinite(now())&&s.expiresAt>now();
+ function clear(id){clearTimeout(contexts.get(id)?.timer);contexts.delete(id);}
+ async function list(id,actor,expiresAt,project,{offset=0,query='',linkedOnly=true,includeSubprojects=false}={},taskReadAction=null){
+  clear(id);if(taskReadAction!==null&&typeof taskReadAction!=='function')fail();if(disposed||typeof id!=='string'||!id||!Number.isFinite(expiresAt)||expiresAt<=now()||!Number.isInteger(offset)||offset<0||offset>1950||offset%50||typeof query!=='string'||query.length>100||typeof linkedOnly!=='boolean'||typeof includeSubprojects!=='boolean'||includeSubprojects&&!allowHierarchy)fail();
+  const s={id,owner:actor?.ownerId,expiresAt:Math.min(expiresAt,now()+300000),project:structuredClone(project),includeSubprojects,viewId:random(),actions:new Map()};contexts.set(id,s);s.timer=setTimeout(()=>{if(contexts.get(id)===s)clear(id);},Math.max(1,s.expiresAt-now()));s.timer.unref?.();
+  try{const snapshot=await readPrivateCommonProjectTasks({api,actor,selectedProject:s.project,includeSubprojects,includeVerifiedInputs:true,isCurrent:()=>alive(s)});if(!alive(s))fail();s.fingerprint=snapshot.inventoryFingerprint;
+   const rows=new Map(snapshot.tasks.map(t=>[commonTaskSourceKey(t.reference),t]));if(!linkedOnly)for(const r of snapshot.verifiedInputs.ordinaryTasks){const reference={kind:'task',recordId:r.id},key=commonTaskSourceKey(reference);if(!rows.has(key))rows.set(key,{reference,title:r.payload.title,section:r.section,completed:r.payload.done,recurring:ongoingRecurringTask(r.payload),projectIds:[]});}
+   if(rows.size>2000)fail();const folded=v=>v.normalize('NFKC').toLocaleLowerCase('en-US'),q=folded(query.trim()),all=[...rows.values()].filter(t=>folded(t.title).includes(q)).sort((a,b)=>Number(b.projectIds.length>0)-Number(a.projectIds.length>0)||a.title.localeCompare(b.title)||commonTaskSourceKey(a.reference).localeCompare(commonTaskSourceKey(b.reference)));if(offset&&offset>=all.length)fail();
+   const tasks=all.slice(offset,offset+50).map(t=>{const taskToken=random();s.actions.set(taskToken,structuredClone(t));const read=t.reference.kind==='task'&&taskReadAction?taskReadAction(snapshot.verifiedInputs.ordinaryTasks.find(row=>row.id===t.reference.recordId)):{};if(!read||Object.keys(read).some(k=>k!=='taskReadToken')||read.taskReadToken!==undefined&&!/^[A-Za-z0-9_-]{43}$/.test(read.taskReadToken))fail();return{...read,taskToken,sourceKind:t.reference.kind,title:t.title,section:t.section,completed:t.completed,recurring:t.recurring,linked:t.projectIds.includes(s.project.id),inheritedProjectCount:t.projectIds.filter(id=>id!==s.project.id).length};});
+   return{projectTitle:s.project.payload.title,includeSubprojects,hierarchyAvailable:allowHierarchy,progress:snapshot.progress,tasks,query:query.trim(),linkedOnly,offset,limit:50,matchCount:all.length,viewId:s.viewId,expiresAt:s.expiresAt};
+  }catch(error){if(contexts.get(id)===s)clear(id);throw error;}
+ }
+ async function selectedRecord(id,actor,taskToken){const s=contexts.get(id),selected=s?.actions.get(taskToken);if(!alive(s)||s.owner!==actor?.ownerId||typeof actor.accessToken!=='string'||!actor.accessToken||!selected)fail();s.actions.delete(taskToken);
+  const latest=await readPrivateCommonProjectTasks({api,actor,selectedProject:s.project,includeSubprojects:s.includeSubprojects,includeVerifiedInputs:true,isCurrent:()=>alive(s)});if(!alive(s)||latest.inventoryFingerprint!==s.fingerprint)fail();const rows=await api.getCommonTaskSource(actor.accessToken,selected.reference,s.owner);if(!alive(s)||!Array.isArray(rows)||rows.length!==1)fail();const task=resolveCommonTaskSource(rows[0],s.owner,selected.reference);
+  const prior=(selected.reference.kind==='task'?latest.verifiedInputs.ordinaryTasks:latest.verifiedInputs.canonicalSources).find(r=>r.id.toLowerCase()===task.source.id.toLowerCase());if(!prior||task.source.version!==prior.version||task.title!==selected.title||task.completed!==selected.completed||task.section!==selected.section)fail();if(selected.reference.kind==='school-step'&&stableStringify(prior)!==stableStringify(task.source))fail();if(!alive(s)||await api.commonTaskLinksReady(actor.accessToken)!==true||!alive(s))fail();const membership=task.reference.kind==='task'?latest.verifiedInputs.ordinaryMemberships.find(row=>row.payload.taskId.toLowerCase()===task.source.id.toLowerCase()&&row.payload.projectId.toLowerCase()===s.project.id.toLowerCase())??null:null;return{task:structuredClone(task),project:structuredClone(s.project),membership:structuredClone(membership),expiresAt:s.expiresAt};
+ }
+ return{list,selectedRecord,clear,currentView:(id,v)=>{const s=contexts.get(id);return Boolean(alive(s)&&s.viewId===v);},dispose(){disposed=true;for(const id of contexts.keys())clear(id);}};
+}

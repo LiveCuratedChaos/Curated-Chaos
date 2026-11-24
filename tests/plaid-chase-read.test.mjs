@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createPlaidChaseRead,usdMinor} from '../server/plaid-chase-read.mjs';
+import {ProviderReadError} from '../server/provider-read-error.mjs';
 const ownerId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',connectionId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const input=()=>({ownerId,connectionId,grant:{ownerId,connectionId,provider:'plaid',environment:'sandbox',institutionId:'ins_56',itemId:'fixture-item',products:['transactions'],accountIds:['fixture-account']},selectedAccountIds:['fixture-account'],accessToken:'access-sandbox-fixture',startDate:'2026-11-01',endDateExclusive:'2026-11-08'});
 const item={item_id:'fixture-item',institution_id:'ins_56',error:null};
@@ -36,6 +37,18 @@ test('USD precision remains exact and invalid amounts never become zero',()=>{
 });
 test('provider failures do not expose raw response errors or credentials',async()=>{
  const api=createPlaidChaseRead({clientId:'fixture-client',secret:'fixture-secret'},async()=>({ok:false,json:async()=>({error_message:'sensitive provider detail fixture-secret'})}));await assert.rejects(api.transactions(input()),error=>!error.message.includes('fixture-secret')&&!error.message.includes('sensitive provider detail'));
+});
+test('bank failures distinguish reconnect, denied permission, changed selection and incomplete snapshots',async()=>{
+ for(const [response,expected] of [
+  [{ok:false,status:401,json:async()=>({error_code:'ITEM_LOGIN_REQUIRED',error_message:'private-bank-detail'})},'reconnect-required'],
+  [{ok:false,status:403,json:async()=>({error_code:'PRIVATE_DENIAL'})},'access-denied'],
+  [{ok:true,status:200,json:async()=>({error_code:'INVALID_ACCOUNT_ID',error_message:'private-bank-detail'})},'selection-changed'],
+ ]){
+  const api=createPlaidChaseRead({clientId:'fixture-client',secret:'fixture-secret'},async()=>response);
+  await assert.rejects(api.transactions(input()),error=>error instanceof ProviderReadError&&error.outcome===expected&&!error.message.includes('private-bank-detail'));
+ }
+ let page=0;const api=createPlaidChaseRead({clientId:'fixture-client',secret:'fixture-secret'},async()=>({ok:true,status:200,json:async()=>++page===1?{item,total_transactions:2,transactions:[transaction('first-page')]}:{item,total_transactions:2,transactions:[]}}));
+ await assert.rejects(api.transactions(input()),error=>error instanceof ProviderReadError&&error.outcome==='incomplete-read');
 });
 test('production calls require both approved environment and explicit live-data grant',async()=>{
  let calls=0;const api=createPlaidChaseRead({clientId:'fixture-client',secret:'fixture-secret',environment:'production',productionApproved:true},async()=>{calls++;return {ok:true,json:async()=>({})};});

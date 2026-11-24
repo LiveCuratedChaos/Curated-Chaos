@@ -1,0 +1,41 @@
+# Private School record creation and program associations
+
+Status: reviewed database foundation installed in isolated development only; protected creation/association workflow integrated and verified with fictional browser data. Owner activation and genuine concurrency acceptance remain unfinished. R03/R27 remain Partial in RELEASE_CHECKLIST.md. All frozen release requirements remain required.
+
+## Reviewed database change — November 19, 2026
+
+Only the existing isolated development project `fngauurauwvbawlfzbbe` is eligible. Production is excluded. No table/data rewrite, owner app restart, provider change, new dependency or hosted CI is involved.
+
+Sources: `supabase/drafts/private_school_records.sql`, generated `private_school_records_ready.sql`, and guarded `private_school_records_rollback.sql`. The atomic forward input removes only the draft's final COMMIT, appends readiness SQL, then COMMIT. SHA-256: `96fb0467c9b133df4ac95e409e3c83a9228451f9cfef11e0d681b53b88d0fb45`. Readiness binds reviewed function bodies, invoker security, exact grants/signatures, immutable scope guard, enabled triggers, RLS and an active development session. Wrong/partial/drifted installations fail closed.
+
+Preflight: isolated target healthy; names unused; no other active client transactions; cc_records RLS enabled; immutable-scope source hash matches reviewed migration (`e5c757ea7faff37379875cb517060eb3`); two established development identities available. Existing nonempty School course association baseline: count 0; digest `d41d8cd98f00b204e9800998ecf8427e`. No record bodies, credentials or account identifiers are logged.
+
+New invoker RPCs derive owner/session server-side and retain existing RLS. Creation uses a preallocated UUID, exact new payload, canonical association, empty academic arrays and version 1; collision never overwrites. Association checks exact course revision/previous program and selected degree revision; only degreeId changes. Reparenting requires explicit unlink. Unchanged legacy unavailable links permit metadata edits. Linked active degrees cannot be removed or made unsupported. Unknown nested contents are preserved.
+
+All authenticated cc_records DML obtains the same owner advisory lock before row locks. RPCs require READ COMMITTED. Installation takes bounded NOWAIT table protection. Recovery takes the owner lock before its bounded NOWAIT table lock and inserts degrees before courses without changing archived source contents, timestamps or revision. Embedded PostgreSQL acceptance includes a course-first encrypted archive under the new guards.
+
+## Recovery procedure
+
+Do not silently remove guards while associations have changed. Stop the new default-off application scope first; no owner launcher is enabled by this work. Recheck active transactions and exact installed schema. Apply the reviewed inverse in a bounded transaction only after comparing current association inventory with the preinstall baseline. Default rollback refuses retained nonempty associations. If a nonempty preinstall baseline exists, a reviewer may set `cc.school_rollback_association_digest` to that exact preinstall digest inside the transaction; any changed association/tombstone then refuses rollback. Do not unlink or delete owner records merely to satisfy the inverse. Rollback drops only these new functions/triggers, without CASCADE or table/data deletion. The generated readiness function is dropped first. Verify original inventory and existing security checks afterward.
+
+Fictional database acceptance must use fresh explicit fixture/session IDs, bounded waits, no user creation or usable login credentials, exact-ID cleanup in dependency order, and verification that no QA rows/sessions remain. Real two-connection concurrency remains required before enabling owner creation/association scope. Browser acceptance and full milestone local verification remain required; passing foundation tests does not complete R27.
+
+## Installed development evidence
+
+Isolated migration `20261119172212` (`private_school_records_reviewed`) installed the exact atomic forward SHA above. Rollback-only hosted policy checks passed: three fictional records and two temporary sessions; no QA records or sessions retained. Verified owned creation, collision/stale refusal, explicit unlink/reparent, unchanged unknown contents, protected degree removal, foreign-owner denial and missing-session denial/readiness. Security advisors have no new findings; the existing leaked-password-protection warning is unchanged. Auth settings were not modified.
+
+The concurrency helper prepares two fresh fictional records and one temporary session, labels holder and contender separately, and requires actual waiting/granted advisory-lock evidence from distinct backends. The first orchestration attempt hit a result-envelope parser error and cleaned up. After correction, the connector did not expose the holder during bounded probes; no concurrent-wait evidence was obtained. This is an unverified gate, not a passing race test. Both attempts' exact-ID cleanup returned 0 records/0 sessions. Existing full record-inventory digest before and after matched. No owner app/production data was changed. Do not repeat unchanged connector attempts or claim genuine multi-connection acceptance.
+
+Local readiness drift, creation guards, recovery ordering, inverse protections and QA generator checks pass. Source model/transport contracts are connected to the protected reviewed workflow below. The final integrated local suite passes2,526/2,526 plus privacy/content/whitespace/launcher checks; RELEASE_CHECKLIST.md remains authoritative.
+
+## Protected workflow integration — November 19
+
+`server/private-school-records.mjs` now owns opaque, expiring creation/association choices and one-use review/approval. Readiness and exact full course/program revisions are rechecked before writing; version1/+1 acknowledgement and a fresh reread must match. The SDK does not expose database credentials. `/school/records-open`, `records-review`, `records-save` and `records-cancel` retain existing session/CSRF/origin/approval boundaries; a newer open retires old approval before source awaits. Older delayed replies cannot replace a newer view. Pending writes prevent refresh/cancellation from clearing their protections.
+
+The independent `--allow-private-school-records-reviewed` scope requires existing School read/edit scopes; the owner launcher is unchanged. Only fictional acceptance fixtures opt in automatically. Program/course forms show all proposed metadata, optional target date/program and an exact human-readable review. New courses use canonical degreeId, an empty legacy program label and empty academic arrays. Linked courses offer unlink only; a later fresh review may select another program. Uncertain creation never automatically retries and retains a human-readable draft copy.
+
+Embedded PostgreSQL service, HTTP/CSRF/race and progressive panel acceptance pass. Actual fictional browser accepted creation, revision, exact notes/order, explicit unlink/reassignment, reload and narrow viewport; reconnection confirmed the new association. The fixture backend ended during final cleanup assertions, so no old-record/sign-out acceptance is claimed from those interrupted steps. Tab closed, viewport reset, listener absent. Full final local counts and activation gates are tracked in RELEASE_CHECKLIST.md.
+
+### November20 — deleted-record recovery context
+
+The prepared School row guard now supports an explicitly scoped archive reconstruction of eligible deleted program/course rows. Only an active authenticated owner already holding the source-table recovery lock may insert those tombstones, with their original removal timestamp inside90days. Validation uses temporary active-shaped copies solely to reuse existing payload/association validation; actual rows and parents remain deleted. A normal create request cannot obtain this context, and an active course still cannot link to a deleted program. `cc_private_school_tombstone_restore_ready` advertises the exact guarded capability. The normal School readiness, academic recovery readiness and canonical-task generated artifacts bind the reviewed updated bodies; no protections were removed to accommodate restoration. Nothing was installed in an owner/hosted database.

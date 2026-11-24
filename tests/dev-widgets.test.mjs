@@ -136,3 +136,5 @@ test('M3B: widget titles and item limits persist, render and cannot inject marku
  layouts=editWidgetLayouts(layouts,'desktop','title',id,'');
  assert.equal(normalizeWidgetLayouts(layouts).desktop.find(x=>x.id===id).title,undefined);
 });
+
+test('legacy widget API preserves unrelated original payload extensions when saving reviewed layouts',async()=>{const {createDevApi}=await import('../src/dev-api.mjs');let body;const api=createDevApi({supabaseUrl:'https://aaaaaaaaaaaa.supabase.co',projectRef:'aaaaaaaaaaaa',publishableKey:'sb_publishable_test'},async(_url,options)=>{body=JSON.parse(options.body);return{ok:true,text:async()=>JSON.stringify([])};});const layouts=defaultWidgetLayouts();await api.updateWidgetLayout('fictional',{id:'11111111-1111-4111-8111-111111111111',version:3,payload:{fictional:true,source:'M2B_DEV_WIDGETS',layoutVersion:1,layouts,extension:{keep:'Exact unknown'}}},ownerA,{fictional:true,source:'M2B_DEV_WIDGETS',layoutVersion:1,layouts:{...layouts,phone:[]}});assert.deepEqual(body.payload.extension,{keep:'Exact unknown'});assert.deepEqual(body.payload.layouts.phone,[]);});

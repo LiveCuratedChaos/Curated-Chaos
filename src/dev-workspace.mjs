@@ -1,3 +1,5 @@
+import {createPrivateClockTicker} from './private-clock-widget.mjs';
+import {validatePrivateWidgetLayouts} from './private-widget-layout.mjs';
 // Milestone 2B: responsive workspace and owner-private customizable fictional dashboard layouts.
 import {createDevApi} from './dev-api.mjs';
 import {createDevSessionManager} from './dev-session.mjs';
@@ -18,6 +20,8 @@ let hideAmounts=true;
 let layouts=defaultWidgetLayouts(),layoutRecord=null,duplicateLayouts=0,layoutEdit=false,layoutDirty=false,layoutBusy=false,layoutNeedsReview=false,layoutMessage='',dragWidget='';
 const currentDevice=()=>typeof window==='undefined'?'desktop':window.innerWidth<680?'phone':window.innerWidth<1020?'tablet':'desktop';
 let device=currentDevice(),manualDevice=false;
+const legacyClockTicker=createPrivateClockTicker({root,widgets:()=>layouts[device],canUse:()=>Boolean(user&&snapshot&&page==='curation'&&!layoutEdit&&!loading&&!layoutBusy)});
+window.addEventListener('pagehide',()=>legacyClockTicker.clear());
 const bodyTitle=workspaceHeading(page);
 function notice(){return error?`<p class="warning" role="alert">${e(error)}</p>`:'';}
 function show(){
@@ -31,7 +35,7 @@ function show(){
     else content+=`<p class="warning">${loading?'Retrieving saved fictional records…':'No verified cloud snapshot is available. Use Fetch latest to try again.'}</p>`;
   }
   if(page!=='more'&&page!=='curation')content+=`<section class="cc-work-next"><h2>Coming in ${e(bodyTitle.next)}</h2><p>This page is the navigation foundation for the ${e(bodyTitle.title)} workspace. The full management tools, widgets, and any integrations for this area are not yet built. Current links lead only to your tested Milestone 1 QA pages.</p></section>`;
-  root.innerHTML=renderConnectedShell(`<div class="cc-workspace-page">${content}</div>`,{active:'workspace',workspace:page});
+  root.innerHTML=renderConnectedShell(`<div class="cc-workspace-page">${content}</div>`,{active:'workspace',workspace:page});legacyClockTicker.refresh();
 }
 async function load(){
   if(!user||!auth||!api||layoutBusy)return;
@@ -96,11 +100,13 @@ async function saveLayout(){
     if(seq!==requestGeneration||user?.id!==viewer)return;
     const fresh=readOwnerWidgetLayout(await api.listWidgetLayouts(token,viewer),viewer);
     if(seq!==requestGeneration||user?.id!==viewer)return;
+    try{if(fresh.duplicateCount||fresh.record&&fresh.record.payload.layoutVersion!==1)throw Error();if(fresh.record)validatePrivateWidgetLayouts(fresh.record.payload.layouts);validatePrivateWidgetLayouts(draft.payload.layouts);}catch{layoutNeedsReview=true;throw Error('Saved layout is duplicated or unsupported. Nothing was overwritten; keep the draft and fetch current settings.');}
     if((fresh.record?.id||null)!==(layoutRecord?.id||null)||(fresh.record?.version||null)!==(layoutRecord?.version||null)){
       layoutNeedsReview=true;throw Error('Layout was changed in another tab. Your draft was not overwritten. Use Discard draft / Fetch latest and try again.');
     }
+    const payload={...(fresh.record?.payload||{}),...draft.payload};
     writeAttempted=true;const result=layoutRecord
-      ?await api.updateWidgetLayout(token,layoutRecord,viewer,draft.payload)
+      ?await api.updateWidgetLayout(token,fresh.record,viewer,payload)
       :await api.addWidgetLayout(token,draft);
     if(seq!==requestGeneration||user?.id!==viewer)return;
     if(!Array.isArray(result)||result.length!==1)throw Error('Save was not confirmed. Do not click Save again until you Fetch latest.');

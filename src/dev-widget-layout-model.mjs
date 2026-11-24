@@ -1,14 +1,24 @@
+import {CLOCK_MODES,renderPrivateClock} from './private-clock-widget.mjs';
 // Milestone 2B — fictional, owner-private widget arrangements.
 // Display settings cannot grant database permissions; source records remain read-only.
 import {escapeHtml as e} from './core.mjs';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const DASHBOARD_DEVICES=Object.freeze(['desktop','tablet','phone']);
 export const TASK_FILTERS=Object.freeze(['all','Home','Personal Life','Work','School']);
+export const FINANCE_WIDGET_TYPES=Object.freeze(['bills','budget','investments']);
 export const WIDGET_TYPES=Object.freeze([
+  {id:'degree_progress',title:'Degree Progress',desc:'Current progress from permitted saved School programs.',href:'/dev-school.html'},
+  {id:'courses',title:'Courses & Assessments',desc:'Saved courses and original assessment details.',href:'/dev-school.html'},
+  {id:'favorites',title:'Favorites',desc:'Open favorite pages, notes, tasks, projects and events.',href:'/dev-dashboard.html'},
+  {id:'clock',title:'Clock',desc:'Current device local time, analog or digital.',href:'/dev-dashboard.html'},
   {id:'brief',title:'A Glimpse of Your Day',desc:'Open your connected Daily Brief.',href:'/dev-dashboard.html'},
+  {id:'coming_up',title:'Coming Up',desc:'Future saved tasks and workspace events after the selected Brief date.',href:'/dev-dashboard.html'},
+  {id:'priority_tasks',title:'Priority Tasks',desc:'Open tasks marked High or Urgent; email suggestions require separate approval.',href:'/dev-tasks.html'},
   {id:'tasks',title:'Tasks',desc:'Saved private test tasks, by section.',href:'/dev-tasks.html'},
   {id:'schedule',title:'Calendar Today & Upcoming',desc:'Fictional calendar events.',href:'/dev-agenda.html'},
   {id:'school',title:'School Reminders',desc:'Saved fictional assessments and study blocks.',href:'/dev-life.html'},
+  {id:'budget',title:'Budget',desc:'Saved spending and the amount left this month.',href:'/dev-finances.html'},
+  {id:'investments',title:'Investments',desc:'Saved holdings and dated valuations.',href:'/dev-finances.html'},
   {id:'bills',title:'Bills',desc:'Fictional upcoming bills; amounts hidden by default.',href:'/dev-life.html'},
   {id:'household',title:'Household',desc:'Fictional cleaning and maintenance.',href:'/dev-life.html'},
   {id:'notes',title:'Notes',desc:'Your private fictional test notes.',href:'/dev-notes.html'},
@@ -30,6 +40,11 @@ export function normalizeWidgetLayouts(raw){
       ids.add(entry.id);const item={id:entry.id,type:entry.type,width:entry.width==='full'?'full':'half',hidden:entry.hidden===true,filter:TASK_FILTERS.includes(entry.filter)?entry.filter:'all'};
       if(typeof entry.title==='string'&&entry.title.trim())item.title=entry.title.trim().slice(0,50);
       if([2,4,6,10].includes(entry.limit))item.limit=entry.limit;
+      if(item.type==='clock'&&CLOCK_MODES.includes(entry.clockMode))item.clockMode=entry.clockMode;
+      if(['notes','projects'].includes(item.type)&&typeof entry.sourceAssociationId==='string'&&UUID.test(entry.sourceAssociationId))item.sourceAssociationId=entry.sourceAssociationId;
+      if(FINANCE_WIDGET_TYPES.includes(item.type))for(const key of ['showAmounts','showPercentages']){
+        if(typeof entry[key]==='boolean')item[key]=entry[key];
+      }
       result.push(item);
     }
     return [device,result];
@@ -60,6 +75,8 @@ export function editWidgetLayouts(raw,device,action,widgetId,arg,newId){
     else if(action==='filter' && TASK_FILTERS.includes(arg))item.filter=arg;
     else if(action==='title' && typeof arg==='string'){const title=arg.trim().slice(0,50);if(title)item.title=title;else delete item.title;}
     else if(action==='limit' && [2,4,6,10].includes(Number(arg)))item.limit=Number(arg);
+    else if(['showAmounts','showPercentages'].includes(action)&&FINANCE_WIDGET_TYPES.includes(item.type)&&typeof arg==='boolean')item[action]=arg;
+    else if(action==='clockMode'&&item.type==='clock'&&CLOCK_MODES.includes(arg))item.clockMode=arg;
     else if(action==='remove')list.splice(index,1);
     else if(action==='duplicate'){
       if(list.length>=MAX_WIDGETS||typeof newId!=='string'||! /^[A-Za-z0-9_-]{3,70}$/.test(newId)||list.some(w=>w.id===newId))throw Error('Cannot duplicate widget.');
@@ -78,6 +95,7 @@ function widgetRows(widget,snapshot,hideAmounts=true){
   const tasks=(snapshot?.tasks||[]).filter(r=>widget.filter==='all'||r.section===widget.filter);
   const life=snapshot?.life||[];
   switch(widget.type){
+    case 'priority_tasks':return tasks.filter(r=>r.payload?.done===false&&['High','Urgent'].includes(r.payload.priority)).sort((a,b)=>(a.payload.priority==='Urgent'?0:1)-(b.payload.priority==='Urgent'?0:1)).slice(0,10).map(r=>({title:r.payload.title,subtitle:[r.payload.priority,r.section,r.payload.day].filter(Boolean).join(' · ')}));
     case 'tasks':return tasks.slice(0,10).map(r=>({title:r.payload.title,subtitle:[r.section,r.payload.day,r.payload.done?'Complete':'To do'].filter(Boolean).join(' · ')}));
     case 'schedule':return (snapshot?.events||[]).slice(0,10).map(r=>({title:r.payload.title,subtitle:[r.payload.day,r.payload.time].filter(Boolean).join(' · ')}));
     case 'school':return life.filter(r=>r.item_type==='school_fixture').slice(0,10).map(r=>({title:r.payload.title,subtitle:[r.payload.day,r.payload.kind].filter(Boolean).join(' · ')}));
@@ -93,9 +111,9 @@ function renderOneWidget(w,index,total,snapshot,editing,hideAmounts){
   const t=typeById[w.type];if(!t)return '';
   if(w.hidden&&!editing)return '';
   const rows=widgetRows(w,snapshot,hideAmounts).slice(0,w.limit||6),isBrief=w.type==='brief';
-  const content=isBrief?'<p class="cc-widget-description">Your verified Milestone 1 Daily Brief is one click away. No duplicate AI summary is generated here.</p>':rows.length?`<ul class="cc-work-list">${rows.map(r=>`<li class="cc-work-item"><strong>${e(r.title)}</strong><small>${e(r.subtitle)}</small></li>`).join('')}</ul>`:'<p class="empty">No saved fictional records for this widget.</p>';
-  const controls=editing?`<div class="cc-widget-controls"><div class="cc-widget-buttons"><button type="button" data-widget-action="up" data-widget-id="${e(w.id)}" ${index===0?'disabled':''} title="Move earlier">↑ Up</button><button type="button" data-widget-action="down" data-widget-id="${e(w.id)}" ${index===total-1?'disabled':''} title="Move later">↓ Down</button><button type="button" data-widget-action="duplicate" data-widget-id="${e(w.id)}">Duplicate</button><button type="button" data-widget-action="hide" data-widget-id="${e(w.id)}">${w.hidden?'Show':'Hide'}</button><button type="button" data-widget-action="remove" data-widget-id="${e(w.id)}">Remove</button></div><div class="cc-widget-options"><label>Width <select data-widget-size="${e(w.id)}"><option value="half" ${w.width==='half'?'selected':''}>Half</option><option value="full" ${w.width==='full'?'selected':''}>Full</option></select></label><label>Items to show <select data-widget-limit="${e(w.id)}">${[2,4,6,10].map(n=>`<option value="${n}" ${(w.limit||6)===n?'selected':''}>${n}</option>`).join('')}</select></label><label>Custom title <input data-widget-title="${e(w.id)}" maxlength="50" placeholder="${e(t.title)}" value="${e(w.title||'')}"></label>${w.type==='tasks'?`<label>Tasks section <select data-widget-filter="${e(w.id)}">${TASK_FILTERS.map(f=>`<option value="${e(f)}" ${w.filter===f?'selected':''}>${e(f==='all'?'All sections':f)}</option>`).join('')}</select></label>`:''}</div></div>`:'';
-  return `<article class="cc-work-card cc-widget-card ${w.width==='full'?'cc-widget-full':''} ${w.hidden?'cc-widget-hidden':''}" data-widget-card="${e(w.id)}" ${editing?'draggable="true"':''}><div class="cc-card-heading"><h2>${e(w.title||t.title)}</h2><span class="pill">${w.hidden?'Hidden':(w.type==='brief'?'Connected':'Saved data')}</span></div>${content}<a class="cc-work-action" href="${e(t.href)}">Open ${e(t.title)} →</a>${controls}</article>`;
+  const content=w.type==='favorites'?'<p>Open the private workspace to view your favorites.</p>':w.type==='coming_up'?'<p>Coming Up is unavailable in this legacy widget view. Open your private Daily Brief to check current sources.</p>':['degree_progress','courses'].includes(w.type)?'<p>Saved School is unavailable in this legacy widget view. Open School to check its original records.</p>':w.type==='clock'?'<div data-private-curation-clock="'+e(w.id)+'" aria-live="off">'+renderPrivateClock(w)+'</div>':isBrief?'<p class="cc-widget-description">Your verified Milestone 1 Daily Brief is one click away. No duplicate AI summary is generated here.</p>':rows.length?`<ul class="cc-work-list">${rows.map(r=>`<li class="cc-work-item"><strong>${e(r.title)}</strong><small>${e(r.subtitle)}</small></li>`).join('')}</ul>`:'<p class="empty">No saved fictional records for this widget.</p>';
+  const controls=editing?`<div class="cc-widget-controls"><div class="cc-widget-buttons"><button type="button" data-widget-action="up" data-widget-id="${e(w.id)}" ${index===0?'disabled':''} title="Move earlier">↑ Up</button><button type="button" data-widget-action="down" data-widget-id="${e(w.id)}" ${index===total-1?'disabled':''} title="Move later">↓ Down</button><button type="button" data-widget-action="duplicate" data-widget-id="${e(w.id)}">Duplicate</button><button type="button" data-widget-action="hide" data-widget-id="${e(w.id)}">${w.hidden?'Show':'Hide'}</button><button type="button" data-widget-action="remove" data-widget-id="${e(w.id)}">Remove</button></div><div class="cc-widget-options"><label>Width <select data-widget-size="${e(w.id)}"><option value="half" ${w.width==='half'?'selected':''}>Half</option><option value="full" ${w.width==='full'?'selected':''}>Full</option></select></label><label>Items to show <select data-widget-limit="${e(w.id)}">${[2,4,6,10].map(n=>`<option value="${n}" ${(w.limit||6)===n?'selected':''}>${n}</option>`).join('')}</select></label><label>Custom title <input data-widget-title="${e(w.id)}" maxlength="50" placeholder="${e(t.title)}" value="${e(w.title||'')}"></label>${['tasks','priority_tasks'].includes(w.type)?`<label>Tasks section <select data-widget-filter="${e(w.id)}">${TASK_FILTERS.map(f=>`<option value="${e(f)}" ${w.filter===f?'selected':''}>${e(f==='all'?'All sections':f)}</option>`).join('')}</select></label>`:''}</div></div>`:'';
+  return `<article class="cc-work-card cc-widget-card ${w.width==='full'?'cc-widget-full':''} ${w.hidden?'cc-widget-hidden':''}" data-widget-card="${e(w.id)}" ${editing?'draggable="true"':''}><div class="cc-card-heading"><h2>${e(w.title||t.title)}</h2><span class="pill">${w.hidden?'Hidden':(w.type==='clock'?'Device time':w.type==='brief'?'Connected':'Saved data')}</span></div>${content}${w.type==='clock'?'':`<a class="cc-work-action" href="${e(t.href)}">Open ${e(t.title)} →</a>`}${controls}</article>`;
 }
 export function renderWidgetBoard(layouts,device,snapshot,{editing=false,dirty=false,loading=false,saveBlocked=false,duplicateCount=0,hideAmounts=true}={}){
   const saved=normalizeWidgetLayouts(layouts),widgets=saved[DASHBOARD_DEVICES.includes(device)?device:'desktop'];

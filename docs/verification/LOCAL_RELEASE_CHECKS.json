@@ -1,0 +1,920 @@
+{
+  "userDate": "2026-11-23",
+  "timezone": "America/New_York",
+  "command": "npm run check:offline",
+  "latestAttempt": {
+    "date": "2026-11-23",
+    "platform": "darwin",
+    "command": "npm run check:offline",
+    "result": {
+      "platformExclusions": [],
+      "localChecksPassed": false,
+      "automatedTests": {
+        "total": 3476,
+        "passed": 3441,
+        "failed": 35,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "checks": {
+        "tests": false,
+        "privacy": true,
+        "whitespace": true,
+        "launcher": true
+      },
+      "privacy": {
+        "unprotectedPaths": 0,
+        "trackedPrivateFiles": 0,
+        "checkedIgnoreRules": 11,
+        "binarySourcesSkipped": 32
+      }
+    },
+    "log": "/tmp/cc-favorites-finished-offline.log",
+    "note": "The final summary was recovered on reconnect. A diagnostic run identified local listener permission errors in all 35 failures."
+  },
+  "result": {
+    "platformExclusions": [],
+    "localChecksPassed": true,
+    "automatedTests": {
+      "total": 3144,
+      "passed": 3144,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "checks": {
+      "tests": true,
+      "privacy": true,
+      "whitespace": true,
+      "launcher": true
+    },
+    "privacy": {
+      "unprotectedPaths": 0,
+      "trackedPrivateFiles": 0,
+      "checkedIgnoreRules": 11,
+      "binarySourcesSkipped": 32
+    }
+  },
+  "browser": {
+    "preparedCases": 228,
+    "freshExecutionVerified": false,
+    "reason": "Four new desktop and mobile Chromium cases were discovered. The fictional loopback fixture could not listen in the managed Mac session.",
+    "attemptLog": "/tmp/cc-favorites-finished-browser.log"
+  },
+  "releaseComplete": false,
+  "productionChanged": false,
+  "hostedCiTriggered": false,
+  "spendingEnabled": false,
+  "limits": [
+    "Prepared generic-record-version and assessment-history SQL installed only in isolated fictional PostgreSQL tests.",
+    "True simultaneous PostgreSQL, hosted and physical Apple-device acceptance remain unverified.",
+    "All R01-R55 remain required. Test counts are verification evidence, not completion percentages.",
+    "Selected School/note/task/event/project history browsing and bounded School/note/event/project and task text/explicit-priority correction have local workflow evidence; full general Undo, actual retention/erasure and wider relationships remain unfinished.",
+    "Owner activation, real authenticated destination recovery and full-system disaster recovery remain unfinished.",
+    "Protected Curation layout configuration has local SQL/service/HTTP/panel/controller evidence; all-page widgets, widget source integration and actual destination recovery and every-page widget consumers remain incomplete.",
+    "Earlier widget arrangements have native read/draft/review/approval and exact SQL history/encrypted restore evidence; generic Undo and real retention/erasure remain unfinished.",
+    "Native Curation core canvas is locally verified with original task/event/note actions and saved settings; remaining non-core widget source queries, approved widget types and full page customization remain unfinished.",
+    "Analog/digital Clock has local rendering, isolated ticker, original review/save/reload and SQL history/encrypted recovery evidence; fresh browser/device appearance and accessibility acceptance remain unverified.",
+    "Independent Work/Personal Life/Home & Household canvases have original configuration/source action/history/recovery evidence; all remaining approved widget sources remain unfinished.",
+    "School/Finances canvases, shared original School progress/course widgets and explicit snapshot privacy have local evidence; remaining full School/finance requirements and provider/device acceptance stay unfinished.",
+    "Daily Brief and Calendar optional canvases preserve original controls, action token contexts and source deadlines in local checks; fresh browser/device execution remains unverified.",
+    "Projects widgets have complete original inventory/area counts and bounded title reads through original source tokens; master-project and individual-project configurations, broader shared/academic workflows and fresh browser/device acceptance remain unfinished.",
+    "Email widgets reuse explicit original saved-copy reads and source-bound reviewed task drafts, with no automatic mailbox/provider/body access; selective email interpretation, suggested priorities and full email lifecycle remain unfinished.",
+    "Priority Tasks widgets have complete manual High/Urgent source counts, saved settings and original protected actions locally verified; email suggestions and browser/device acceptance remain unfinished.",
+    "Coming Up has complete future saved-task/workspace-event counts, a single merged limit and original actions locally verified, including Calendar selections outside typed results; other domain inputs and browser/device acceptance remain unfinished.",
+    "Explicit task text+priority historical correction is verified through original editor/CAS and isolated SQL history; full task lifecycle/checklist Undo and persistent individual-widget source associations remain unfinished.",
+    "Current project editing from widgets/search reuses original source reader/editor/review/CAS and scoped saved-count refresh without history readiness; persistent individual-widget source associations and broader shared/academic/browser/device acceptance remain unfinished.",
+    "Pinned manual-model/convergence preflight foundations are locally verified with the approved single-master rule; runtime/autosave mounting, full payload/history/provenance migration and source associations remain unimplemented.",
+    "Protected convergence preview is verified through the original fixture factory/authenticated HTTP handler; it is default-off, read-only, covered-type-limited and never migration approval. Canonical relationship/payload/history/receipt bridge and production autosave remain unfinished.",
+    "Native/manual operation-intent contract has five focused passing tests but is unmounted and non-atomic; it does not persist receipts or enable routine autosave.",
+    "Latest full offline check is inconclusive in the managed macOS sandbox: 3,106/3,136 tests passed; reported failures include denied local listener startup. No restriction bypass was attempted.",
+    "Unapplied native operation receipt candidate verifies isolated edit/history/replay and rollback; no mounted route, Undo, live schema, manual runtime, or true concurrent two-connection acceptance.",
+    "Persistent Notes/Projects widget association has default-off local picker, reviewed layout CAS/save, current-view server resolution, sparse per-widget rendering through original note/project reader tokens and optional original removal-review handoff. The alias table migration is still unapplied; binding follows the settings save in a separate transaction, so acknowledgement failure is uncertain and requires fresh read/reselection. Orphan mapping cleanup, true PostgreSQL multi-connection concurrency and browser/device acceptance remain unfinished.",
+    "Linked individual project widgets now use the original project detail and explicit task-summary reader when visible/current; no new project/task writer was added. Browser/device and real PostgreSQL concurrency acceptance remain unverified.",
+    "Quick Add locally parses explicit task area phrases for the approved Home, Personal Life, Work and School areas, preserving the current default if omitted. Grocery/routine Quick Add, remembered destinations/fields and voice lifecycle remain unfinished.",
+    "The private task Quick Add now remembers the last confirmed task area only in volatile signed-in tab memory; page destinations override and session clearing removes it. Other remembered fields, groceries/routines and voice consent/raw-audio lifecycle remain unfinished.",
+    "R20 now has default-off, reviewed section color preferences through the original owner-private settings CAS; current task/project list accents are integrated. Per-item controls, all approved consumers and browser/device acceptance remain unfinished."
+  ],
+  "latestFocusedChecks": {
+    "command": "node --test tests/private-operation-bridge-contract.test.mjs tests/private-operation-receipts-database.test.mjs tests/private-widget-source-association-contract.test.mjs tests/private-widget-source-associations-database.test.mjs tests/private-widget-layout-service.test.mjs tests/private-widget-pages.test.mjs tests/private-widget-layout-panel.test.mjs",
+    "passed": 35,
+    "failed": 0
+  },
+  "targetedChecks": {
+    "total": 532,
+    "passed": 532,
+    "failed": 0,
+    "log": "/tmp/curated-convergence-http-final-targeted.log"
+  },
+  "verificationBasis": {
+    "fullCommand": "npm run check:offline",
+    "fullCommandExitCode": 0,
+    "log": "/tmp/curated-convergence-http-final-full.log",
+    "historicalLastPassingCheckpoint": true,
+    "latestAttemptIsInconclusive": true
+  },
+  "currentFocusedChecks": {
+    "date": "2026-11-21",
+    "workShiftCreation": {
+      "command": "node --test --test-name-pattern='Work page creates shifts' tests/private-dashboard-controller.test.mjs and five related suites",
+      "passed": 56,
+      "failed": 0,
+      "scope": "Protected Work weekly shift display and review-gated canonical Calendar event creation; optional task dates and Calendar/event contracts."
+    },
+    "workCanvasReuse": {
+      "command": "node --test tests/private-curation-canvas.test.mjs tests/private-widget-layout-associations.test.mjs tests/private-project-widget-source.test.mjs tests/private-widget-source-picker.test.mjs",
+      "passed": 17,
+      "failed": 0,
+      "scope": "Work-filtered Curation task widgets and existing linked note/project readers/actions; source expiry, removal review and project-task-summary capability boundaries."
+    },
+    "workCareerProjectContractAudit": {
+      "command": "node --test tests/private-project-model.test.mjs tests/private-projects.test.mjs tests/private-project-api.test.mjs tests/private-project-panel.test.mjs tests/private-project-history.test.mjs tests/private-project-version-panel.test.mjs tests/workspace-backup-guards.test.mjs",
+      "passed": 29,
+      "failed": 0,
+      "scope": "Audited the strict owner-private project model/service/API/panel/history/version and encrypted backup contract before extending it for R29 career/application tracking. Existing contract accepts only current project metadata, with JSONB persistence and no schema migration needed; career metadata must be carried consistently through read/review/save/history/restore before adding UI.",
+      "code": "no career source changes made in this audit step",
+      "next": "Continue with the nested career metadata model and reviewed project editor, then update selected reads/history/archive validation and tests. Keep R27 retention choice pending."
+    },
+    "workCareerProjects": {
+      "command": "node --test tests/private-career-fields.test.mjs tests/private-project-panel-boundaries.test.mjs tests/private-projects.test.mjs tests/private-project-api.test.mjs tests/private-project-history.test.mjs tests/private-project-version-panel.test.mjs tests/private-search-project-panel.test.mjs tests/private-project-widget-source.test.mjs tests/workspace-backup-guards.test.mjs",
+      "passed": 55,
+      "failed": 0,
+      "scope": "Owner-named application stages and career goals on canonical private Work Project records; reviewed creation/edit, selected detail, historical correction and encrypted archive retention; no new schema/store."
+    },
+    "personalLifeProjectProgressReuse": {
+      "command": "node --test tests/private-project-task-link-api.test.mjs tests/private-project-task-links.test.mjs tests/private-project-task-read.test.mjs tests/private-project-task-summary.test.mjs tests/private-project-task-details-panel.test.mjs tests/private-project-hierarchy-api.test.mjs tests/private-project-hierarchy-http.test.mjs tests/private-project-hierarchy-panel.test.mjs tests/private-project-hierarchy-service.test.mjs tests/private-project-hierarchy-archive.test.mjs tests/private-common-task-link-api.test.mjs tests/private-common-task-link-panel.test.mjs tests/private-common-task-link-review.test.mjs tests/private-common-task-memberships.test.mjs",
+      "passed": 147,
+      "failed": 0,
+      "scope": "Canonical shared task/project progress and links, manual status independence, deduplicated hierarchy, recovery/archive boundaries and protected original details. Reuses existing project engine for Personal Life goals."
+    },
+    "personalLifeGoalWidgetIntegration": {
+      "command": "node --test tests/private-widget-pages.test.mjs tests/private-project-widget.test.mjs tests/private-project-task-summary.test.mjs tests/private-project-task-link-read.test.mjs",
+      "passed": 13,
+      "failed": 0,
+      "scope": "Default Personal Life canvas includes Personal Life-filtered Goals & projects widgets on desktop/tablet/phone; canonical selected-project and linked-task progress readers remain available without copying or changing sources."
+    },
+    "homeProjectWidgetIntegration": {
+      "command": "node --test tests/private-widget-pages.test.mjs tests/private-project-widget.test.mjs tests/private-project-overview.test.mjs tests/private-project-task-summary.test.mjs tests/private-project-task-link-read.test.mjs",
+      "passed": 23,
+      "failed": 0,
+      "scope": "The Home projects widget exposes only bounded vehicle/possession label, latest usage reading and warranty date for Home assets; receipt notes/tracking refs stay out. Existing canonical selected-project and linked-task progress readers remain intact."
+    },
+    "taskTemplateContractAudit": {
+      "command": "node --test tests/private-task-creation.test.mjs tests/private-task-edit-verification.test.mjs tests/private-task-edits.test.mjs tests/private-task-history.test.mjs tests/private-task-history-draft.test.mjs tests/private-task-graph-restore-integration.test.mjs tests/workspace-backup-guards.test.mjs tests/private-workspace-restore.test.mjs",
+      "passed": 75,
+      "failed": 0,
+      "scope": "Audited insert-only reviewed canonical task creation, 20-step checklist limit and new step identities, stable-ID checklist edits, prior-version history and encrypted backup/restore. No current dedicated protected list-template record/lifecycle exists; implementing one needs its own bounded model, APIs, restore/history contracts and locally prepared SQL if needed. No live changes."
+    },
+    "personalLifeListTemplates": {
+      "command": "node --test tests/private-list-template-model.test.mjs tests/private-list-templates.test.mjs tests/private-list-template-panel.test.mjs tests/private-list-template-restore.test.mjs tests/private-workspace-session-http.test.mjs tests/private-workspace-static.test.mjs tests/dev-api.test.mjs tests/private-workspace-client.test.mjs tests/private-task-creation.test.mjs tests/private-task-edits.test.mjs tests/private-task-history.test.mjs tests/workspace-backup-guards.test.mjs",
+      "passed": 267,
+      "failed": 0,
+      "scope": "Bounded owner-private Personal Life templates with versioned create/edit review, exact save/reread, explicit instantiation to a separate canonical task draft with fresh open checklist IDs, default-off HTTP/static/API routes, history/backup/restore validation and canonical task creation/edit/history recovery compatibility. Prepared SQL remains unapplied; no live schema change."
+    },
+    "r33BillScheduleAndConfirmationContract": {
+      "date": "2026-11-22",
+      "command": "node --test tests/private-manual-bills.test.mjs tests/task-recurrence.test.mjs tests/private-manual-finance-database.test.mjs tests/private-manual-budget-workflow.test.mjs tests/private-manual-income.test.mjs",
+      "passed": 27,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "Pure bill scheduling and historical estimates, confirmation provenance, and isolated PostgreSQL checks for owner, exact source revisions and uniqueness. Signed-in bill storage, API and UI remain open."
+    },
+    "homeCleaningRollover": {
+      "command": "node --test tests/private-home-cleaning.test.mjs tests/private-task-creation.test.mjs tests/private-task-edits.test.mjs tests/private-task-reader.test.mjs tests/private-task-completion.test.mjs tests/private-task-completion-verification.test.mjs tests/private-workspace-brief.test.mjs tests/private-workspace-session-http.test.mjs tests/private-workspace-static.test.mjs tests/private-curation-sources.test.mjs tests/dev-api.test.mjs tests/private-workspace-restore.test.mjs tests/recurring-chore-saving.test.mjs",
+      "passed": 283,
+      "failed": 0,
+      "scope": "Protected optional Home cleaning room/assignee and display-only rollover across reviewed creation/edit, selected reads, completion, selected-day Brief regrouping, API/HTTP/static gates, restore contract and fictional isolated recurring SQL. Original due dates and task identities remain unchanged; recurring successors retain metadata."
+    },
+    "homeCleaningLauncherGuard": {
+      "command": "node --test --test-name-pattern='Home cleaning rollover has a protected default-off launch flag' tests/private-session-preview-guards.test.mjs",
+      "passed": 1,
+      "failed": 0,
+      "scope": "Explicit default-off preview flag requires protected Brief, task read/create/edit/completion and checklist dependencies."
+    },
+    "homeCleaningVerification": {
+      "command": "npm run check:privacy; git diff --check; node --check on changed JavaScript modules",
+      "passed": 1,
+      "failed": 0,
+      "scope": "Privacy guard reports zero unprotected paths and zero tracked private files; whitespace and changed-module syntax checks pass."
+    },
+    "homeCleaningLimitations": "Broader launcher guard run: 330 passed, 20 failed because listener-dependent acceptance cannot bind 127.0.0.1 (EPERM). Browser/device acceptance remains unverified. No live schema was applied.",
+    "homeGroceries": {
+      "command": "node --test tests/private-home-cleaning.test.mjs tests/private-home-grocery-restore.test.mjs tests/private-task-creation.test.mjs tests/private-task-edits.test.mjs tests/private-task-reader.test.mjs tests/private-task-completion.test.mjs tests/private-task-completion-verification.test.mjs tests/private-workspace-brief.test.mjs tests/private-workspace-session-http.test.mjs tests/private-workspace-static.test.mjs tests/private-curation-sources.test.mjs tests/dev-api.test.mjs tests/private-workspace-restore-executor.test.mjs tests/private-task-history.test.mjs tests/private-task-history-draft.test.mjs tests/workspace-backup-guards.test.mjs tests/recurring-chore-saving.test.mjs",
+      "passed": 327,
+      "failed": 0,
+      "scope": "Protected optional Home grocery quantity/favorite metadata and cleaning rollover across reviewed create/edit/read/completion, selected Brief/widget data, API/HTTP/static scopes, history/archive/restore and isolated recurring SQL successor preservation. Grocery support remains separate and default-off."
+    },
+    "homeGroceriesLauncherGuard": {
+      "command": "node --test --test-name-pattern='Home grocery launch flag' tests/private-session-preview-guards.test.mjs",
+      "passed": 1,
+      "failed": 0,
+      "scope": "Separate default-off Home groceries preview scope requires protected optional-date task create/edit/read/completion and Brief dependencies."
+    },
+    "homeGroceriesLimitations": "Loopback launcher acceptance remains blocked by listen EPERM on 127.0.0.1; browser/device acceptance remains unverified. No live schema was applied.",
+    "homeGroceryTemplates": {
+      "command": "node --test tests/private-list-templates.test.mjs tests/private-list-template-panel.test.mjs tests/private-list-template-restore.test.mjs tests/private-workspace-session-http.test.mjs tests/private-workspace-static.test.mjs tests/dev-api.test.mjs tests/private-workspace-client.test.mjs tests/private-task-creation.test.mjs tests/private-task-edits.test.mjs tests/private-task-history.test.mjs tests/workspace-backup-guards.test.mjs tests/private-home-cleaning.test.mjs tests/private-home-grocery-restore.test.mjs tests/private-task-reader.test.mjs tests/private-task-completion.test.mjs tests/private-workspace-brief.test.mjs tests/private-curation-sources.test.mjs tests/recurring-chore-saving.test.mjs",
+      "passed": 363,
+      "failed": 0,
+      "scope": "Protected Home grocery list templates reuse existing owner-private versioned source records and review/approval; dual-scope default-off HTTP/API/static availability, explicit Home destination, fresh open task checklist identities, and archive/restore, task, Brief/widget, history and recurring successor compatibility. Existing Personal Life templates remain supported.",
+      "limitations": "No live schema was changed. Loopback launcher/browser/device acceptance remains unverified due environment listen EPERM."
+    },
+    "ciPreflightDeduplication": {
+      "command": "ruby -e \"require 'yaml'; YAML.load_file('.github/workflows/checks.yml')\" && git diff --check",
+      "passed": 1,
+      "failed": 0,
+      "scope": "Removed three redundant authenticated GitHub contents-API preflight requests; pinned checkout remains the repository access check. The three offline, browser and Mac-native jobs, triggers, permissions, action pins and test commands remain. No hosted run was dispatched.",
+      "limitation": "GitHub Actions quota and hosted execution remain unverified; no paid usage or publication."
+    },
+    "homeAssetProfiles": {
+      "command": "node --test tests/private-home-asset.test.mjs tests/private-projects.test.mjs tests/private-project-panel-boundaries.test.mjs tests/private-project-api.test.mjs tests/private-project-recovery-service.test.mjs",
+      "passed": 34,
+      "failed": 0,
+      "scope": "Bounded private possession/vehicle profiles on canonical Home projects; chronological nondecreasing usage readings, usage units, warranty date and receipt note/reference validated through existing reviewed project create/read, Home-only area checks, editor/review rendering and encrypted workspace archive. Leaving Home clears the Home-only profile. Receipt file attachments remain under R40 Document Library; this adds no file upload or bytes.",
+      "syntax": "changed source modules passed node --check",
+      "limitations": "Hosted database schema readiness and browser/device acceptance not run; maintenance usage and linked service tasks are not shown in a dedicated Home maintenance widget.",
+      "extendedCommand": "node --test tests/private-home-asset.test.mjs tests/private-projects.test.mjs tests/private-project-panel-boundaries.test.mjs tests/private-project-api.test.mjs tests/private-project-history.test.mjs tests/private-project-version-panel.test.mjs tests/private-project-recovery-service.test.mjs tests/workspace-backup-guards.test.mjs",
+      "extendedPassed": 51,
+      "extendedFailed": 0,
+      "extendedScope": "Additional project history/version-panel and encrypted workspace backup guard acceptance; confirms the existing canonical history and backup contracts remain intact.",
+      "widgetCommand": "node --test tests/private-widget-pages.test.mjs tests/private-project-widget.test.mjs tests/private-project-overview.test.mjs tests/private-project-task-summary.test.mjs tests/private-project-task-link-read.test.mjs",
+      "widgetPassed": 23,
+      "widgetFailed": 0
+    },
+    "homeDeliveries": {
+      "command": "node --test tests/private-home-delivery.test.mjs tests/private-task-creation.test.mjs tests/private-task-edits.test.mjs tests/private-task-reader.test.mjs tests/private-workspace-brief.test.mjs tests/private-workspace-session-http.test.mjs tests/private-workspace-static.test.mjs tests/private-workspace-restore-executor.test.mjs tests/recurring-chore-saving.test.mjs tests/private-curation-sources.test.mjs",
+      "passed": 294,
+      "failed": 0,
+      "controllerCommand": "node --test --test-name-pattern='Home delivery form validates' tests/private-dashboard-controller.test.mjs",
+      "controllerPassed": 1,
+      "controllerFailed": 0,
+      "scope": "Default-off manual Home package tracking through bounded status/date/carrier/reference/refund-note model, task create/edit/read review services and HTTP routes, Daily Brief/Curation task summaries, UI create/review, recurring successors, archive restore, static asset/config gate and exact Home-only cleanup on moving tasks out of Home. Status updates never request purchases, returns or refunds; receipts remain references only until R40 Document Library.",
+      "sql": "Local migration sources preserve delivery details in recurring successors; isolated PGlite test passed. No live database migration was applied.",
+      "privacy": "Content scan passed with zero findings and zero tracked private files.",
+      "browser": "controller simulation passed; physical/browser acceptance remains unverified",
+      "widgetSummary": "Delivery status and expected date flow into existing Curation task summaries; the Home-project widget remains a separate canonical Home-project reader."
+    },
+    "r32ManualFinanceContract": {
+      "command": "node --test tests/private-finance-manual.test.mjs",
+      "passed": 4,
+      "failed": 0,
+      "syntax": "node --check src/private-finance-manual.mjs tests/private-finance-manual.test.mjs (both pass)",
+      "whitespace": "git diff --check (pass)",
+      "scope": "Pure validation/arithmetic only; account visibility is independent from aggregate inclusion; no protected persistence/UI, history/recovery, live account, schema, feature activation or owner workspace was changed.",
+      "status": "R32 remains Partial"
+    },
+    "manualAccountWorkflow": {
+      "passed": 262,
+      "failed": 0,
+      "scope": "Manual account UI, signed-in HTTP, one-use reviews, stale edits, scoped ciphertext transport and archive restore. Includes Home projection, static, client, bank snapshot and existing HTTP regression suites. In-process HTTP, fictional balances.",
+      "command": "node --test tests/private-workspace-restore-executor.test.mjs tests/private-finance-manual.test.mjs tests/private-manual-finance-workflow.test.mjs tests/private-project-api.test.mjs tests/private-project-overview.test.mjs tests/private-project-widget.test.mjs tests/private-home-delivery.test.mjs tests/private-workspace-session-http.test.mjs tests/private-workspace-static.test.mjs tests/private-saved-finance.test.mjs tests/private-workspace-client.test.mjs"
+    },
+    "routineAndSchoolPolicy": {
+      "command": "node --test tests/private-routine-streak.test.mjs tests/private-school-academic-recovery*.test.mjs tests/private-school-recovery-schema-readiness.test.mjs tests/private-common-task-schema-package.test.mjs tests/recurring-chore-saving.test.mjs tests/private-dashboard-controller.test.mjs tests/private-workspace-restore-executor.test.mjs tests/private-finance-manual.test.mjs tests/private-manual-finance-workflow.test.mjs tests/private-project-api.test.mjs tests/private-project-overview.test.mjs tests/private-project-widget.test.mjs tests/private-home-delivery.test.mjs tests/private-workspace-session-http.test.mjs tests/private-workspace-static.test.mjs tests/private-saved-finance.test.mjs tests/private-workspace-client.test.mjs",
+      "passed": 633,
+      "failed": 0,
+      "scope": "Selected recurring task identity and reset, isolated completion SQL, expired School history retention, existing restore boundary, dashboard and Finance regressions. R44 fresh reauthentication and permanent deletion remain open."
+    },
+    "limitedHttpTransport": {
+      "command": "CC_TEST_HTTP_TRANSPORT=handler node --test tests/private-brief-layout-http.test.mjs tests/private-project-search-http.test.mjs tests/private-project-subproject-http.test.mjs",
+      "passed": 11,
+      "failed": 0,
+      "nativeSocket": false
+    },
+    "r32BudgetWorkflow": {
+      "command": "node --test tests/private-manual-budget-workflow.test.mjs tests/private-finance-manual.test.mjs",
+      "passed": 9,
+      "failed": 0,
+      "scope": "Manual monthly and pay-period budgets, scoped encrypted storage, reviewed signed-in save, rollover and race handling, exact cent reconciliation including unmatched expenses and initial balances. Finance canvas mount and routine detail checked in two additional controller tests."
+    },
+    "approvedPoliciesSuite": {
+      "command": "CLANG_MODULE_CACHE_PATH=<temporary cache> SWIFT_MODULECACHE_PATH=<same cache> CC_TEST_HTTP_TRANSPORT=handler node --test --test-concurrency=5 --test-timeout=90000 --test-reporter=tap tests/*.test.mjs",
+      "passed": 3278,
+      "failed": 24,
+      "total": 3302,
+      "limitation": "All 24 failure reports contain listen EPERM on loopback. This run preceded budget workflow changes. No browser or live provider acceptance."
+    },
+    "r32IncomeAndCashFlow": {
+      "command": "node --test tests/private-manual-finance-database.test.mjs tests/private-manual-income.test.mjs tests/private-manual-budget-workflow.test.mjs tests/private-manual-finance-workflow.test.mjs tests/private-finance-manual.test.mjs tests/private-dashboard-controller.test.mjs tests/private-workspace-session-http.test.mjs tests/private-workspace-client.test.mjs tests/private-workspace-static.test.mjs tests/private-workspace-restore-executor.test.mjs tests/private-routine-streak.test.mjs tests/private-school-academic-recovery*.test.mjs tests/private-school-recovery-schema-readiness.test.mjs tests/private-common-task-schema-package.test.mjs tests/recurring-chore-saving.test.mjs",
+      "passed": 616,
+      "failed": 0,
+      "scope": "Before final split test. Original handler, canonical income schedule and receipts, protected signed-in panel workflow, isolated PostgreSQL row policies, monthly and pay-period budgets, cash reconciliation, School retention and consecutive routine resets."
+    },
+    "r33ManualExpenseSplits": {
+      "command": "node --test tests/private-manual-budget-workflow.test.mjs",
+      "passed": 6,
+      "failed": 0,
+      "scope": "Exact reviewed split expense, optional description and receipt reference, per-category and unmatched actuals, original total counted once in period cash flow. Receipt attachments and broader reconciliation remain open."
+    },
+    "postIncomeSuite": {
+      "command": "CLANG_MODULE_CACHE_PATH=<temporary cache> SWIFT_MODULECACHE_PATH=<same cache> CC_TEST_HTTP_TRANSPORT=handler node --test --test-concurrency=5 --test-timeout=90000 --test-reporter=tap tests/*.test.mjs",
+      "passed": 3293,
+      "failed": 24,
+      "total": 3317,
+      "limitation": "All 24 reports contain loopback listen EPERM. Run covers income and cash-flow workflows before final expense splits."
+    },
+    "r33SignedInBillWorkflow": {
+      "date": "2026-11-22",
+      "command": "CC_TEST_HTTP_TRANSPORT=handler node --test tests/private-manual-bill*.test.mjs tests/private-manual-{budget-workflow,income,finance-workflow,finance-database}.test.mjs tests/private-workspace-{restore,static,session-http}.test.mjs tests/private-dashboard-controller.test.mjs tests/private-session-preview-guards.test.mjs tests/task-recurrence.test.mjs",
+      "passed": 560,
+      "failed": 0,
+      "scope": "Signed-in schedule creation/edit, manual payment, posted snapshot match, default-hidden amounts, reopen, stale and duplicate approvals, encrypted database persistence and recovery dependencies.",
+      "browser": "Desktop and mobile Chromium attempted. Both blocked by macOS MachPortRendezvous permission 1100 before page execution. Firefox and WebKit executables are absent.",
+      "fullNative": {
+        "command": "CLANG_MODULE_CACHE_PATH=<temporary cache> SWIFT_MODULECACHE_PATH=<same cache> node --test --test-concurrency=5 --test-reporter=tap tests/*.test.mjs",
+        "passed": 3325,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "log": "/tmp/curated-r33-native-full.tap",
+        "scope": "Bills checkpoint. All native loopback suites ran on this host. Chromium and device acceptance remain open."
+      }
+    },
+    "r33ManualTransactionHistory": {
+      "command": "node --test tests/private-manual-budget-workflow.test.mjs",
+      "passed": 7,
+      "failed": 0,
+      "scope": "Direct period-level transaction history, individual reviewed add/edit, receipt reference, splits, preservation of legacy allocations and other expenses, and concurrent edit refusal."
+    },
+    "r34BudgetProposals": {
+      "command": "node --test tests/private-budget-proposals.test.mjs",
+      "passed": 3,
+      "failed": 0,
+      "scope": "Exact cent allocation, two or three distinct proposals, owner-entered reserve, historical budget data retained, signed-in review/back/approve/reopen and opt-in enforcement.",
+      "fullNative": {
+        "passed": 3329,
+        "failed": 0,
+        "skipped": 0,
+        "log": "/tmp/curated-r34-planner-full.tap"
+      }
+    },
+    "r33SavedTransactionCategories": {
+      "command": "node --test tests/private-manual-finance-database.test.mjs tests/private-transaction-categories.test.mjs",
+      "passed": 4,
+      "failed": 0,
+      "scope": "Signed-in separately reviewed categorization of settled debit and credit snapshots. Splits use exact cents. Source remains read-only, a later copy can be reviewed again and database storage binds the annotation to the source revision.",
+      "fullNative": {
+        "passed": 3332,
+        "failed": 0,
+        "skipped": 0,
+        "log": "/tmp/curated-r33-categories-full.tap"
+      }
+    },
+    "r33ExpenseReconciliation": {
+      "command": "node --test tests/private-transaction-categories.test.mjs tests/private-manual-finance-database.test.mjs",
+      "passed": 5,
+      "failed": 0,
+      "scope": "Signed-in cross-date, different-amount comparison; exact review; duplicate and stale refusals; native PostgreSQL transactional rollback and encrypted budget, source and receipt recovery dependencies.",
+      "fullNative": {
+        "passed": 3333,
+        "failed": 0,
+        "skipped": 0,
+        "log": "/tmp/curated-r33-expense-reconciliation-full.tap"
+      }
+    },
+    "r34ManualHoldings": {
+      "command": "node --test tests/private-holdings.test.mjs tests/private-manual-finance-database.test.mjs",
+      "passed": 4,
+      "failed": 0,
+      "fullNative": {
+        "passed": 3336,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "log": "/tmp/curated-r34-holdings-full.tap"
+      },
+      "scope": "Owner-entered holdings, manual as-of valuation, dated activity, cash and reinvested dividends, annual estimate, versioned correction, encrypted persistence and restoration. No external prices or trading."
+    },
+    "r34FinanceShortcut": {
+      "passed": 294,
+      "failed": 0,
+      "command": "node --test tests/private-finance-privacy.test.mjs tests/private-dashboard-controller.test.mjs",
+      "scope": "Conceal saved and manual financial panels during an edit, restore the original draft only upon explicit resume, conceal across tabs, persist the device choice and clear private data on sign-out."
+    },
+    "r34FinanceWidgets": {
+      "scope": "Budget, Bills and Investments widget records use independent amount and percentage opt-ins, scoped authenticated reads and server-side omission of unrequested values. Views expire, conceal across the workspace, and do not disturb pending saves.",
+      "focused": {
+        "widgetRegression": 368,
+        "signedInAndPrivacy": 3
+      },
+      "fullNative": {
+        "passed": 3341,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "log": "/tmp/curated-r34-finance-widgets-full.tap"
+      },
+      "browser": {
+        "inAppDesktop": "Fictional signed-in Finance, Ctrl+Alt+H on populated bill edit, empty concealed view, restored name and amount, saved percentage-only Bills widget, opened current-month empty state.",
+        "standalone": "Both Chromium projects stopped at macOS MachPortRendezvous permission error 1100 before page execution.",
+        "physicalDevice": "Unverified"
+      }
+    },
+    "r25BrokerageView": {
+      "scope": "Selected read-only investment accounts, signed-in Finance workflow, separate institution price date and read time, hidden values by default, no duplicate/manual aggregation. Purely fictional provider responses used.",
+      "focusedPassed": 6,
+      "fullNative": {
+        "passed": 3344,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "log": "/tmp/curated-r25-brokerage-full.tap"
+      },
+      "unverified": "Real Schwab account, provider approval/pricing, physical device and hosted configuration."
+    },
+    "r25BrokerageAuthorization": {
+      "focusedPassed": 4,
+      "failed": 0,
+      "command": "node --test tests/linked-brokerage-source.test.mjs",
+      "scope": "Hosted Link consent, institution and investment scopes, owner/session binding, one-use exchange, local encrypted restart and concurrent attempts. Only mocked providers and temporary stores.",
+      "fullNative": {
+        "passed": 3348,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "log": "/tmp/curated-r25-brokerage-link-full.tap"
+      }
+    },
+    "r40PrivateDocumentLibrary": {
+      "focusedPassed": 3,
+      "failed": 0,
+      "command": "node --test tests/private-document-library.test.mjs",
+      "scope": "Fictional file upload review, stored metadata, protected original-byte download, owner-private deduplication, competing inserts, cryptographic integrity and row isolation in embedded PostgreSQL.",
+      "liveSchemaChanged": false,
+      "fullNative": {
+        "passed": 3351,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "log": "/tmp/curated-r40-documents-full.tap"
+      }
+    },
+    "r33ReceiptFiles": {
+      "focusedPassed": 10,
+      "failed": 0,
+      "log": "/tmp/curated-r33-all-receipt-files.tap",
+      "scope": "Reviewed attachment, protected download and unlink for manual and saved posted transactions. An uncategorized saved transaction can carry a receipt. Category corrections retain the file. Original file bytes, immutable provider source, original expense total and receipt notes are preserved.",
+      "restore": "The ordinary-record restore refuses financial records with document dependencies until document archive support is available.",
+      "fullNative": {
+        "passed": 3354,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "log": "/tmp/curated-r33-receipts-full.tap"
+      }
+    },
+    "r40DocumentOrganization": {
+      "focusedPassed": 12,
+      "failed": 0,
+      "log": "/tmp/curated-doc-organization-focus.tap",
+      "scope": "Authenticated revision-checked metadata edits, file identity and bytes, stale open receipts, linked-file reopen, multi-page discovery, owner isolation and unchanged ciphertext. Schema applied only to isolated PostgreSQL.",
+      "fullNative": {
+        "passed": 3356,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "log": "/tmp/curated-doc-organization-full.tap"
+      }
+    },
+    "r40ReceiptRecovery": {
+      "focusedPassed": 55,
+      "failed": 0,
+      "log": "/tmp/curated-r40-recovery-combined.tap",
+      "scope": "Optional document-inclusive archive, exact owner/project/revision checks, whole-file round trip up to 8 MiB, complete repeated source inventory, existing destination comparisons, manual and posted receipt links, one-use recovery, conflict refusal and atomic rollback in embedded PostgreSQL. Legacy record-only backups retain their prior format.",
+      "liveSchemaChanged": false,
+      "fullNative": {
+        "passed": 3360,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "log": "/tmp/curated-r40-recovery-full.tap"
+      }
+    },
+    "r31MaintenanceReceipt": {
+      "focusedPassed": 45,
+      "failed": 0,
+      "log": "/tmp/curated-r31-maintenance-receipts.tap",
+      "scope": "Home possession/vehicle original-file links created, retained through ordinary edits, downloaded, replaced through an explicit picker or unlinked while retaining originals. Current and historical asset receipt dependencies checked in archives and transactional recovery. Existing Home summary projections omit files and receipt notes.",
+      "fullNative": {
+        "total": 3363,
+        "passed": 3363,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    "r28StudySchedule": {
+      "focusedPassed": 142,
+      "failed": 0,
+      "log": "/tmp/curated-r28-schedule-focus.tap",
+      "scope": "Checked owner Calendar and School windows with all-day, overnight, unknown-end and previously saved sessions. Explicit course review, duplicate/conflict refusal and current course reread. SQL session append and schedule race guards exercised only in embedded PostgreSQL.",
+      "browser": "In-app browser saved and reopened fictional course 2 on November 25 from 18:00 to 18:45. The saved study agenda displayed the start, end and session title.",
+      "initialOffline": "3,366 of 3,367 passed. A read-only adapter exposed scheduling methods. Scheduling now has a separate adapter. The original read-only contract and the new scheduling route pass focused tests.",
+      "fullNative": {
+        "total": 3368,
+        "passed": 3368,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    "schoolLibrary": {
+      "focusedPassed": 329,
+      "failed": 0,
+      "log": "/tmp/curated-school-library-focused.tap",
+      "scope": "Fictional signed-in program and course association, original bytes for each guide version, independent syllabus and course guide counts, revision and duplicate refusal, original course orders, encrypted archive with file dependency in current and historical versions, isolated PostgreSQL atomic append and recovery.",
+      "fullNative": {
+        "total": 3373,
+        "passed": 3373,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    "academicCalendar": {
+      "focusedPassed": 4,
+      "failed": 0,
+      "scope": "Month totals and selected-day paging, program filtering and original-course navigation, signed-in sparse read and stale revision refusal after another tab edits the course.",
+      "fullNative": {
+        "total": 3377,
+        "passed": 3377,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "browser": "In-app browser displayed four November 22 study sessions, then opened the original Fictional course 2 at its details heading and displayed the saved 18:00 session."
+    },
+    "reviewedGuideChanges": {
+      "focusedPassed": 333,
+      "failed": 0,
+      "log": "/tmp/curated-guide-plan-focus.tap",
+      "evidence": "Fictional two-page PDF physically parsed by local PDFKit; source-specific course and program fields, explicit individual approval, archive validation, retained quotations and duplicate/conflict refusal. Isolated SQL verified atomic write, file and record revision binding and wrong-owner refusal. Non-macOS returns a manual fallback.",
+      "fullNative": {
+        "total": 3382,
+        "passed": 3382,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    "documentText": {
+      "focusedPassed": 28,
+      "failed": 0,
+      "log": "/tmp/curated-private-text-focus.tap",
+      "scope": "Three-page PDF read and in-file search, current original selection, same-owner revision checks, page navigation and per-page unreadable fallback. A real raster test exercised the unavailable response on this Mac. Both Vision paths returned unavailable, so OCR accuracy is unverified.",
+      "fullNative": {
+        "total": 3386,
+        "passed": 3386,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    "filingSuggestions": {
+      "focusedPassed": 31,
+      "failed": 0,
+      "log": "/tmp/curated-filing-suggestions-focus.tap",
+      "browser": "Signed into a fictional preview, read the two-page warranty, inspected the exact page-two quote, reviewed the expiry, then approved. The refreshed library displayed Expires 2028-02-29.",
+      "scope": "Separate classification, tag and expiry proposals; encrypted revision-checked metadata edits; ambiguous dates withheld; additive legacy-compatible fields, manual correction, unchanged source bytes.",
+      "fullNative": {
+        "total": 3389,
+        "passed": 3389,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "shell": "A restarted fictional browser session showed Review before saving in the header, body and footer with document and School editing enabled."
+    },
+    "suggestedSchoolGuideLinks": {
+      "focusedPassed": 350,
+      "failed": 0,
+      "log": "/tmp/curated-school-document-match-focus.tap",
+      "scope": "Unique same-page guide heading and course code/program title; explicit source/target review, canonical numbered original, fresh separate School scope, ambiguity/changed source/duplicate/replay refusal. No schema change required.",
+      "fullOfflinePassed": 3394
+    },
+    "workApplicationPipeline": {
+      "focusedPassed": 373,
+      "workflowTests": 5,
+      "log": "/tmp/curated-work-pipeline-focus.tap",
+      "scope": "Create first Work application, review stage changes on the same project, custom stage totals, employer/role/title filters, 50-record pages, minimal projection, session and stale-version protection.",
+      "fullOfflinePassed": 3399,
+      "browser": "Opened the pipeline from the signed-in Work page in the fictional browser. The empty stage filter and Add application entry were available."
+    },
+    "workCareerProfile": {
+      "focusedPassed": 669,
+      "fullOfflinePassed": 3402,
+      "log": "/tmp/curated-work-career-profile-focus.tap",
+      "scope": "Owner-created original career goals, selected role/compensation edits, merged per-page skill/certification index, case-insensitive cross-page search, and Work confidentiality guidance. Compensation and project notes excluded from overview and network projection."
+    },
+    "workApplicationMail": {
+      "focusedPassed": 725,
+      "fullOfflinePassed": 3407,
+      "log": "/tmp/curated-work-application-mail-focus.tap",
+      "scope": "Explicit saved subject page for a selected original, exact role and employer, no unrelated mail returned, prior and proposed stage, independent approval, rechecked saved copy and source project, dismissal and stale refusal. Live Gmail was not accessed."
+    },
+    "workShiftWeeks": {
+      "focusedPassed": 333,
+      "fullOfflinePassed": 3408,
+      "log": "/tmp/curated-work-shift-weeks-focus.tap",
+      "scope": "Adjacent and chosen rolling seven-day Work shifts, year boundary, selected-day original event creation, return to ordinary title search."
+    },
+    "documentLibraryTextSearch": {
+      "focusedPassed": 343,
+      "fullOfflinePassed": 3412,
+      "log": "/tmp/curated-document-library-search-focus.tap",
+      "scope": "Search private original text from the main search field or Document Library, two files per request, 25 matches per result page, cancellation, unavailable-page counts, opaque one-use cursors and revision-checked original page reads.",
+      "browser": "Dashboard search checked two fictional PDFs, returned only the guide with a page 2 match and reopened the exact original text on page 2."
+    },
+    "workProjectNoteLinks": {
+      "passed": 756,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Original private note picker, independent link/unlink approval, retained project fields, owner/version checks, database note deletion cleanup, encrypted archive and offline database restore."
+    },
+    "quickAddOriginalRecords": {
+      "date": "2026-11-23",
+      "focused": {
+        "passed": 394,
+        "failed": 0,
+        "skipped": 0
+      },
+      "workflow": "Six scope-controlled Quick Add choices. Confirmed a quantity-free undated Home grocery, monthly routine from Calendar and default Work project area using the signed-in in-app browser. Encrypted restore and ordinary SQL completion preserve the first routine anchor and grocery details.",
+      "browserLimit": "Standalone desktop and mobile Playwright both stopped before page load at macOS Chromium bootstrap permission. Interactive in-app browser passed.",
+      "log": "/tmp/cc-quick-focus.tap"
+    },
+    "quickAddProfile": {
+      "date": "2026-11-23",
+      "passed": 493,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Saved task, project and routine destination choices and detail visibility per original record type. Two signed-in tabs detect version conflicts. Browser approved School and expanded task details from Notes and verified both in the Work editor. Native Chromium launch still blocked; signed-in in-app browser passed.",
+      "previousFailures": "Updated the grocery widget and task-area memory regressions for quantity-free groceries and separate routine destinations; both passed on recheck."
+    },
+    "quickAddVoice": {
+      "date": "2026-11-23",
+      "passed": 337,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Local-only recognition negotiated before capture; fictional speech engines cover review, editable insertion, cancellation, timeout, stale drafts and typed fallback. Real microphone and device support remain unverified."
+    },
+    "combinedWorkLists": {
+      "date": "2026-11-23",
+      "passed": 476,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Named Work task searches page independently and combine by original identity. Two overlapping lists produced one original task with both saved steps in the signed-in browser. HTTP coverage includes distinct originals with the same title, multi-page choices and tasks, expiry, changed list versions and original task opening.",
+      "corrected": "The typed page refresh referenced a flag belonging only to explicit searches. Corrected and reran all 476 focused checks."
+    },
+    "savedDocumentSearches": {
+      "date": "2026-11-23",
+      "passed": 398,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Saved text and metadata searches keep only criteria; current files are checked again on rerun. The signed-in browser approved a name and reran the content query. An HTTP check added a new original after saving and found it in both shortcuts. Isolated PostgreSQL restored three exact Work/document shortcuts.",
+      "fullAttempt": "3,432 of 3,432 tests passed, plus launcher and privacy. The whitespace gate flagged an extra final blank line in COMPLETION_PLAN.md. Corrected; full recheck pending.",
+      "fullRecheck": "All 3,434 tests, privacy, whitespace and launcher passed on macOS."
+    },
+    "recurringSeriesRestore": {
+      "date": "2026-11-23",
+      "passed": 52,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Isolated source and destination PostgreSQL instances confirmed exact restored occurrence records, idempotent replay of original approval and one successor after a new completion. Reopened and stopped histories survive. Partial, changed and inconsistent series block recovery."
+    },
+    "macSafariAcceptance": {
+      "date": "2026-11-23",
+      "verified": false,
+      "evidence": "Native Safari is installed. macOS ScreenCaptureKit failed to start capture (SCStreamError -3811). The other browser connection offers Chromium. No native Safari, VoiceOver or physical iOS acceptance inferred."
+    },
+    "onboarding": {
+      "date": "2026-11-23",
+      "passed": 491,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Guided Setup resumed saved School and Work choices in the signed-in browser. Quick Start previewed Coastal Blue, applied it to the original profile on approval, linked Follow my budget, displayed optional existing sources and completed the three-step tour. Reviewed pause leaves the original palette unchanged. Existing custom widget layouts take precedence.",
+      "fullRun": "/tmp/curated-onboarding-palette-offline.log"
+    },
+    "profileRestore": {
+      "date": "2026-11-23",
+      "passed": 104,
+      "failed": 0,
+      "log": "/tmp/cc-profile-recovery-focus.tap",
+      "evidence": "Two isolated PostgreSQL databases preserved an encrypted original profile and confirmed its appearance plus four separate settings readers. Legacy layout bytes and omitted fields were retained. Unsupported and conflicting settings prevented insertion."
+    },
+    "legacyTaskRestore": {
+      "passed": 52,
+      "failed": 0,
+      "log": "/tmp/cc-legacy-checklist-recovery-focus.tap",
+      "evidence": "Embedded PostgreSQL restored completed and in-progress tasks. The original completion and reopen reviews retained mixed position-based and ID-based checklist steps, including repeated titles."
+    },
+    "accessibleAppearance": {
+      "textSize": "system, 125%, 150%",
+      "motion": "system, full, subtle, minimal",
+      "browser": "Signed-in 14px to 21px with zero-duration transitions and no document overflow at 1265px and 375px content widths. Sign-out restored 14px/system.",
+      "firstFullRun": "3443/3444; the previous default DOM attribute contract was restored. Ten targeted tests passed after correction.",
+      "correctedFullRun": "3444/3444; privacy, whitespace and launcher passed.",
+      "feedbackFocused": 593,
+      "feedbackEvidence": "Browser verified both options default off, enabled only vibration, saved it and reopened the original appearance editor with sound off and vibration on. Simulated supported/unsupported devices verified independent one-time feedback for confirmed task completion.",
+      "feedbackFullLog": "/tmp/cc-display-feedback-offline.log",
+      "feedbackFullRun": "3446/3446 plus privacy, whitespace and launcher"
+    },
+    "categoryCalendar": {
+      "sectionChecks": 629,
+      "calendarChecks": 523,
+      "browser": "Work accent on the original due task, Calendar accent on two visible events, named November shortcut, and rerun returning both current events.",
+      "regression": "Calendar in the complete launcher configuration encountered a 409 while offering a saved search. Preserving kind, source and category through the existing shortcut service fixed it.",
+      "fullLog": "/tmp/cc-calendar-shortcuts-colors-offline.log",
+      "fullRun": "3448/3448 plus all offline gates"
+    },
+    "taskColor": {
+      "focusedPassed": 481,
+      "log": "/tmp/cc-item-color-focus.tap",
+      "fullRun": "3449/3449 plus all offline gates",
+      "browser": "The original task editor reviewed Positive, the Tasks list displayed it, and removing the override returned the original to its section color. Two same-title tasks, stale/other-session choices and private preference redaction were checked."
+    },
+    "noteEventColors": {
+      "focusedPassed": 485,
+      "log": "/tmp/cc-record-colors-focus.tap",
+      "fullRun": "3450/3450 plus all offline gates",
+      "browser": "Signed-in fictional owner changed one note to Warning and one event to Positive from its day schedule. The Notes row, Calendar month label and day row showed those colors. HTTP also covered removal, original details and other-session refusal."
+    },
+    "hierarchyRecovery": {
+      "focusedPassed": 163,
+      "log": "/tmp/cc-hierarchy-recovery-focus.tap",
+      "fullRun": "3454/3454 and all offline gates",
+      "database": "Fictional authenticated PostgreSQL restored fresh single-master projects, active and retained retired links, native tasks and academic task memberships in one reviewed transaction. Exact revisions and timestamps survived. Replay inserted zero. The original unlink workflow worked. Cycle, second parent, changed safeguards and pre-existing active endpoints refused. Rollback and foreign-owner isolation verified."
+    },
+    "projectColors": {
+      "focusedPassed": 525,
+      "fullRun": "3455/3455 and all four local gates",
+      "browser": "Saved Warning on a fictional project from the Tasks list. Its Daily Brief entry displayed Warning and allowed returning to its section color. Original details survived. HTTP verified searches and widgets."
+    },
+    "calendarDayFilters": {
+      "focusedPassed": 467,
+      "fullRun": "3457/3457 and all four gates",
+      "log": "/tmp/cc-day-filter-focused.tap",
+      "scope": "Filtered Calendar month and selected day agree for timed/all-day, calendar source, category and title, including results past row 50 and rerunning a named shortcut. In the signed-in browser, changing only source changed the same date from zero manual matches to one verified original in Other saved calendar."
+    },
+    "favoritePages": {
+      "date": "2026-11-23",
+      "passed": 317,
+      "failed": 0,
+      "scope": "Fixed private page destinations and named collections, session-bound review, stale approvals, expiry, discarded late replies, and encrypted PostgreSQL restore. In the fictional browser Calendar and Notes reopened from Week planning and both remained favorites after collection removal."
+    },
+    "favoritesWidget": {
+      "date": "2026-11-23",
+      "passed": 349,
+      "failed": 0,
+      "scope": "The reviewed desktop canvas saved a Favorites widget in the signed-in fictional browser. It rendered its empty state first; saving The Curation from the widget populated the original page link. Scoped read-only projection, independent limits, hidden, expired and offline states covered locally."
+    },
+    "favoriteNotes": {
+      "date": "2026-11-23",
+      "passed": 467,
+      "failed": 0,
+      "scope": "Signed-in Notes saved and reopened the selected original, then renamed it through the original editor. Favorites displayed the new title and the exact original text. Scoped note reads, stale approval, removal, atomic collection cleanup and exact encrypted PostgreSQL recovery passed."
+    },
+    "sparseNoteWidgetPicker": {
+      "date": "2026-11-23",
+      "passed": 506,
+      "failed": 0,
+      "scope": "Widget choices work with the private title-only inventory. Checking the selected original requires matching ID, scope and current content. A superseded inventory cannot invalidate a new selection."
+    },
+    "favoriteTasks": {
+      "date": "2026-11-23",
+      "passed": 480,
+      "failed": 0,
+      "scope": "The signed-in browser saved and reopened an original task and its description. The authenticated API verified a completed favorite across independent sessions, stale reads, explicit removal, and isolated recovery of a favorite undated task and collection."
+    },
+    "collectionItems": {
+      "date": "2026-11-23",
+      "passed": 457,
+      "failed": 0,
+      "scope": "In the signed-in fictional browser Weekend started empty, then reopened its explicitly assigned task. The native source checked 52 matching notes across pages, other collections, unauthorized originals, and renamed collection labels."
+    },
+    "favoriteProjects": {
+      "date": "2026-11-23",
+      "passed": 463,
+      "failed": 0,
+      "scope": "Fictional browser project creation, favorite review and original detail reopening. HTTP tests cover management and read-only selections, rejected stale reads, renamed/completed projects, removal without altering the project, and unavailable scopes."
+    },
+    "favoriteEvents": {
+      "date": "2026-11-23",
+      "passed": 517,
+      "failed": 0,
+      "scope": "The fictional browser saved the November 23 event from the day drawer, then opened 10:30 New York time from Favorites. Authenticated tests covered multi-day/all-day originals, rescheduling to timed, selection expiry, and rejecting read-only favorites at edit endpoints. The day drawer and main event detail could both remain open."
+    },
+    "favoriteWidgetOriginals": {
+      "date": "2026-11-23",
+      "passed": 432,
+      "failed": 0,
+      "scope": "Original event handoff with date and filters retained, selected note, task, project and event reads from the Favorites widget, removal, expiry and partial inventory handling. Signed-in fictional HTTP and controller checks."
+    }
+  },
+  "widgetSourceAssociations": {
+    "status": "partial",
+    "enabledByDefault": false,
+    "schemaApplied": false,
+    "workflow": "default-off sparse picker -> reviewed layout save/CAS -> server-only alias binding -> current-view source resolution -> original note/project read/edit/history/removal capabilities; associated project tokens now enter the original selected-project details and explicit linked-task summary panel only while the visible layout/source view is live",
+    "knownLimits": [
+      "settings save and alias binding are separate transactions",
+      "orphan mapping cleanup/retention not implemented",
+      "true multi-connection PostgreSQL and browser/device acceptance unverified",
+      "selected project panel/browser device acceptance has not been run in this environment"
+    ]
+  },
+  "resolvedDecision": {
+    "requirement": "R27 School program milestones",
+    "choice": "Derived display-only markers from verified saved courses and program progress; no milestone identities, writes or actions.",
+    "scope": "Completed courses; a saved term only when every saved course for that program and term is Completed; completed saved credits; selected credit target completion only when the program metric is credits.",
+    "consequence": "No duplicate progress state; custom owner-defined targets remain unsupported.",
+    "next": "R28 now has review-only proposals from owner-supplied availability; R27 expired-history deletion policy remains pending. Continue with R29 protected Work/Career schedule and shift workflow."
+  },
+  "pendingDecision": null,
+  "workShiftCreation": {
+    "command": "node --test --test-name-pattern='Work page creates shifts' tests/private-dashboard-controller.test.mjs && node --test tests/private-calendar-workspace.test.mjs tests/private-event-creation.test.mjs tests/dev-work.test.mjs tests/dev-workspace.test.mjs tests/private-task-workspace.test.mjs",
+    "passed": 56,
+    "failed": 0,
+    "scope": "One Work-page controller workflow verifies current-week Work Shift filtering/rendering and explicit reviewed creation; 55 related Calendar, event-creation, optional-task-date and task-workspace checks pass.",
+    "syntax": "passed; dev-private-brief, Calendar model and controller test modules pass node --check",
+    "privacy": "passed; 0 unprotected paths and 0 tracked private files",
+    "whitespace": "passed; git diff --check",
+    "json": "passed; release evidence JSON parses",
+    "fullOffline": "not rerun; latest attempt remains inconclusive at 3106/3136 with listener EPERM",
+    "browser": "not rerun; Chromium MachPortRendezvous denial remains the limitation"
+  },
+  "workCanvasReuse": {
+    "command": "node --test tests/private-curation-canvas.test.mjs tests/private-widget-layout-associations.test.mjs tests/private-project-widget-source.test.mjs tests/private-widget-source-picker.test.mjs",
+    "passed": 17,
+    "failed": 0,
+    "scope": "Work-filtered Curation task widgets and existing linked note/project readers/actions; source expiry, removal review and project-task-summary capability boundaries."
+  },
+  "privateDashboardControllerDiagnostic": {
+    "command": "node --test --test-name-pattern='unconfirmed copied-event creation retains' tests/private-dashboard-controller.test.mjs",
+    "result": "Reproduced 1 failing test in isolation: copied-event creation expected one saved event but observed zero; unrelated to the Work Shift flow. The larger controller diagnostic previously recorded 87 passing, 61 failing and 1 cancelled tests, mostly empty Brief fixture renders.",
+    "note": "The isolated failure predates this Work Shift-specific assertion and remains open for separate controller diagnosis; Work Shift creation/display is separately verified 1/1."
+  },
+  "resolvedRetentionDecisionCorrection": "The prior entry treating 'continue' as selecting the recommendation was incorrect. The user clarified that continue does not choose between unselected policies; the R27 retention decision is pending. Superseded by the subsequent explicit owner choice recorded in ownerPolicyDecisions.",
+  "workCareerProjectContractAudit": {
+    "command": "node --test tests/private-project-model.test.mjs tests/private-projects.test.mjs tests/private-project-api.test.mjs tests/private-project-panel.test.mjs tests/private-project-history.test.mjs tests/private-project-version-panel.test.mjs tests/workspace-backup-guards.test.mjs",
+    "passed": 29,
+    "failed": 0,
+    "scope": "Audited the strict owner-private project model/service/API/panel/history/version and encrypted backup contract before extending it for R29 career/application tracking. Existing contract accepts only current project metadata, with JSONB persistence and no schema migration needed; career metadata must be carried consistently through read/review/save/history/restore before adding UI.",
+    "code": "no career source changes made in this audit step",
+    "next": "Continue R30's approved Personal Life goal/list/template workflows using canonical records and existing recovery; preserve pending R27 retention decision.",
+    "implementation": "Career details are implemented as optional nested Project metadata and flow through the original owner-private versioned Project write/read/history/archive paths; focused acceptance 55/55."
+  },
+  "workCareerProjects": {
+    "command": "node --test tests/private-career-fields.test.mjs tests/private-project-panel-boundaries.test.mjs tests/private-projects.test.mjs tests/private-project-api.test.mjs tests/private-project-history.test.mjs tests/private-project-version-panel.test.mjs tests/private-search-project-panel.test.mjs tests/private-project-widget-source.test.mjs tests/workspace-backup-guards.test.mjs",
+    "passed": 55,
+    "failed": 0,
+    "scope": "Owner-named application stages and career goals on canonical private Work Project records; reviewed creation/edit, selected detail, historical correction and encrypted archive retention; no new schema/store."
+  },
+  "personalLifeProjectProgressReuse": {
+    "command": "node --test tests/private-project-task-link-api.test.mjs tests/private-project-task-links.test.mjs tests/private-project-task-read.test.mjs tests/private-project-task-summary.test.mjs tests/private-project-task-details-panel.test.mjs tests/private-project-hierarchy-api.test.mjs tests/private-project-hierarchy-http.test.mjs tests/private-project-hierarchy-panel.test.mjs tests/private-project-hierarchy-service.test.mjs tests/private-project-hierarchy-archive.test.mjs tests/private-common-task-link-api.test.mjs tests/private-common-task-link-panel.test.mjs tests/private-common-task-link-review.test.mjs tests/private-common-task-memberships.test.mjs",
+    "passed": 147,
+    "failed": 0,
+    "scope": "Canonical shared task/project progress and links, manual status independence, deduplicated hierarchy, recovery/archive boundaries and protected original details. Reuses existing project engine for Personal Life goals."
+  },
+  "nextAction": "Run the four Calendar and Favorites Chromium cases in a local-listener-enabled environment, then continue R13 School program and course Favorites with collection membership and the original School reader.",
+  "pendingDecisions": [],
+  "resolvedHomeCleaningRollover": {
+    "requirement": "R31 Home cleaning rollover semantics",
+    "choice": "Display-only carry-forward: an incomplete marked cleaning task appears on later daily cleaning lists while retaining its original due date and identity.",
+    "evidence": "currentFocusedChecks.homeCleaningRollover; recurring successor preservation verified in isolated local database.",
+    "consequence": "No automatic date writes or duplicate task creation; original overdue history and task identity remain stable."
+  },
+  "ownerPolicyDecisions": {
+    "R31": "Reset the consecutive streak after a missed scheduled occurrence. Retain occurrence history.",
+    "R27": "Retain expired academic snapshots. Close ordinary recovery after 90 days. Permanent deletion requires a separate owner review and fresh strong authentication.",
+    "authorization": "User explicitly answered “use those choices” to the two recommendations.",
+    "R34": "For supported, authorized brokerage connections, show brokerage-reported holdings and values with their as-of date. Keep manual entry available. No separate streaming quote feed is required. A Chase transaction or transfer cannot establish a Schwab position."
+  },
+  "previousPassingMacAttempt": {
+    "date": "2026-11-23",
+    "platform": "darwin",
+    "command": "npm run check:offline",
+    "result": {
+      "platformExclusions": [],
+      "localChecksPassed": true,
+      "automatedTests": {
+        "total": 3471,
+        "passed": 3471,
+        "failed": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "checks": {
+        "tests": true,
+        "privacy": true,
+        "whitespace": true,
+        "launcher": true
+      },
+      "privacy": {
+        "unprotectedPaths": 0,
+        "trackedPrivateFiles": 0,
+        "checkedIgnoreRules": 11,
+        "binarySourcesSkipped": 32
+      }
+    },
+    "log": "/tmp/cc-fav-event-offline.log"
+  }
+}

@@ -35,7 +35,7 @@ export function emailSuggestions(emails){
     const p=row?.payload;
     const template=EMAIL_EXAMPLES.find(t=>t.id===p?.template_id);
     if(row?.deleted_at!=null||!template?.actionTitle||!UUID.test(row?.id||'')||!validDay(p.action_day))return [];
-    return [{id:`email-fixture-${row.id}`,source:'email',sourceVersion:row.version,rule:'email_to_task',section:template.section,day:p.action_day,title:template.actionTitle,reason:`The fictional email “${template.subject}” suggests a task. You can review and change it before saving.`,emailId:row.id}];
+    return [{id:`email-fixture-${row.id}`,source:'email',sourceId:row.id,sourceVersion:Number.isInteger(row.version)&&row.version>0?row.version:null,confidence:0.8,uncertainty:'This fixed fictional template suggests a follow-up; confirm the message meaning and task date.',rule:'email_to_task',section:template.section,day:p.action_day,title:template.actionTitle,reason:`The fictional email “${template.subject}” suggests a task. You can review and change it before saving.`,emailId:row.id}];
   });
 }
 export function isEmailFixtureSuggestion(s){return Boolean(s&&s.source==='email'&&s.rule==='email_to_task'&&/^email-fixture-[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s.id||''));}

@@ -1,6 +1,7 @@
 // Server-only, metadata-first Gmail preparation. No OAuth route or live account is enabled.
 // The caller must verify the app session and load the owner's grant from trusted storage.
 import {createHash} from 'node:crypto';
+import {ProviderReadError} from './provider-read-error.mjs';
 export const GMAIL_READ_SCOPE='https://www.googleapis.com/auth/gmail.readonly';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const identifier=value=>typeof value==='string'&&/^[A-Za-z0-9_-]{1,256}$/.test(value);
@@ -36,10 +37,10 @@ export async function readGmailWindow({ownerId,connectionId,grant,selectedLabelI
  async function request(url){
   let response;
   try{response=await fetcher(url.href,{method:'GET',headers:{Authorization:'Bearer '+accessToken,Accept:'application/json'},cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)});}
-  catch{throw Error('Gmail could not be reached. No partial result was accepted.');}
-  if(!response.ok)throw Error(response.status===401?'Gmail authorization expired. Reconnect to continue.':response.status===403?'Gmail access was denied. Review approved permissions.':'Gmail refresh failed. No partial result was accepted.');
-  let data;try{data=await response.json();}catch{throw Error('Gmail response could not be verified.');}
-  if(!data||typeof data!=='object'||Array.isArray(data))throw Error('Gmail response could not be verified.');
+  catch{throw new ProviderReadError('source-unavailable','Gmail could not be reached. No partial result was accepted.');}
+  if(!response.ok)throw response.status===401?new ProviderReadError('reconnect-required','Gmail authorization expired. Reconnect to continue.'):response.status===403?new ProviderReadError('access-denied','Gmail access was denied. Review approved permissions.'):new ProviderReadError('source-unavailable','Gmail refresh failed. No partial result was accepted.');
+  let data;try{data=await response.json();}catch{throw new ProviderReadError('incomplete-read','Gmail response could not be verified.');}
+  if(!data||typeof data!=='object'||Array.isArray(data))throw new ProviderReadError('incomplete-read','Gmail response could not be verified.');
   return data;
  }
  const base='https://gmail.googleapis.com/gmail/v1/users/me/messages',ids=new Set(),tokens=new Set();let pageToken='',complete=false;

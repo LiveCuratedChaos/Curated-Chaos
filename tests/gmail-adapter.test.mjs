@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {GMAIL_READ_SCOPE,normalizeGmailMetadata,readGmailWindow} from '../server/gmail.mjs';
 import {allowedPublicPath} from '../tools/local-server.mjs';
+import {ProviderReadError} from '../server/provider-read-error.mjs';
 const ownerId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',connectionId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const config={ownerId,connectionId,grant:{ownerId,connectionId,provider:'gmail',scopes:[GMAIL_READ_SCOPE],labelIds:['Label_test']},selectedLabelIds:['Label_test'],accessToken:'fixture-token',timeMin:'2026-11-01T00:00:00Z',timeMax:'2026-11-09T00:00:00Z'};
 const message=(id='abc123')=>({id,threadId:'thread123',internalDate:String(Date.parse('2026-11-08T14:00:00Z')),labelIds:['Label_test'],payload:{headers:[{name:'Subject',value:'Fictional appointment'},{name:'From',value:'Fictional sender <fixture@example.test>'}],body:{data:'must-never-leak'}},snippet:'private-snippet',raw:'private-raw'});
@@ -34,6 +35,9 @@ test('Gmail skips messages that moved outside selected labels, exact time bounds
 });
 test('failed detail reads reject the whole result without echoing private provider errors',async()=>{
  await assert.rejects(readGmailWindow(config,async url=>new URL(url).pathname.endsWith('/messages')?response({messages:[{id:'abc123'}]}):{ok:false,status:500,json:async()=>({message:'private-provider-secret'})}),err=>/No partial/.test(err.message)&&!err.message.includes('private-provider-secret'));
+});
+test('expired Gmail authorization has a typed reconnect outcome without echoing provider details',async()=>{
+ await assert.rejects(readGmailWindow(config,async()=>({ok:false,status:401,json:async()=>({error:'private-provider-secret'})})),error=>error instanceof ProviderReadError&&error.outcome==='reconnect-required'&&!error.message.includes('private-provider-secret'));
 });
 test('Gmail rejects looping pagination, mismatched message IDs and ambiguous headers',async()=>{
  await assert.rejects(readGmailWindow(config,async()=>response({messages:[],nextPageToken:'same'})),/pagination/);

@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {makeFictionalTask} from '../src/dev-brief-model.mjs';
+import {supportsOrdinaryWorkspaceRestore,supportsArchivedDeletedWorkspaceRestore} from '../server/private-workspace-restore-contract.mjs';
+const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+function row(){const task=makeFictionalTask({title:'Oat milk',day:'',section:'Home'},owner,{allowUndated:true});return{...task,id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',origin:'PRIVATE_COOKIE_TASK_CREATE',version:1,created_at:'2026-11-21T12:00:00Z',updated_at:'2026-11-21T12:00:00Z',deleted_at:null,payload:{...task.payload,homeGrocery:{quantity:'2 cartons',favorite:true}}};}
+test('Home grocery optional quantity and favorite survive exact task archive and restore validation',()=>{const source=row();assert.equal(supportsOrdinaryWorkspaceRestore(source),true);assert.equal(supportsArchivedDeletedWorkspaceRestore({...source,deleted_at:'2026-11-21T12:00:00Z'},{now:Date.parse('2026-11-22T12:00:00Z')}),true);for(const mutate of [r=>r.section='Work',r=>r.payload.homeGrocery={quantity:'',favorite:null},r=>r.payload.homeGrocery={quantity:'x'.repeat(41),favorite:false},r=>r.payload.homeGrocery={quantity:'2',favorite:'yes'}]){const invalid=structuredClone(source);mutate(invalid);assert.equal(supportsOrdinaryWorkspaceRestore(invalid),false);}});

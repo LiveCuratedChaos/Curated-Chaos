@@ -1,6 +1,7 @@
 // Local tests and repository checks only. No setup, credential loader or cloud verifier.
 import {spawn} from 'node:child_process';
 import {readdirSync} from 'node:fs';
+import {availableParallelism} from 'node:os';
 import {dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -17,7 +18,7 @@ export async function runOfflineChecks({projectRoot=root,runCommand=runLocal,pla
  if(!tests.length)throw Error('Local test files are missing.');
  const platformExclusions=platform==='darwin'?[]:['mac-calendar-native-transfer.test.mjs'];const runnableTests=tests.filter(path=>!platformExclusions.includes(path.split('/').at(-1)));
  const plan=[
-  {name:'tests',command:process.execPath,args:['--test','--test-reporter=tap',...runnableTests]},
+  {name:'tests',command:process.execPath,args:['--test','--test-reporter=tap','--test-concurrency='+Math.min(5,Math.max(1,availableParallelism()-1)),...runnableTests]},
   {name:'privacy',command:process.execPath,args:['tools/check-repository-privacy.mjs','--scan-content']},
   {name:'whitespace',command:'git',args:['diff','--check']},
   {name:'launcher',command:'/bin/zsh',args:['-n','tools/Open-Private-Workspace.command']}

@@ -1,0 +1,139 @@
+{
+  "userDate": "2026-11-21",
+  "repository": "LiveCuratedChaos/Curated-Chaos",
+  "repositoryVisibility": "private",
+  "remoteMutated": false,
+  "hostedRunsTriggered": false,
+  "billingUsageAvailable": false,
+  "local": {
+    "branch": "codex/browser-checks",
+    "head": "718596e1cf72f6087c2d887a1458f93b0287287b",
+    "existingUncommittedWorkPreserved": true,
+    "lastVerifiedLocalTests": 3144
+  },
+  "remoteSource": {
+    "branch": "codex/manual-autosave-coordinator-20261117",
+    "commit": "a6a7f33d0086cf739d8e4963ea61eac65854b6d0",
+    "pinnedBy": "Identical-ref GitHub compare base_commit; selected file blob SHAs re-read at pinned commit and matched audited branch."
+  },
+  "reviewedSourceFiles": [
+    {
+      "path": "src/manual-autosave-session.mjs",
+      "blobSha": "d0f437b7b6f5ed7a8c8e3489bb2b20b1e48d0376",
+      "localPresent": false,
+      "state": "Unmounted remote foundation; routine manual text/date/priority autosave with receipts and guarded Undo. Not native UI or durable offline support."
+    },
+    {
+      "path": "server/production-workspace-runtime.mjs",
+      "blobSha": "9f1428e901856a7c91f7389f8d1cbb3d4d73f5af",
+      "localPresent": false,
+      "state": "Unactivated composition of durable session/job/manual-workspace adapters. No hosted readiness inferred."
+    },
+    {
+      "path": "docs/MANUAL_AUTOSAVE_COORDINATOR.md",
+      "blobSha": "e9495bb87ea9ac3719d31c6ee4d47efd76389f96",
+      "localPresent": false,
+      "state": "Remote inherited acceptance report only; not fresh execution or acceptance of current checkout."
+    },
+    {
+      "path": "server/workspace-convergence-plan.mjs",
+      "localPresent": true,
+      "state": "Selectively reused as an unmounted read-only preflight, adapted to approved single-master hierarchy; no migration or production acceptance inferred."
+    },
+    {
+      "path": "server/workspace-convergence-relationships.mjs",
+      "localPresent": true,
+      "state": "Selectively reused as an unmounted read-only preflight, adapted to approved single-master hierarchy; no migration or production acceptance inferred."
+    }
+  ],
+  "integrationConstraints": [
+    "Current native private reviewed records and remote manual records use different explicit provenance contracts.",
+    "Remote manual tasks use one project_id; approved native tasks can have multiple memberships. Preserve approved memberships, recurrence, current progress options, source identities and supported extensions.",
+    "Approved smaller-project hierarchy is single-master (owner decision November17). Remote convergence code still describes several-parent project hierarchy; adapt it to reject/report unsupported extra parents without unlinking data. Multiple memberships apply to tasks, not project parents.",
+    "Do not overwrite shared native source from the old remote baseline, weaken fictional-data guards, auto-convert records or import old draft migration009 by assumption.",
+    "Remote AGENTS.md describes its integration branch; this local original checkout has no AGENTS.md. User standing authorization and current authoritative RELEASE_CHECKLIST remain controlling.",
+    "Prepare an explicit provenance/receipt/history bridge and isolated migration/rollback acceptance before enabling any runtime. Existing live schema and owner app remain unchanged."
+  ],
+  "ci": {
+    "localWorkflow": ".github/workflows/checks.yml",
+    "localAutomaticFeaturePushRemoved": true,
+    "localEssentialJobs": [
+      "offline",
+      "browser",
+      "mac-native"
+    ],
+    "remoteConcurrencyWorkflow": ".github/workflows/project-concurrency.yml",
+    "remoteConcurrencyBlobSha": "9781551160b275b201acd4b4faa52ed45f705190",
+    "preserveSeparateConcurrencyAcceptance": true,
+    "note": "Current connector exposes workflow status/metadata, not billing/quota. No workflow or spending changes made."
+  },
+  "browser": {
+    "freshExecutionVerified": false,
+    "desktopStatusOrControlToolsExposed": false,
+    "configuredChromiumStartup": "Previously denied by macOS bootstrap permission1100; unchanged launch not retried.",
+    "isolatedAlternative": "Cloud runtime/desktop guidance inspected; no environment status, desktop control or preview tools exposed. No platform restriction bypassed."
+  },
+  "truePostgresConcurrency": {
+    "currentCheckoutVerified": false,
+    "existingLocalServerToolsFound": false,
+    "remoteEvidence": "Separate inherited disposable PostgreSQL workflow/verifier exists. It is not acceptance of current local source.",
+    "noInstallationOrDatabaseChanges": true
+  },
+  "nextAction": "Reuse pinned durable/manual foundations selectively; first map current native provenance/multiple-membership/recurrence semantics into an explicit tested bridge. Keep original reviewed and manual workflows separate until bridge/rollback proof; finish individual-widget source associations using original settings/review/recovery.",
+  "reusedLocalFiles": [
+    {
+      "path": "src/project-workspace-model.mjs",
+      "remoteSourceBlobSha": "02dab136a3bf707011cc6b6e618ea0b68a6d0b5b",
+      "localSha256": "c69a130bb3f5e56b796e32de3d5dc4128811f8d29fbdd01794047775148e3201",
+      "nativeRuntimeMounted": false
+    },
+    {
+      "path": "server/workspace-convergence-plan.mjs",
+      "remoteSourceBlobSha": "756a52a50c64fab8e73a05460ea9dd57a689ef9b",
+      "localSha256": "4bdd7fbbc015a9341ad5b09ef45eb1ff8a1a20973c94cb85ffbffa41c792c6ac",
+      "nativeRuntimeMounted": false
+    },
+    {
+      "path": "server/workspace-convergence-relationships.mjs",
+      "remoteSourceBlobSha": "e90ca26e8120cb2f5e0ddc6e4b6fc95a5450e83e",
+      "localSha256": "71d2079f03d254dddbce26891631e60bbc727352b6277e2b9df828f0dc353a9f",
+      "nativeRuntimeMounted": false
+    },
+    {
+      "path": "tests/project-workspace-model.test.mjs",
+      "remoteSourceBlobSha": "27e2337522f5440a712b82580eeb57dc15e6f090",
+      "localSha256": "0c0498a4ce04e70c7849c3f651353b1fbc5d69c274d7f17e96c446905ec0f170",
+      "nativeRuntimeMounted": false
+    },
+    {
+      "path": "tests/workspace-convergence-plan.test.mjs",
+      "remoteSourceBlobSha": "47c6f8050ebc4e9629cf4ce0ed9498f1ebad76c4",
+      "localSha256": "71439f1c25c0c56f5a7081759a3d783a530f33df7598c88a47095ca7cad0fd91",
+      "nativeRuntimeMounted": false
+    },
+    {
+      "path": "tests/workspace-convergence-relationships.test.mjs",
+      "remoteSourceBlobSha": "59b435f42c63b8a6900eda1a36b65ecaf18e8c49",
+      "localSha256": "faf2adcd38829bd9a71b2646b4233fc0aa372763a52ea50d7483e345be88c2c0",
+      "nativeRuntimeMounted": false
+    }
+  ],
+  "localReuseVerification": {
+    "fullCommand": "npm run check:offline",
+    "fullPassed": 3137,
+    "targetedPassed": 77,
+    "fullLog": "/tmp/curated-convergence-reuse-full.log",
+    "migrationReady": false,
+    "recordWrites": 0,
+    "runtimeMounted": false
+  },
+  "protectedPreflightVerification": {
+    "fullPassed": 3144,
+    "targetedPassed": 532,
+    "fullLog": "/tmp/curated-convergence-http-final-full.log",
+    "route": "/auth/workspace/convergence/preview",
+    "ownerActivation": false,
+    "recordWrites": 0,
+    "migrationReady": false
+  }
+}

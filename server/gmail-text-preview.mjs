@@ -1,5 +1,6 @@
 // Explicit one-message content preview. No database writes, attachments endpoint or source changes.
 import {GMAIL_READ_SCOPE,normalizeGmailMetadata} from './gmail.mjs';
+import {suggestGmailMessageCategories} from './gmail-message-candidates.mjs';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function plainTextFromGmail(payload){
  let nodes=0,bytes=0;const pieces=[];
@@ -33,5 +34,6 @@ export async function readOneGmailTextPreview({approved,ownerId,connectionId,gra
  if(!response.ok)throw Object.assign(Error('Message preview unavailable.'),{safeReason:[401,403,404,429].includes(response.status)?'http-'+response.status:'provider-error'});const source=await boundedJson(response),metadata=normalizeGmailMetadata(source,{ownerId,connectionId});
  if(metadata.messageId!==saved.messageId||metadata.receivedAt!==saved.receivedAt||metadata.subject!==saved.subject||metadata.sender!==saved.sender||!metadata.labelIds.includes('INBOX')||metadata.labelIds.some(x=>['TRASH','SPAM','DRAFT'].includes(x)))throw Error('Message identity or Inbox membership changed.');
  const content=plainTextFromGmail(source.payload);if(!await confirmCurrent())throw Error('App session or saved selection changed.');
- return {previewOnly:true,persisted:false,provider:'gmail',subject:metadata.subject,sender:metadata.sender,receivedAt:metadata.receivedAt,...content,automaticActions:false};
+ const candidates=suggestGmailMessageCategories({subject:metadata.subject,text:content.text});
+ return {previewOnly:true,persisted:false,provider:'gmail',subject:metadata.subject,sender:metadata.sender,receivedAt:metadata.receivedAt,...content,candidates,automaticActions:false};
 }

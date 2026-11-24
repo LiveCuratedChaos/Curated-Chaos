@@ -1,0 +1,19 @@
+-- PREPARED ONLY. Never discard captured history to remove the schema.
+begin;
+set local lock_timeout='3s';
+lock table public.cc_records in share row exclusive mode nowait;
+lock table cc_private.record_versions in access exclusive mode nowait;
+do $$begin if exists(select 1 from cc_private.record_versions) then raise exception 'Retained record versions require protected archival before rollback';end if;end$$;
+drop function public.import_private_record_versions(uuid,jsonb);
+drop function cc_private.record_version_recovery_valid(jsonb,integer);
+drop function public.cc_private_record_versions_ready();
+drop function public.lock_private_record_versions_for_recovery();
+drop function public.export_private_record_versions(uuid);
+drop function public.list_private_record_versions(uuid,integer);
+drop function public.get_private_record_version(uuid,uuid);
+drop trigger cc_capture_private_record_version on public.cc_records;
+drop trigger cc_immutable_private_record_version on cc_private.record_versions;
+drop function cc_private.capture_record_version();
+drop function cc_private.immutable_record_version();
+drop table cc_private.record_versions;
+commit;
