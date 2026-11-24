@@ -1083,7 +1083,11 @@ test('using a Home grocery template opens the original task form with grocery fi
 test('the signed-in Home canvas opens its enabled Household Hub on request',async t=>{
  const householdRegion={innerHTML:''};
  let reads=0;
- const workspaceClient={householdDirectory:async()=>{reads++;return{households:[{name:'Fictional home',role:'adult'}],expiresAt:60001};}};
+ const choice='h'.repeat(43);
+ const workspaceClient={
+  householdDirectory:async()=>{reads++;return{households:[{name:'Fictional home',role:'adult',choice}],expiresAt:60001};},
+  householdSummary:async selected=>{assert.equal(selected,choice);return{tasks:3,notes:2};},
+ };
  const args={curationWorkspace:true,canvasPage:'home',allowWidgetLayouts:true,allowWidgetPages:true,workspaceClient,householdRegion};
  const enabled=await setup(t,{...args,allowHouseholdDirectory:true});
  assert.match(enabled.root.innerHTML,/Household Hub/);
@@ -1091,6 +1095,8 @@ test('the signed-in Home canvas opens its enabled Household Hub on request',asyn
  const click=action=>enabled.events.click({target:{closest:selector=>selector==='[data-household-directory]'?{dataset:{householdDirectory:action}}:null}});
  await click('open');await turn();
  assert.match(householdRegion.innerHTML,/Fictional home · Adult member/);
+ await click('select-'+choice);await turn();
+ assert.match(householdRegion.innerHTML,/Visible shared tasks: 3 · Visible shared notes: 2/);
  await click('close');assert.doesNotMatch(householdRegion.innerHTML,/Fictional home/);
  const disabled=await setup(t,args);
  assert.doesNotMatch(disabled.root.innerHTML,/data-household-directory/);

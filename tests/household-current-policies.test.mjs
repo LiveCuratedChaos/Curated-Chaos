@@ -81,17 +81,51 @@ test('development directory uses the authenticated member filter and returns spa
  let request;
  const api=createDevApi(config,async(url,options)=>{
   request={url:new URL(url),options};
-  return {ok:true,text:async()=>JSON.stringify([{role:'adult',cc_households:{name:'Fictional home'},user_id:i.b}])};
+  const rows=request.url.pathname.endsWith('/cc_records')?
+   [{id:i.other,item_type:'task'},{id:i.sc,item_type:'note'}]:
+   [{household_id:i.home,role:'adult',cc_households:{name:'Fictional home'},user_id:i.b}];
+  return {ok:true,text:async()=>JSON.stringify(rows)};
  });
- assert.deepEqual(await api.listHouseholdDirectory('fixture-session',i.b),[{name:'Fictional home',role:'adult'}]);
+ assert.deepEqual(await api.listHouseholdDirectory('fixture-session',i.b),[{id:i.home,name:'Fictional home',role:'adult'}]);
  assert.equal(request.url.pathname,'/rest/v1/cc_household_memberships');
  assert.deepEqual(Object.fromEntries(request.url.searchParams),{
-  select:'role,cc_households!inner(name)',user_id:'eq.'+i.b,status:'eq.active',order:'household_id.asc',limit:'101'
+  select:'household_id,role,cc_households!inner(name)',user_id:'eq.'+i.b,status:'eq.active',order:'household_id.asc',limit:'101'
  });
  assert.equal(request.options.headers.Authorization,'Bearer fixture-session');
  await assert.rejects(api.listHouseholdDirectory('fixture-session','invalid'));
+ assert.deepEqual(await api.summarizeHouseholdTasksAndNotes('fixture-session',i.home),{tasks:1,notes:1});
+ assert.equal(request.url.searchParams.get('household_id'),'eq.'+i.home);
+ assert.equal(request.url.searchParams.get('select'),'id,item_type');
+ assert.equal(request.url.searchParams.get('visibility'),'eq.household');
+ assert.equal(request.url.searchParams.get('deleted_at'),'is.null');
  const flags=['--fixtures-only','--serve-private-dashboard','--allow-private-brief-read','--allow-private-widget-layouts-reviewed','--allow-private-widget-pages'];
  const enable='--allow-private-household-directory-reviewed';
  assert.equal(validatePrivatePreviewArguments([...flags,enable]).allowHouseholdDirectory,true);
  assert.throws(()=>validatePrivatePreviewArguments(flags.filter(f=>!f.endsWith('widget-pages')).concat(enable)));
+});
+
+test('household summaries are scoped to a session choice and drop revoked memberships',async t=>{
+ const {privateWorkspaceFixture}=await import('./support/private-workspace-fixture.mjs');
+ const db=await setup(t);
+ const app=privateWorkspaceFixture(t,{
+  fixtureHouseholdDirectory:async()=> (await db.query(`select h.id,h.name,m.role from public.cc_household_memberships m
+   join public.cc_households h on h.id=m.household_id where m.user_id=$1 and m.status='active'`,[i.b])).rows,
+  fixtureHouseholdSummary:async(_actor,id)=>{
+   await actor(db,i.b,i.sb);
+   return (await db.query(`select count(*) filter(where item_type='task')::int tasks,count(*) filter(where item_type='note')::int notes
+    from public.cc_records where household_id=$1 and visibility='household' and deleted_at is null`,[id])).rows[0];
+  },
+ });
+ const tab=app.tab(), other=app.tab();
+ await tab.login();await other.login();
+ const {households:[home]}=await tab.client.householdDirectory();
+ assert.deepEqual(Object.keys(home).sort(),['choice','name','role']);
+ assert.equal(home.role,'adult');
+ assert.notEqual(home.choice,i.home);
+ await assert.rejects(other.client.householdSummary(home.choice));
+ await assert.rejects(tab.client.householdSummary(i.home));
+ assert.deepEqual(await tab.client.householdSummary(home.choice),{tasks:0,notes:3});
+ await administrator(db);
+ await db.query("update public.cc_household_memberships set status='removed' where household_id=$1 and user_id=$2",[i.home,i.b]);
+ await assert.rejects(tab.client.householdSummary(home.choice));
 });

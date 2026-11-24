@@ -104,11 +104,26 @@ export function createDevApi(config,fetcher=fetch,{timeoutMs=15000,includeAllDay
     async listHouseholdDirectory(token,ownerId){
       if(!recoveryUuid(ownerId))throw Error('Verified household member required.');
       const query=new URLSearchParams({
-        select:'role,cc_households!inner(name)',user_id:'eq.'+ownerId,status:'eq.active',order:'household_id.asc',limit:'101'
+        select:'household_id,role,cc_households!inner(name)',user_id:'eq.'+ownerId,status:'eq.active',order:'household_id.asc',limit:'101'
       });
       const rows=await request('/rest/v1/cc_household_memberships?'+query,{},token);
       if(!Array.isArray(rows)||rows.length>100)throw Error('Household list could not be verified.');
-      return rows.map(row=>({name:row?.cc_households?.name,role:row?.role}));
+      return rows.map(row=>({id:row?.household_id,name:row?.cc_households?.name,role:row?.role}));
+    },
+    async summarizeHouseholdTasksAndNotes(token,householdId){
+      if(!recoveryUuid(householdId))throw Error('Verified household required.');
+      const query=new URLSearchParams({
+        select:'id,item_type',household_id:'eq.'+householdId,visibility:'eq.household',
+        deleted_at:'is.null',item_type:'in.(task,note)',order:'id.asc',limit:'501'
+      });
+      const rows=await request('/rest/v1/cc_records?'+query,{},token);
+      if(!Array.isArray(rows)||rows.length>500)throw Error('Household summary could not be verified.');
+      const summary={task:0,note:0};
+      for(const row of rows){
+        if(!recoveryUuid(row?.id)||!Object.hasOwn(summary,row.item_type))throw Error('Household summary could not be verified.');
+        summary[row.item_type]++;
+      }
+      return {tasks:summary.task,notes:summary.note};
     },
     getUser(token){return request('/auth/v1/user',{},token);},
     async isSessionActive(token){const active=await request('/rest/v1/rpc/cc_development_session_active',{method:'POST',body:'{}'},token);if(typeof active!=='boolean')throw Error('Development session status not verified.');return active;},
