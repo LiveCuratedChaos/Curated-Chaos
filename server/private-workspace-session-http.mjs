@@ -390,7 +390,7 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
      });
     });
     if(!current())throw Error();
-    send(res,200,{households});
+    send(res,200,{households,expiresAt:Math.min(c.expiresAt,now()+60000)});
    }catch{send(res,409,{error:'Could not verify available households. Open households again.'});}
    return true;
   }

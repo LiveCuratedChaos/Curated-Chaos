@@ -43,11 +43,33 @@ test('signed-in household directory uses the session identity and returns only a
  const tab=app.tab();
  await assert.rejects(tab.client.householdDirectory());
  await tab.login();
- assert.deepEqual(await tab.client.householdDirectory(),{households:[{name:'Fictional home',role:'owner'}]});
+ const listing=await tab.client.householdDirectory();
+ assert.deepEqual(listing.households,[{name:'Fictional home',role:'owner'}]);
+ assert.ok(listing.expiresAt>Date.now()&&listing.expiresAt<=Date.now()+60000);
+ assert.equal((await (await tab.fetcher('/dev-config.json')).json()).privateHouseholdDirectory,true);
  await administrator(db);
  await db.query("update public.cc_household_memberships set status='removed' where user_id=$1",[readActor]);
- assert.deepEqual(await tab.client.householdDirectory(),{households:[]});
+ assert.deepEqual((await tab.client.householdDirectory()).households,[]);
  const disabled=privateWorkspaceFixture(t).tab();
  await disabled.login();
  await assert.rejects(disabled.client.householdDirectory());
+});
+
+test('Household Hub escapes names and releases private listing state on expiry and close',async t=>{
+ const {createHouseholdDirectoryPanel}=await import('../src/private-household-directory-panel.mjs');
+ let now=1,complete;
+ const panel=createHouseholdDirectoryPanel({clock:()=>now,client:{
+  householdDirectory:()=>new Promise(resolve=>{complete=resolve;}),
+ }});
+ t.after(()=>panel.reset());
+ const click=action=>panel.click({target:{closest:()=>({dataset:{householdDirectory:action}})}});
+ const turn=()=>new Promise(resolve=>setImmediate(resolve));
+ click('open');
+ complete({households:[{name:'Fictional <home>',role:'owner'}],expiresAt:60001});await turn();
+ assert.match(panel.render(),/Fictional &lt;home&gt; · Owner/);
+ now=60001;
+ assert.doesNotMatch(panel.render(),/Fictional/);
+ click('open');click('close');
+ complete({households:[{name:'Fictional late home',role:'adult'}],expiresAt:120001});await turn();
+ assert.doesNotMatch(panel.render(),/Fictional/);
 });
