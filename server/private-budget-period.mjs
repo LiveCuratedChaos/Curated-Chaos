@@ -35,6 +35,15 @@ function preserveExpenseMatches(current,proposed){
  if(!same(before,after)||new Set(after.map(entry=>entry[0])).size!==after.length)throw Error('Preserve the date, amount and link for each reconciled expense.');
 }
 
+// PostgreSQL retains microseconds. Two budgets created in the same millisecond must still page in order.
+export function budgetCreationCursor(row){
+ const value=row.created_at instanceof Date?row.created_at.toISOString():row.created_at;
+ const match=typeof value==='string'&&/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(?:Z|\+00:00)$/.exec(value);
+ if(!uuid.test(row.id)||!match||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,19)!==match[1])
+  throw Error('The saved budget creation time could not be verified.');
+ return {createdAt:match[1]+'.'+(match[2]??'').padEnd(6,'0')+'Z',id:row.id};
+}
+
 export function createPrivateBudgetReview({api,now=Date.now,documentStorage=null}) {
  const views=new Map();
  function clear(id){clearTimeout(views.get(id)?.timer);views.delete(id);}
@@ -57,6 +66,27 @@ export function createPrivateBudgetReview({api,now=Date.now,documentStorage=null
    throw Error('Could not verify the saved months.');
   const months=ids.map((id,index)=>saved.includes(id)?index+1:null).filter(Boolean).reverse();
   return {year,months,expiresAt:Math.min(now()+300000,expiresAt)};
+ }
+ async function savedPeriods(actor,{before},expiresAt){
+  let cursor=null;
+  if(before!==undefined){
+   if(!before||Object.keys(before).sort().join(',')!=='period,periodEnd,periodStart')throw Error('Choose a saved budget period.');
+   const anchor=await read(actor,manualBudgetPeriod(before));
+   if(!anchor)throw Error('Reopen the list of saved periods.');
+   cursor=budgetCreationCursor(anchor);
+  }
+  const rows=await api.listManualBudgetPage(actor.accessToken,actor.ownerId,cursor);
+  if(!Array.isArray(rows)||rows.length>11)throw Error('Could not verify the list of saved periods.');
+  const periods=[],seen=new Set(cursor?[cursor.id]:[]);
+  for(const row of rows){
+   const next=budgetCreationCursor(row);
+   if(seen.has(next.id)||cursor&&(next.createdAt>cursor.createdAt||next.createdAt===cursor.createdAt&&next.id>=cursor.id))
+    throw Error('The list of saved periods changed.');
+   seen.add(next.id);
+   periods.push(manualBudgetPeriod(validateBudgetRow(row,actor.ownerId)));
+   cursor=next;
+  }
+  return {periods:periods.slice(0,10),hasMore:periods.length>10,expiresAt:Math.min(now()+300000,expiresAt)};
  }
  async function open(id,actor,values,expiresAt){
   clear(id);
@@ -178,5 +208,5 @@ export function createPrivateBudgetReview({api,now=Date.now,documentStorage=null
   clear(view.id);
   return {saved:true,version:latest.version};
  }
- return {savedMonths,open,prepare,cashFlow,receipts,receiptDownload,claim,save,clear,dispose(){for(const id of views.keys())clear(id);}};
+ return {savedPeriods,savedMonths,open,prepare,cashFlow,receipts,receiptDownload,claim,save,clear,dispose(){for(const id of views.keys())clear(id);}};
 }

@@ -181,6 +181,15 @@ export function createManualFinanceStorage(request, loadKey) {
     if(page.length<100)return rows;
    }
   },
+  async listManualBudgetPage(token,owner,cursor){
+   let path=collection(owner,'manual_finance_budget')+'&order=created_at.desc,id.desc&limit=11';
+   if(cursor){
+    if(!uuid(cursor.id)||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(cursor.createdAt))throw Error('Choose a valid budget cursor.');
+    const boundary=encodeURIComponent(cursor.createdAt);
+    path+='&or=(created_at.lt.'+boundary+',and(created_at.eq.'+boundary+',id.lt.'+cursor.id+'))';
+   }
+   return open(await request(path,{},token),owner,11,null,'manual_finance_budget');
+  },
   async listManualBudgetIds(token,owner,ids){
    if(!Array.isArray(ids)||ids.length!==12||new Set(ids).size!==12||!ids.every(uuid))throw Error('Choose one budget year.');
    const path=collection(owner,'manual_finance_budget')+'&select=id&id=in.('+ids.join(',')+')&limit=13';

@@ -16,7 +16,7 @@ import {createIsolatedDevelopmentDatabase,identities,actor} from './fixtures/iso
 import {createManualFinanceStorage} from '../server/private-manual-finance-storage.mjs';
 import {incomeSourceType,incomePaymentType,paymentId,incomeMonth} from '../server/private-income-records.mjs';
 import {nextFinanceSlot} from '../server/private-finance-identity.mjs';
-import {manualBudgetId} from '../server/private-budget-period.mjs';
+import {budgetCreationCursor,manualBudgetId} from '../server/private-budget-period.mjs';
 import {blockedManualFinanceRestores,supportsOrdinaryWorkspaceRestore} from '../server/private-workspace-restore-contract.mjs';
 const {a,sa,b,sb}=identities;
 
@@ -53,6 +53,16 @@ function financeStorage(db,key){
   }
   const parameters=[eq('owner_id'),eq('item_type'),eq('section'),eq('visibility'),eq('origin')];
   let sql='select * from public.cc_records where owner_id=$1 and item_type=$2 and section=$3 and visibility=$4 and origin=$5 and household_id is null and deleted_at is null';
+  if(params.get('order')==='created_at.desc,id.desc'){
+   assert.equal(eq('item_type'),'manual_finance_budget');assert.equal(params.get('limit'),'11');
+   if(params.has('or')){
+    const boundary=/^\(created_at\.lt\.([^,]+),and\(created_at\.eq\.([^,]+),id\.lt\.([a-f0-9-]+)\)\)$/.exec(params.get('or'));
+    assert.ok(boundary);assert.equal(boundary[1],boundary[2]);
+    sql+=' and (created_at,id)<($6::timestamptz,$7::uuid)';parameters.push(boundary[1],boundary[3]);
+   }
+   const query='select to_jsonb(item) as row from ('+sql+' order by created_at desc,id desc limit 11) item';
+   return (await db.query(query,parameters)).rows.map(item=>item.row);
+  }
   if(params.get('select')==='id'){
    assert.equal(eq('item_type'),'manual_finance_budget');assert.equal(params.get('limit'),'13');
    const matches=/^in\.\(([^)]+)\)$/.exec(params.get('id'));
@@ -330,4 +340,27 @@ test('recovering a reconciled budget counts its split expense once and preserves
  assert.deepEqual((await restored.getExpenseMatch('a',a,match.id))[0],receipt);
  assert.deepEqual((await widget(true)).rows.map(row=>row.amount),[6600,13400]);
  assert.deepEqual(await restored.getManualBudget('b',budgetId,a),[]);
+});
+
+test('saved budget pages retain exact PostgreSQL creation order and restrict the list to the signed-in owner',async t=>{
+ const db=await createIsolatedDevelopmentDatabase();t.after(()=>db.close());
+ const api=financeStorage(db,Buffer.alloc(32,15)),ids=[];
+ await db.exec('begin');
+ for(let index=1;index<=12;index++){
+  const period={period:'pay_period',periodStart:'2026-04-'+String(index).padStart(2,'0'),periodEnd:'2026-04-30'};
+  const id=manualBudgetId(a,period);
+  const budget={...period,plannedIncomeMinor:index*100,allocations:[],transactions:[]};
+  const row={id,owner_id:a,section:'Finances',origin:'PRIVATE_MANUAL_FINANCE',visibility:'private',household_id:null,item_type:'manual_finance_budget',
+   payload:{fictional:true,ownerId:a,version:1,budget}};
+  await api.saveManualBudget('a',a,row,null);ids.push(id);
+ }
+ await db.exec('commit');
+ const ordered=ids.toSorted().reverse();
+ const first=await api.listManualBudgetPage('a',a,null);assert.equal(first.length,11);
+ assert.equal(new Set(first.map(row=>row.created_at)).size,1);
+ assert.deepEqual(first.map(row=>row.id),ordered.slice(0,11));
+ const boundary=budgetCreationCursor(first[9]);
+ const second=await api.listManualBudgetPage('a',a,boundary);assert.deepEqual(second.map(row=>row.id),ordered.slice(10));
+ assert.deepEqual(await api.listManualBudgetPage('b',a,null),[]);
+ assert.equal(budgetCreationCursor({id:ids[0],created_at:'2026-11-24T11:22:33.000009+00:00'}).createdAt,'2026-11-24T11:22:33.000009Z');
 });

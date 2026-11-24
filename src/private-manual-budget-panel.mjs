@@ -14,6 +14,7 @@ const check=(label,name,value)=>'<label><input type="checkbox" name="'+name+'" '
 const monthName=new Intl.DateTimeFormat('en-US',{month:'long',timeZone:'UTC'});
 const decimal=value=>dollars(value).replace(/[$,]/g,'');
 const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const periodKey=period=>[period.period,period.periodStart,period.periodEnd].join('_');
 const samePeriod=(a,b)=>a.period===b.period&&a.periodStart===b.periodStart&&a.periodEnd===b.periodEnd;
 const keys=(value,expected)=>value&&Object.keys(value).sort().join(',')===expected;
 const empty=period=>({...period,plannedIncomeMinor:0,allocations:[],transactions:[]});
@@ -74,27 +75,40 @@ function transactionRows(transactions,shown,selectable=true,receipts=false){
    '</td><td>'+amount(t.amountMinor)+'</td>'+(selectable?'<td>'+button('transaction-'+index,'Open transaction')+(receipts?button('receipt-at-'+index,t.receiptFile?'Manage receipt file':'Attach receipt file'):'')+'</td>':'')+'</tr>').join('')+'</tbody></table>';
 }
 export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=false,allowDocuments=false,canDownload=()=>true,download,clock=Date.now,onChange=()=>{},canOpen=()=>true}){
- let transactionsOnly=false,expenseIndex=null,planner=null,receipt=null;
+ let transactionsOnly=false,expenseIndex=null,planner=null,receipt=null,periodTrail=[];
  let period,view,directory,draft,review,cash,priorStart,notice,busy,shown,timer,sequence=0;
  function reset(){
   sequence++;clearTimeout(timer);period=manualBudgetMonth(newYorkTaskDay(clock()));view=directory=draft=review=cash=null;
-  priorStart='';notice='';busy=false;shown=false;transactionsOnly=false;expenseIndex=null;planner=null;receipt=null;
+  priorStart='';notice='';busy=false;shown=false;transactionsOnly=false;expenseIndex=null;planner=null;receipt=null;periodTrail=[];
  }
  reset();
  function fresh(){return view&&view.expiresAt>clock();}
  function expire(){reset();notice='The budget view expired. Open the period again.';onChange();}
- async function findMonths(selection){
-  const year=Number(selection.periodStart.slice(0,4));
+ async function findPeriods(selection,kind,trail=[null]){
+  const before=trail.at(-1)??undefined;
   reset();period=selection;const run=sequence;busy=true;onChange();
   try{
-   const result=await client.manualBudgetMonths(year);
+   const year=Number(selection.periodStart.slice(0,4));
+   const result=kind==='months'?await client.manualBudgetMonths(year):await client.manualBudgetPeriods(before);
    if(run!==sequence)return;
-   if(!keys(result,'expiresAt,months,year')||result.year!==year||!Array.isArray(result.months)||result.months.length>12||
-      result.months.some((month,index)=>!Number.isInteger(month)||month<1||month>12||index>0&&month>=result.months[index-1])||
-      !Number.isFinite(result.expiresAt)||result.expiresAt<=clock()||result.expiresAt>clock()+300000)throw Error();
-   directory=result;
+   if(!Number.isFinite(result?.expiresAt)||result.expiresAt<=clock()||result.expiresAt>clock()+300000)throw Error();
+   if(kind==='months'){
+    if(!keys(result,'expiresAt,months,year')||result.year!==year||!Array.isArray(result.months)||result.months.length>12||
+       result.months.some((month,index)=>!Number.isInteger(month)||month<1||month>12||index>0&&month>=result.months[index-1]))throw Error();
+   }else{
+    if(!keys(result,'expiresAt,hasMore,periods')||!Array.isArray(result.periods)||result.periods.length>10||
+       typeof result.hasMore!=='boolean'||result.hasMore&&result.periods.length!==10)throw Error();
+    const seen=new Set(before?[periodKey(before)]:[]);
+    for(const entry of result.periods){
+     if(!keys(entry,'period,periodEnd,periodStart'))throw Error();
+     const key=periodKey(manualBudgetPeriod(entry));
+     if(seen.has(key))throw Error();
+     seen.add(key);
+    }
+   }
+   directory=result;periodTrail=trail;
    timer=setTimeout(expire,Math.max(1,result.expiresAt-clock()));timer.unref?.();
-  }catch{if(run===sequence)notice='Could not verify the saved months for this year.';}
+  }catch{if(run===sequence)notice=kind==='months'?'Could not verify the saved months for this year.':'Could not verify the saved budget periods.';}
   finally{if(run===sequence){busy=false;onChange();}}
  }
  async function open(selection,history=false){
@@ -190,6 +204,19 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
  function render(){
   const heading='<h2>'+(transactionsOnly?'Manual transactions':'Manual budget')+'</h2><p role="status">'+esc(busy?'Checking the budget…':notice)+'</p>';
   const group=html=>'<fieldset '+(busy?'disabled':'')+'>'+html+'</fieldset>';
+  if(directory?.periods&&directory.expiresAt>clock()){
+   let html='<legend>Saved budget periods, newest created first</legend>';
+   for(const entry of directory.periods){
+    const dates=entry.periodStart+' through '+entry.periodEnd;
+    const label=(entry.period==='month'?'Monthly budget':'Pay period')+' · '+dates;
+    html+='<section aria-label="'+esc(label)+'"><h3>'+esc(label)+'</h3>'+button('period-budget-'+periodKey(entry),'Open budget')+
+     button('period-transactions-'+periodKey(entry),'Open transactions')+'</section>';
+   }
+   if(!directory.periods.length)html+='<p>No saved budget periods on this page.</p>';
+   if(periodTrail.length>1)html+=button('newer-periods','Newer saved periods');
+   if(directory.hasMore)html+=button('older-periods','Older saved periods');
+   return heading+group(html+button('close-months','Choose another period'));
+  }
   if(directory&&directory.expiresAt>clock()){
    let html='<legend>Saved monthly budgets for '+esc(String(directory.year).padStart(4,'0'))+'</legend>';
    for(const month of directory.months){
@@ -200,7 +227,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
    return heading+group(html+button('close-months','Choose another period'));
   }
   if(!fresh())return heading+'<form id="budget-period">'+group('<legend>Choose a budget period</legend><label>Period<select name="period"><option value="month">Monthly</option><option value="pay_period" '+(period.period==='pay_period'?'selected':'')+'>Pay period</option></select></label>'+
-   field(period.period==='month'?'Month containing':'Start date','periodStart',period.periodStart,'date')+(period.period==='pay_period'?field('End date','periodEnd',period.periodEnd,'date'):'')+'<button>Open budget</button>'+button('transactions','Open transaction history')+(period.period==='month'?button('saved-months','Find saved months') : ''))+'</form>';
+   field(period.period==='month'?'Month containing':'Start date','periodStart',period.periodStart,'date')+(period.period==='pay_period'?field('End date','periodEnd',period.periodEnd,'date'):'')+'<button>Open budget</button>'+button('transactions','Open transaction history')+button('all-periods','Browse saved periods')+(period.period==='month'?button('saved-months','Find saved months') : ''))+'</form>';
   let html='<p>'+esc(period.periodStart)+' through '+esc(period.periodEnd)+'</p>';
   let periodControls='';
   if(period.period==='month'){
@@ -297,6 +324,15 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   if(directory){
    if(directory.expiresAt<=clock()){expire();return true;}
    if(action==='close-months'){reset();onChange();return true;}
+   if(directory.periods){
+    if(!canOpen())return true;
+    if(action==='newer-periods'&&periodTrail.length>1){void findPeriods(period,'all',periodTrail.slice(0,-1));return true;}
+    if(action==='older-periods'&&directory.hasMore){void findPeriods(period,'all',[...periodTrail,directory.periods.at(-1)]);return true;}
+    const choice=/^period-(budget|transactions)-(.+)$/.exec(action);
+    const chosen=choice&&directory.periods.find(entry=>periodKey(entry)===choice[2]);
+    if(chosen)void open(chosen,choice[1]==='transactions');
+    return true;
+   }
    const choice=/^saved-(budget|transactions)-([1-9]|1[0-2])$/.exec(action);
    if(choice&&canOpen()&&directory.months.includes(Number(choice[2]))){
     const first=String(directory.year).padStart(4,'0')+'-01-01';
@@ -304,8 +340,9 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
    }
    return true;
   }
+  if(action==='all-periods'&&!view&&canOpen()){void findPeriods({...period},'all');return true;}
   if(action==='saved-months'&&!view&&canOpen()&&period.period==='month'){
-   try{void findMonths(manualBudgetMonth(period.periodStart));}
+   try{void findPeriods(manualBudgetMonth(period.periodStart),'months');}
    catch{notice='Choose a valid budget date.';onChange();}
    return true;
   }

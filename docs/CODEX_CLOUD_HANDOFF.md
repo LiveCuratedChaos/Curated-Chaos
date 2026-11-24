@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R32 / R33** added Browse saved periods to Finances. It lists monthly budgets and exact custom pay periods by creation time, ten per page, with separate links to the original budget and transactions. Overlapping dates and identical database timestamps kept distinct records, older and newer paging worked, and amounts stayed concealed. All 349 related checks passed, followed by the two final paging and panel checks.
+
 - **R32 / R33** added Find saved months to the budget period chooser. A year lookup reads only the twelve possible record IDs. It returns saved months in descending order and opens the chosen original budget or transaction list on request. The 346 related checks passed, including owner isolation, empty years, malformed responses, expired selections and preserving a pending approval.
 
 - **R32 / R33** added Previous month and Next month to the monthly budget and transaction history. Moving to another month hides amounts and keeps the current view type. Pay periods keep their exact chosen dates. The 331 related checks passed, including leap February, year boundaries and active edits or approvals. Desktop and phone-size browser cases are prepared.
@@ -80,14 +82,14 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Verification and blockers
 
-The November 24 full macOS check passed 3,530 of 3,554 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Of the 24 listener-related failures, 16 directly reported a binding denial and eight received the same denial inside an assertion. Privacy, whitespace and launcher checks passed. Two obsolete School shortcut expectations had failed on the first run and passed after correction.
+The November 24 full macOS check passed 3,533 of 3,557 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Of the 24 listener-related failures, 16 directly reported a binding denial and eight received the same denial inside an assertion. Privacy, whitespace and launcher checks passed. Two obsolete School shortcut expectations had failed on the first run and passed after correction.
 
 Playwright 1.65.1 discovered 242 cases. The 22 selected desktop and phone-size cases are pending. This session cannot bind the fictional fixture to loopback, and macOS also denied launch of the pinned headless Chromium. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, historical note and task text, Undo, saved shortcut history and monthly budget navigation. Local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. This session cannot open a loopback listener, and a free hosted runner could not be verified. Use the pinned lockfile and matching Chromium. Record the results under R13, R18, R21 and R32 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Under R32, extend budget history to exact saved custom pay periods. Pay periods can overlap or vary in length. Browse their stored start and end dates and keep financial amounts hidden until explicitly opened.
+2. For the next R03/R32 database drill, restore overlapping custom pay periods together and reopen their original transactions through Browse saved periods. Then advance an individual period and verify archive replay preserves it. Use isolated fictional data.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

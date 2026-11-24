@@ -1001,4 +1001,17 @@ test('monthly budget navigation preserves the selected view and conceals amounts
  await expect(panel.getByRole('heading',{name:'Manual transactions'})).toBeVisible();
  await expect(panel).toContainText('2028-01-01 through 2028-01-31');
  await expect(button('Add transaction')).toBeVisible();
+ await button('Choose another period').click();
+ await panel.getByLabel('Period',{exact:true}).selectOption('pay_period');
+ await panel.getByLabel('Start date').fill('2028-03-24');
+ await panel.getByLabel('End date').fill('2028-04-10');
+ await button('Open budget').click();
+ await button('Create budget').click();await panel.getByLabel('Planned income').fill('220.00');
+ await button('Review budget').click();await button('Approve budget save').click();
+ await button('Choose another period').click();await button('Browse saved periods').click();
+ const saved=panel.getByRole('region',{name:'Pay period · 2028-03-24 through 2028-04-10',exact:true});
+ await expect(saved).toBeVisible();await expect(panel).not.toContainText('$220.00');
+ await saved.getByRole('button',{name:'Open transactions',exact:true}).click();
+ await expect(panel.getByRole('heading',{name:'Manual transactions'})).toBeVisible();
+ await expect(panel).toContainText('2028-03-24 through 2028-04-10');
 });

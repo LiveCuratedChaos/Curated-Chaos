@@ -10,6 +10,7 @@ import {validateSchoolCreationPayload,schoolProgramProposal} from '../src/privat
 import {validateHierarchyChange} from '../src/project-hierarchy.mjs';
 import {nextTaskOccurrence} from '../src/task-recurrence.mjs';
 import {stableStringify} from '../server/stable-json.mjs';
+import {budgetCreationCursor} from '../server/private-budget-period.mjs';
 import {createManualFinanceStorage} from "../server/private-manual-finance-storage.mjs";
 import {readExistingFinanceKey,createPrivateSavedFinanceReader,createPrivateSavedTransactionReader} from '../server/private-saved-finance-reader.mjs';
 import {createPasswordRecoveryHttp} from '../server/private-password-recovery-http.mjs';import {createSupabasePasswordRecovery} from '../server/supabase-password-recovery.mjs';
@@ -219,6 +220,12 @@ function fixtureApi({fixtureSavedMail=[],fixtureSavedTransactions=[],undated=fal
    if((existing?.version??0)!==(prior?.version??0))return [];
    const saved={...structuredClone(draft),version:(existing?.version??0)+1,deleted_at:null,created_at:existing?.created_at??createdAt,updated_at:new Date().toISOString()};
    incomeRecords.set(draft.id,saved);return [structuredClone(saved)];
+  },
+  async listManualBudgetPage(token,owner,cursor){
+   if(!active.has(token)||owner!==ownerId)throw Error('Sign in to find saved budgets.');
+   const records=[...manualBudgets.values()].map(row=>({row,...budgetCreationCursor(row)}));
+   return structuredClone(records.filter(item=>!cursor||item.createdAt<cursor.createdAt||item.createdAt===cursor.createdAt&&item.id<cursor.id)
+    .sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id)).slice(0,11).map(item=>item.row));
   },
   async listManualBudgetIds(token,owner,ids){
    if(!active.has(token)||owner!==ownerId)throw Error('Sign in to find saved budgets.');

@@ -11,8 +11,8 @@
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3554,
-        "passed": 3530,
+        "total": 3557,
+        "passed": 3533,
         "failed": 24,
         "cancelled": 0,
         "skipped": 0
@@ -35,7 +35,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "Full gate through the year lookup for saved budgets, monthly navigation and both encrypted finance recovery drills. Every remaining failure requires a loopback listener."
+    "note": "Full gate through paged browsing of saved custom pay periods. Every remaining failure requires a loopback listener."
   },
   "result": {
     "platformExclusions": [],
@@ -874,6 +874,13 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "savedCustomBudgetPeriods": {
+      "date": "2026-11-24",
+      "node": "24.22.3",
+      "passed": 349,
+      "failed": 0,
+      "scope": "Read-only paged browsing of exact monthly and pay-period dates by immutable creation time, owner isolation, overlapping periods, equal timestamps, older and newer pages, concealed amounts and opening the original transactions."
+    },
     "savedMonthlyBudgetLookup": {
       "date": "2026-11-24",
       "node": "24.22.3",
@@ -1104,7 +1111,7 @@
     "failed": 0,
     "scope": "Canonical shared task/project progress and links, manual status independence, deduplicated hierarchy, recovery/archive boundaries and protected original details. Reuses existing project engine for Personal Life goals."
   },
-  "nextAction": "Browse saved custom pay periods using their exact original start and end dates.",
+  "nextAction": "Verify restored overlapping custom pay periods through the original history browser and refusal to overwrite later spending.",
   "pendingDecisions": [],
   "resolvedHomeCleaningRollover": {
     "requirement": "R31 Home cleaning rollover semantics",

@@ -272,3 +272,50 @@ test('invalid, expired or late month lists cannot reopen a selected budget',asyn
  await new Promise(resolve=>setImmediate(resolve));
  assert.doesNotMatch(panel.render(),/Open November budget/);await click('saved-transactions-11');assert.deepEqual(calls,[]);
 });
+
+test('saved budget periods preserve overlapping custom dates and offer older records without repeating them',async t=>{
+ const fixture=privateWorkspaceFixture(t,enabled),tab=fixture.tab();await tab.login();
+ const periods=[];
+ for(let index=1;index<=12;index++){
+  const period={period:'pay_period',periodStart:'2026-11-'+String(index).padStart(2,'0'),periodEnd:'2026-11-30'};
+  periods.push(period);await tab.client.manualBudgetOpen(period);
+  const review=await tab.client.manualBudgetReview({budget:{...period,plannedIncomeMinor:index*100,allocations:[],transactions:[]}});
+  await tab.client.manualBudgetSave(review.reviewId);
+ }
+ const list=await tab.client.manualBudgetPeriods();
+ assert.equal(list.hasMore,true);assert.equal(list.periods.length,10);
+ assert.deepEqual(Object.keys(list).sort(),['expiresAt','hasMore','periods']);
+ for(const period of list.periods)assert.deepEqual(Object.keys(period).sort(),['period','periodEnd','periodStart']);
+ const boundary=list.periods.at(-1),next=await tab.client.manualBudgetPeriods(boundary);
+ assert.equal(next.hasMore,false);assert.equal(next.periods.length,2);
+ assert.deepEqual([...list.periods,...next.periods].map(p=>p.periodStart).sort(),periods.map(p=>p.periodStart));
+ await assert.rejects(tab.client.manualBudgetPeriods({...boundary,periodEnd:'2026-12-01'}));
+ const panel=createManualBudgetPanel({client:tab.client});t.after(()=>panel.reset());
+ const click=async action=>{panel.click({target:{closest:()=>({dataset:{budgetAction:action}})}});await new Promise(resolve=>setImmediate(resolve));};
+ await click('all-periods');assert.match(panel.render(),/Saved budget periods/);assert.doesNotMatch(panel.render(),/\$|Planned income/);
+ await click('older-periods');assert.doesNotMatch(panel.render(),/Older saved periods/);assert.match(panel.render(),/Newer saved periods/);
+ await click('newer-periods');assert.match(panel.render(),/Older saved periods/);assert.doesNotMatch(panel.render(),/Newer saved periods/);
+ await click('older-periods');
+ const selected=next.periods[0];
+ await click('period-budget-pay_period_'+list.periods[0].periodStart+'_'+list.periods[0].periodEnd);
+ assert.match(panel.render(),/Saved budget periods/);
+ await click('period-transactions-pay_period_'+selected.periodStart+'_'+selected.periodEnd);
+ assert.match(panel.render(),/Manual transactions/);assert.ok(panel.render().includes(selected.periodStart+' through '+selected.periodEnd));
+ await click('close');await click('all-periods');await click('older-periods');
+ await click('period-budget-pay_period_'+selected.periodStart+'_'+selected.periodEnd);
+ assert.match(panel.render(),/Show amounts/);assert.doesNotMatch(panel.render(),/\$/);
+});
+
+test('a page of saved periods rejects duplicate dates, financial fields, stale replies and an impossible continuation',async t=>{
+ const period={period:'pay_period',periodStart:'2026-11-01',periodEnd:'2026-11-15'};
+ let now=Date.parse('2026-11-24T12:00:00Z'),response,resolvePage,delay=false;
+ const panel=createManualBudgetPanel({clock:()=>now,client:{manualBudgetPeriods:()=>delay?new Promise(resolve=>{resolvePage=resolve;}):Promise.resolve(response)}});
+ t.after(()=>panel.reset());
+ const click=async action=>{panel.click({target:{closest:()=>({dataset:{budgetAction:action}})}});await new Promise(resolve=>setImmediate(resolve));};
+ for(const [periods,hasMore] of [[[period,period],false],[[{...period,balance:123}],false],[[period],true]]){
+  response={periods,hasMore,expiresAt:now+20000};await click('all-periods');
+  assert.match(panel.render(),/Could not verify the saved budget periods/);assert.doesNotMatch(panel.render(),/data-budget-action="period-transactions-/);
+ }
+ delay=true;await click('all-periods');panel.reset();resolvePage({periods:[period],hasMore:false,expiresAt:now+20000});
+ await new Promise(resolve=>setImmediate(resolve));assert.doesNotMatch(panel.render(),/data-budget-action="period-transactions-/);
+});
