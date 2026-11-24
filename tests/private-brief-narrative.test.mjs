@@ -64,3 +64,17 @@ test('expanded School narrative uses complete verified course counts and bounded
 test('hidden or collapsed School facts cannot affect source expiry or narrative content',()=>{for(const display of ['hidden','collapsed']){const preferences=layout({length:'detailed',detail:'titles'});preferences.sections.find(s=>s.id==='school').display=display;const result=generateBriefNarrative({...fixture(),schoolOverview:{private:'DO_NOT_READ'}},preferences,{now});assert.equal(result.available,true);assert.equal(result.expiresAt,now+300000);assert.doesNotMatch(text(result),/School|program|course|DO_NOT_READ/);}});
 test('School unavailability is not presented as zero and malformed/stale or forged progress fails closed',()=>{for(const schoolOverview of [null,{available:false}]){const result=generateBriefNarrative({...fixture(),schoolOverview},only('school'),{now});assert.equal(result.available,true);assert.doesNotMatch(text(result),/0 saved|0 course/);}for(const change of [s=>s.expiresAt=now,s=>s.programs[0].done=2,s=>s.courses[0].notes='PRIVATE_BODY',s=>s.programs[0].percentage=100,s=>s.providerRead=true]){const source=school();change(source);assert.deepEqual(generateBriefNarrative({...fixture(),schoolOverview:source},only('school'),{now}),{available:false});}});
 test('short narrative excludes later School facts and their expiry even when the School section is expanded',()=>{const preferences=layout({length:'short',detail:'titles'});preferences.sections.find(s=>s.id==='school').display='expanded';const result=generateBriefNarrative({...fixture(),schoolOverview:school()},preferences,{now});assert.equal(result.expiresAt,now+300000);assert.doesNotMatch(text(result),/Saved course|saved program|marked complete/);assert.match(text(result),/Additional expanded sections/);});
+
+test('expanded routines contribute a verified count and keep unrelated summary facts available',()=>{
+ const brief=fixture();
+ const preferences=only('routines','notes');
+ assert.match(text(generateBriefNarrative(brief,preferences,{now})),/2 saved notes/);
+ brief.routines={count:2,completed:1,rows:[{title:'Fictional routine',done:true},{title:'Fictional second routine',done:false}]};
+ const result=generateBriefNarrative(brief,preferences,{now});
+ assert.match(text(result),/2 saved routines scheduled for 2026-11-17: 1 due and 1 complete/);
+ assert.match(text(result),/2 saved notes/);
+ assert.doesNotMatch(text(result),/Fictional routine/);
+ assert.doesNotMatch(text(generateBriefNarrative(brief,only('notes'),{now})),/routines/);
+ brief.routines.completed=0;
+ assert.deepEqual(generateBriefNarrative(brief,preferences,{now}),{available:false});
+});

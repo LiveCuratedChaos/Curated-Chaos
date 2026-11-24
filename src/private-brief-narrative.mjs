@@ -51,13 +51,24 @@ export function generateBriefNarrative(brief,layout,options={}){
    if(section.display!=='expanded'||section.id==='bills'||section.id==='undatedTasks'&&!fresh.undated)continue;
    if(section.id==='school'){
     const school=brief.schoolOverview;if(school==null||school.available===false&&Object.keys(school).length===1)continue;verifyPrivateSchoolOverview(school,{now});const completed=school.courses.filter(course=>course.status==='Completed').length;facts.push({text:`${school.programs.length} saved ${noun(school.programs.length,'program')} and ${school.courses.length} saved ${noun(school.courses.length,'course')} are currently shown; ${completed} ${noun(completed,'course')} ${is(completed)} currently marked complete.`,titles:school.courses.map(course=>course.title),expiresAt:school.expiresAt});
+   }else if(section.id==='routines'){
+    const routines=brief.routines;
+    if(routines==null)continue;
+    const {count:total,completed,rows}=routines;
+    if(!count(total)||total>brief.counts.supportedRecords||!count(completed)||completed>total||
+       !Array.isArray(rows)||rows.length!==Math.min(20,total)||
+       rows.some(row=>!row||!title(row.title)||typeof row.done!=='boolean'))fail();
+    const shownComplete=rows.filter(row=>row.done).length;
+    if(shownComplete>completed||rows.length-shownComplete>total-completed)fail();
+    // These are also task records. The breakdown does not add to the task totals.
+    facts.push({text:`${total} saved ${noun(total,'routine')} scheduled for ${brief.day}: ${total-completed} due and ${completed} complete.`,titles:[]});
    }else if(section.id==='projects'){
     if(brief.projectOverview==null)continue;
     const projects=verifyPrivateProjectOverview(brief.projectOverview,{now});if(!projects.available)continue;
     facts.push({text:`${projects.totalCount} ${noun(projects.totalCount,'project')} ${is(projects.totalCount)} currently saved: ${projects.openCount} open and ${projects.completedCount} marked complete.`,titles:projects.projects.map(row=>row.title),expiresAt:projects.expiresAt});
    }else facts.push({text:coreFact(section.id,brief.counts[section.id],brief.day),titles:brief[section.id].map(row=>row.title)});
   }
-  const settings=preferences.narrative,limits={short:2,standard:4,detailed:9},titlesPerSection={short:1,standard:2,detailed:3},shown=facts.slice(0,limits[settings.length]);
+  const settings=preferences.narrative,limits={short:2,standard:4,detailed:10},titlesPerSection={short:1,standard:2,detailed:3},shown=facts.slice(0,limits[settings.length]);
   const introductions={'elegant-warm':`A glimpse of your current saved records for ${brief.day}.`,professional:`Current saved-record summary for ${brief.day}.`,gentle:`Here is a look at your current saved records for ${brief.day}.`};
   const paragraphs=[introductions[settings.tone]+' This reflects current supported records, not a historical snapshot.'];
   for(const fact of shown){let paragraph=fact.text;if(settings.detail==='titles'&&fact.titles.length)paragraph+=' Shown titles: '+fact.titles.slice(0,titlesPerSection[settings.length]).map(value=>'“'+value+'”').join('; ')+'.';paragraphs.push(paragraph);}
