@@ -14,9 +14,9 @@ function editFixture(t,{kind='project',allowEditing=true,allowCommonTaskLinks=fa
  const row={referenceReadToken:token,sourceKind:kind,title:'Original fictional record',section:kind==='project'?'Work':'School',manualStatus:kind==='project'?'Active':null,academicStatus:null};
  const fields={title:row.title,progressMetric:'classes',totalCredits:120,totalTerms:6,targetDate:''},edit=kind==='project'?{title:row.title,description:'\nLiteral original details',status:'Active',section:'Work',separateRecurring:false,projectToken:'p'.repeat(43),expiresAt}:{kind:'degree',fields,editToken:'e'.repeat(43),expiresAt};
  const client={async projectReferencesList(values){calls.push('list');return{...values,readOnly:true,providerRead:false,checkedAt:new Date(now).toISOString(),expiresAt,viewId:'v'.repeat(43),limit:50,matchCount:1,records:[row]};},async projectReferencesRead(){return{readOnly:true,sourceKind:kind,expiresAt,record:kind==='project'?{readOnly:true,expiresAt,title:row.title,description:edit.description,status:'Active',section:'Work',separateRecurring:false}:{readOnly:true,expiresAt,kind:'degree',...fields}};},async projectReferencesManage(value){calls.push(value);return manage?manage({sourceKind:kind,expiresAt,edit}):{sourceKind:kind,expiresAt,edit};},async schoolEditCancel(){calls.push('cancel');return{cancelled:true};}};
- let handed;const panel=createPrivateCommonProjectPanel({client,clock:()=>now,canUse:()=>true,allowEditing,allowCommonTaskLinks,onEditProject:value=>handed=value});t.after(()=>panel.dispose());
+ let handed,clockNow=now;const panel=createPrivateCommonProjectPanel({client,clock:()=>clockNow,canUse:()=>true,allowEditing,allowCommonTaskLinks,onEditProject:value=>handed=value});t.after(()=>panel.dispose());
  const click=async selector=>{panel.click({target:{closest:s=>s===selector?{}:s==='[data-common-project-read]'&&selector==='read'?{dataset:{commonProjectRead:token}}:null}});await turn();};
- return{panel,client,click,calls,edit,handed:()=>handed};
+ return{panel,client,click,calls,edit,handed:()=>handed,advance:ms=>{clockNow+=ms;}};
 }
 test('explicit original-project editing hands off exact fields only when existing editing scope is enabled',async t=>{
  for(const enabled of [false,true]){const f=editFixture(t,{allowEditing:enabled});await f.panel.open();await f.click('read');assert.equal(f.panel.render().includes('Edit original record'),enabled);await f.click('#private-project-references-edit');if(enabled)assert.deepEqual(f.handed(),f.edit);else assert.equal(f.handed(),undefined);}
@@ -35,3 +35,23 @@ test('shared project details fetch the same sparse read-only task summary and pr
 test('shared summary rejects forged replies and late reset results and remains hidden without canonical scope',async t=>{const s=summaryPanel(t);await s.open();s.reply({...s.value,projectToken:'forged'});s.click('#private-project-references-task-summary');await turn();assert.match(s.panel.render(),/Linked task summary could not be verified/);assert.doesNotMatch(s.panel.render(),/Original &lt;step&gt;/);const delayed=summaryPanel(t);await delayed.open();let release;delayed.delay(new Promise(r=>{release=r;}));delayed.click('#private-project-references-task-summary');delayed.panel.reset();release();await turn();assert.equal(delayed.panel.render(),'');const off=summaryPanel(t,{allowCommonTaskLinks:false});await off.open();assert.doesNotMatch(off.panel.render(),/Fetch linked task summary/);off.click('#private-project-references-task-summary');await turn();assert.equal(off.calls.length,0);});
 
 test('shared program summary shows intrinsic steps and linked tasks without manual status or credit inference',async t=>{const s=editFixture(t,{kind:'school-degree',allowEditing:false,allowCommonTaskLinks:true}),now=Date.parse('2026-11-19T12:00:00Z');let reads=0;s.client.projectReferencesTasks=async()=>{reads++;return{readOnly:true,sourceKind:'school-degree',title:'Original fictional record',academicStatus:null,progress:{separateRecurring:true,completed:1,total:1,percentage:100,recurringCompleted:0,recurringTotal:0,linkedCompleted:1,linkedTotal:1},intrinsicCount:1,explicitCount:0,tasks:[{sourceKind:'school-step',title:'Original <academic> step',section:'School',completed:true,recurring:false,intrinsic:true,directLink:false,descendantLinkCount:0}],offset:0,limit:50,matchCount:1,expiresAt:now+100000};};await s.panel.open();s.panel.click({target:{closest:q=>q==='[data-common-project-read]'?{dataset:{commonProjectRead:'r'.repeat(43)}}:null}});await turn();assert.equal(reads,0);s.panel.click({target:{closest:q=>q==='#private-project-references-task-summary'?{}:null}});await turn();assert.equal(reads,1);assert.match(s.panel.render(),/Original &lt;academic&gt; step/);assert.match(s.panel.render(),/Program credit and course progress remain separate/);assert.doesNotMatch(s.panel.render(),/Project status remains|Include tasks from subprojects/);});
+
+test('an earlier selected detail expiry retires its text and nested editor before a delayed timer',async t=>{
+ const f=editFixture(t,{kind:'school-degree'}),read=f.client.projectReferencesRead;
+ f.client.projectReferencesRead=async()=>{
+  const original=await read(),expiresAt=original.expiresAt-90000;
+  return {...original,expiresAt,record:{...original.record,expiresAt}};
+ };
+ await f.panel.open();await f.click('read');
+ await f.click('#private-project-references-edit');
+ assert.match(f.panel.render(),/Edit saved School record/);
+ f.advance(10000);
+ assert.doesNotMatch(f.panel.render(),/Original fictional record|Edit saved School record/);
+ assert.match(f.panel.render(),/common project view expired/);
+ assert.equal(f.panel.blocked(),false);
+ const before=f.calls.length;
+ await f.click('#private-project-references-edit');
+ assert.equal(f.calls.length,before);
+ await f.click('#private-project-references-fetch');
+ assert.ok(f.calls.length>before);
+});
