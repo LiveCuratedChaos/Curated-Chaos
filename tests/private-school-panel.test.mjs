@@ -45,3 +45,32 @@ test('expired selected School details cannot open a new editor before the timer 
  assert.doesNotMatch(panel.render(),/Private stale notes/);
  assert.match(panel.render(),/School record details expired/);
 });
+
+test('editing study availability clears the displayed review and invalidates its save',async t=>{
+ const now=Date.parse('2026-11-18T12:00:00Z'),token='a'.repeat(43),viewId='v'.repeat(43);
+ const course={schoolReadToken:token,title:'Fictional course',code:'F101',term:'Fall',status:'In Progress',
+  credits:3,officialOrder:1,studyOrder:2,targetDate:'',programReadToken:'',programTitle:'Unassigned',association:'unassigned'};
+ const client={schoolOverview:async()=>({readOnly:true,providerRead:false,checkedAt:new Date(now).toISOString(),
+  expiresAt:now+100000,viewId,programs:[],courses:[course]}),
+  studyAvailability:async()=>({providerRead:false,viewId,windows:[{day:'2026-11-18',start:'18:00',end:'18:45'}]}),
+  studySessionReview:async({day,start,end})=>({title:course.title,day,start,end,reviewId:'r'.repeat(43),expiresAt:now+50000}),
+  studySessionSave:assert.fail};
+ const panel=createPrivateSchoolPanel({client,clock:()=>now,canUse:()=>true,allowEdit:true,allowStudySchedule:true});
+ t.after(()=>panel.dispose());
+ const click=selector=>panel.click({target:{closest:query=>query===selector?{dataset:{studyReview:'0'}}:null}});
+ click('#private-school-open');await turn();
+ panel.submit({preventDefault(){},target:{id:'private-school-study-planner-form',querySelector:selector=>({
+  value:selector.includes('availability')?'2026-11-18 18:00-20:00':'45'
+ })}});
+ await turn();
+ click('[data-study-review]');await turn();
+ const proposal=panel.render().split('id="private-school-study-proposal-result">')[1]?.split('</div></section>')[0];
+ assert.match(proposal,/id="private-study-save"/);
+ let cleared=0;
+ panel.input({target:{name:'availability',value:'2026-11-19 18:00-20:00',closest:selector=>({
+  querySelector:selector=>selector==='#private-school-study-proposal-result'?{replaceChildren:()=>cleared++}:null
+ })}});
+ assert.equal(cleared,1);
+ assert.doesNotMatch(panel.render(),/id="private-study-save"/);
+ click('#private-study-save');await turn();
+});
