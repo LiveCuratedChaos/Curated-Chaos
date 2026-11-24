@@ -57,3 +57,13 @@ test('Calendar event wording uses the same protected event filters and date chec
  assert.deepEqual(parse('Calendar event about "Check-in"').fields,fields({type:'event',section:'Calendar',query:'Check-in'}));
  for(const phrase of ['work calendar events','urgent calendar events','calendar events without a due date'])assert.throws(()=>parse(phrase));
 });
+
+test('document metadata phrases require document scope and retain exact literal search text',()=>{
+ const options={allowDocuments:true};
+ assert.deepEqual(parse('Find documents about appliance warranty',options).fields,
+  {type:'document-library',query:'appliance warranty',collection:'all'});
+ assert.deepEqual(parse('document about "Work due tomorrow"',options).fields,
+  {type:'document-library',query:'Work due tomorrow',collection:'all'});
+ assert.throws(()=>parse('find documents about warranty'));
+ for(const phrase of ['find documents','documents about warranty due tomorrow','documents about "invoice" this week','documents about " "'])assert.throws(()=>parse(phrase,options));
+});

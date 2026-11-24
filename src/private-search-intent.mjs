@@ -1,5 +1,6 @@
 // Bounded English read filters only. No network, AI, history or record changes.
 import {newYorkTaskDay} from './private-smart-task.mjs';
+import {documentFilter} from './private-document-fields.mjs';
 import {validSavedSearchFilters} from './private-saved-search-panel.mjs';
 const millisecondsPerDay=86400000;
 const friendly='This search could not be interpreted. Use explicit filters or a supported phrase.';
@@ -24,11 +25,21 @@ function dates(phrase,anchor,weekStart){
 export function parsePrivateSearchIntent(text,options={}){
  try{
   if(!options||typeof options!=='object'||Array.isArray(options))fail();
-  const {now=Date.now(),allowProjects=false,allowSchoolRead=false,allowPriority=false,allowDates=false,allowUndated=false,weekStart=0}=options;
-  if(!Number.isFinite(now)||[allowProjects,allowSchoolRead,allowPriority,allowDates,allowUndated].some(value=>typeof value!=='boolean')||!Number.isInteger(weekStart)||weekStart<0||weekStart>6||typeof text!=='string'||!text.trim()||text.length>300||/[\u0000-\u001f\u007f]/.test(text))fail();
+  const {now=Date.now(),allowProjects=false,allowSchoolRead=false,allowDocuments=false,allowPriority=false,allowDates=false,allowUndated=false,weekStart=0}=options;
+  if(!Number.isFinite(now)||[allowProjects,allowSchoolRead,allowDocuments,allowPriority,allowDates,allowUndated].some(value=>typeof value!=='boolean')||!Number.isInteger(weekStart)||weekStart<0||weekStart>6||typeof text!=='string'||!text.trim()||text.length>300||/[\u0000-\u001f\u007f]/.test(text))fail();
   const anchorDay=newYorkTaskDay(now);if(!day(anchorDay))fail();
   let remaining=text.trim(),type,status,section,priority,overdue=false;
   const leading=remaining.match(/^(?:show|find)\b\s*/i);if(leading)remaining=remaining.slice(leading[0].length);
+  const documents=remaining.match(/^documents?\s+about\s+(.+)$/i);
+  if(documents){
+   if(!allowDocuments)fail();
+   const phrase=documents[1].trim();
+   const quoted=phrase.match(/^"([^"\\]+)"$/);
+   if(!quoted&&(phrase.includes('"')||reserved.test(phrase)||/\d{1,4}[-/]\d{1,2}/.test(phrase)))fail();
+   const filter=documentFilter({collection:'all',text:quoted?.[1]??phrase});
+   if(!filter.text)fail();
+   return {fields:{type:'document-library',query:filter.text,collection:filter.collection},anchorDay,interpretedAt:now,expiresAt:now+300000};
+  }
   while(remaining){
    const schoolRecords=remaining.match(/^school\s+records?\b\s*/i);
    if(schoolRecords){
