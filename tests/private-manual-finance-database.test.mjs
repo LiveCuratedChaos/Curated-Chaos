@@ -1,3 +1,7 @@
+import {readBriefBillWeek,createBriefBillSources} from '../server/private-finance-widget.mjs';
+import {createPrivateWorkspaceRestoreRepository} from '../server/private-workspace-restore-repository.mjs';
+import {createPrivateWorkspaceRestoreExecutor} from '../server/private-workspace-restore-executor.mjs';
+import {sealPrivateWorkspace} from '../server/private-workspace-backup.mjs';
 import {holdingType} from '../server/private-holding-record.mjs';
 import {prepareExpenseReconciliation} from '../server/private-expense-reconciliation.mjs';
 import {categorySource,categoryRecordId,categoryRecordType} from '../server/private-transaction-category-record.mjs';
@@ -15,9 +19,8 @@ import {manualBudgetId} from '../server/private-budget-period.mjs';
 import {blockedManualFinanceRestores,supportsOrdinaryWorkspaceRestore} from '../server/private-workspace-restore-contract.mjs';
 const {a,sa,b,sb}=identities;
 
-test('isolated PostgreSQL preserves encrypted finance forms, owner isolation, period queries and receipt recovery dependencies',async t=>{
- const db=await createIsolatedDevelopmentDatabase();t.after(()=>db.close());
- const key=Buffer.alloc(32,12);
+function financeStorage(db,key){
+ const sourceId=nextFinanceSlot(a,incomeSourceType,[]);
  async function transport(path,options,token){
   await actor(db,token==='a'?a:b,token==='a'?sa:sb);
   const url=new URL(path,'https://fixture.invalid'),params=url.searchParams;
@@ -60,7 +63,13 @@ test('isolated PostgreSQL preserves encrypted finance forms, owner isolation, pe
   }else if(params.has('id')){sql+=' and id=$6';parameters.push(eq('id'));}
   return (await db.query(sql+' order by id',parameters)).rows;
  }
- const api=createManualFinanceStorage(transport,async()=>Buffer.from(key));
+ return createManualFinanceStorage(transport,async()=>Buffer.from(key));
+}
+
+test('isolated PostgreSQL preserves encrypted finance forms, owner isolation, period queries and receipt recovery dependencies',async t=>{
+ const db=await createIsolatedDevelopmentDatabase();t.after(()=>db.close());
+ const key=Buffer.alloc(32,12);
+ const api=financeStorage(db,key);
  const sourceId=nextFinanceSlot(a,incomeSourceType,[]);
  const draft=(id,item_type,fields)=>({id,owner_id:a,section:'Finances',origin:'PRIVATE_MANUAL_FINANCE',visibility:'private',household_id:null,item_type,
   payload:{fictional:true,ownerId:a,version:1,...fields}});
@@ -163,4 +172,90 @@ test('isolated PostgreSQL preserves encrypted finance forms, owner isolation, pe
  const sealedHolding=(await db.query('select * from public.cc_records where id=$1',[positionId])).rows[0];
  assert.doesNotMatch(JSON.stringify(sealedHolding),/Manual position|shareUnits|annualDividendMinor/);
  assert.equal(supportsOrdinaryWorkspaceRestore(sealedHolding,{manualFinanceKey:key}),true);
+});
+
+
+test('a restored bill reopens its paid occurrence and preserves a later payment across archive replay',async t=>{
+ const key=Buffer.alloc(32,16),projectRef='fictionalbillrecovery';
+ const source=await createIsolatedDevelopmentDatabase(),destination=await createIsolatedDevelopmentDatabase();
+ t.after(async()=>{await source.close();await destination.close();});
+ const who={owner:a,session:sa},viewer={ownerId:a,accessToken:'a'};
+ const repository=db=>createPrivateWorkspaceRestoreRepository({
+  projectRef,verifyTarget:async(connection,ref)=>connection===db&&ref===projectRef,
+  withConnection:async(identity,callback)=>{await actor(db,identity.owner,identity.session);return callback(db);}
+ });
+ const sourceRepo=repository(source),destinationRepo=repository(destination);
+ const api=financeStorage(source,key),restored=financeStorage(destination,key);
+ const billId=nextFinanceSlot(a,billType,[]),dueDay='2026-02-13',nextDay='2026-03-13';
+ const bill={label:'Fictional monthly bill',dueDay,endDay:'',frequency:'monthly',interval:1,estimated:false,amountMinor:4300};
+ const draft=(id,item_type,fields)=>({id,owner_id:a,visibility:'private',household_id:null,section:'Finances',origin:'PRIVATE_MANUAL_FINANCE',item_type,
+  payload:{fictional:true,ownerId:a,version:1,...fields}});
+ const [schedule]=await api.saveBill('a',a,draft(billId,billType,{bill}),null);
+ const payment=day=>draft(confirmationId(a,billId,day),confirmationType,{billId,match:null,
+  confirmation:{label:bill.label,dueDay:day,paidDay:day,estimated:false,expectedMinor:4300,amountMinor:4300,source:'manual'}});
+ await api.confirmBill('a',a,payment(dueDay),schedule);
+ const ids=new Set([billId,confirmationId(a,billId,dueDay)]);
+ const original=(await sourceRepo.readPrivateRows(who,a)).filter(row=>ids.has(row.id));
+ assert.equal(original.length,2);
+ const archive=rows=>sealPrivateWorkspace({projectRef,ownerId:a,key,rows}).bytes;
+ const bytes=archive(original);
+ const executor=createPrivateWorkspaceRestoreExecutor({projectRef,key,repository:destinationRepo,allowManualFinanceRestore:true,
+  resolveActor:async identity=>({ownerId:identity.owner,sessionBinding:identity.session,expiresAt:Date.now()+300000}),authorizeWrite:async()=>true});
+ t.after(()=>executor.dispose());
+ const missingBill=await executor.prepare(who,{bytes:archive(original.filter(row=>row.id!==billId))});
+ assert.equal(missingBill.canRestore,false);assert.equal(missingBill.reviewId,undefined);
+ const review=await executor.prepare(who,{bytes});assert.equal(review.canRestore,true);assert.equal(review.insertCount,2);
+ assert.equal((await executor.execute(who,{reviewId:review.reviewId,approved:true})).restored,2);
+ assert.deepEqual((await destinationRepo.readPrivateRows(who,a)).filter(row=>ids.has(row.id)),original);
+ const now=Date.parse('2026-05-01T12:00:00Z');
+ const weekly=anchor=>readBriefBillWeek({api:restored,actor:viewer,fields:{anchor,range:'rolling',weekStart:1},now,expiresAt:now+300000});
+ assert.deepEqual((await weekly(dueDay)).days[0],{day:dueDay,paid:1,unpaid:0});
+ assert.deepEqual((await weekly(nextDay)).days[0],{day:nextDay,paid:0,unpaid:1});
+ const daily=createBriefBillSources({api:restored,now:()=>now});t.after(()=>daily.dispose());
+ const page=await daily.list('recover',viewer,dueDay,now+300000,{offset:0});
+ const detail=await daily.read('recover',viewer,page.rows[0].billReadToken);
+ assert.equal(detail.scheduleLabel,bill.label);assert.equal(detail.frequency,'monthly');assert.equal(detail.paidDay,dueDay);
+ const [originalSchedule]=await restored.getBillRecord('a',a,billType,billId);
+ await restored.confirmBill('a',a,payment(nextDay),originalSchedule);
+ const beforeReplay=await destinationRepo.readPrivateRows(who,a);
+ const again=await executor.prepare(who,{bytes});assert.equal(again.insertCount,0);assert.equal(again.canRestore,true);
+ assert.equal((await executor.execute(who,{reviewId:again.reviewId,approved:true})).restored,0);
+ assert.deepEqual(await destinationRepo.readPrivateRows(who,a),beforeReplay);
+ assert.deepEqual((await weekly(nextDay)).days[0],{day:nextDay,paid:1,unpaid:0});
+ assert.equal((await restored.listBillConfirmations('a',a,billId,dueDay,nextDay)).length,2);
+
+ const matchedDay='2026-04-13',transactionId=randomUUID();
+ const savedTransaction={connectionId:randomUUID(),sourceId:'fixture-april-payment',provider:'plaid',institution:'Chase',fictional:false,
+  content:{currency:'USD',name:'Fictional merchant',merchant:'Fictional biller',date:matchedDay,accountId:'fixture-account',
+   amountMinor:4300,pending:false,pendingTransactionId:null}};
+ async function insertSavedTransaction(db,fields){
+  const payload={scheme:'chase-private-v1',version:1,encrypted:createTokenSealer(key).seal(fields,'finance-record:'+a+':'+transactionId)};
+  await actor(db,a,sa);
+  return (await db.query("insert into public.cc_records (id,owner_id,visibility,section,item_type,origin,payload) values($1,$2,'private','Finances','provider_bank_transaction','plaid_readonly',$3) returning *",
+   [transactionId,a,JSON.stringify(payload)])).rows[0];
+ }
+ const snapshot=await insertSavedTransaction(source,savedTransaction);
+ const {match}=billMatchCandidate({...snapshot,payload:savedTransaction},a,matchedDay);
+ const bankPayment=payment(matchedDay);bankPayment.payload.match=match;bankPayment.payload.confirmation.source='saved_transaction';
+ await api.confirmBill('a',a,bankPayment,schedule);
+ const matchedRows=(await sourceRepo.readPrivateRows(who,a)).filter(row=>row.id===bankPayment.id);
+ assert.equal(matchedRows.length,1);
+ const matchedArchive=archive(matchedRows);
+ assert.equal((await executor.prepare(who,{bytes:matchedArchive})).canRestore,false);
+ await destination.exec('begin');
+ try{
+  await insertSavedTransaction(destination,{...savedTransaction,content:{...savedTransaction.content,amountMinor:4400}});
+  const changed=await executor.prepare(who,{bytes:matchedArchive});
+  assert.equal(changed.canRestore,false);assert.equal(changed.reviewId,undefined);
+ }finally{await destination.exec('rollback');}
+ await insertSavedTransaction(destination,savedTransaction);
+ const ready=await executor.prepare(who,{bytes:matchedArchive});
+ assert.equal(ready.canRestore,true);assert.equal(ready.insertCount,1);
+ assert.equal((await executor.execute(who,{reviewId:ready.reviewId,approved:true})).restored,1);
+ assert.deepEqual((await weekly(matchedDay)).days[0],{day:matchedDay,paid:1,unpaid:0});
+ assert.deepEqual(await restored.usedBillMatchKeys('a',a,[match.key]),[match.key]);
+ const matchedReplay=await executor.prepare(who,{bytes:matchedArchive});
+ assert.equal(matchedReplay.insertCount,0);
+ assert.equal((await executor.execute(who,{reviewId:matchedReplay.reviewId,approved:true})).restored,0);
+ assert.deepEqual(await restored.listBills('b',a),[]);
 });

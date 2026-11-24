@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R03 / R16 / R33** verified that an encrypted backup restores a recurring bill and its confirmed payment. The weekly counts and original daily schedule reopened correctly. Replaying the backup preserved a later payment. A bank-matched payment required the same saved transaction and amount at the destination. All 38 related checks passed, followed by the expanded bank-match check.
+
 - **R12** added separate earlier-title and earlier-description actions for tasks. Each starts in the current editor, retains the other current fields and requires explicit approval. All 359 related checks passed, including a later rename, unchanged checklist and loss of acknowledgment.
 
 - **R03 / R12** verified Undo after encrypted shortcut recovery with PostgreSQL’s version and restore-window triggers installed together. The prior name and filters reopened, the removal time matched its archived version, all three imported entries stayed intact and the earlier archive could not reverse later changes. All 32 related checks passed.
@@ -78,8 +80,8 @@ Playwright 1.65.1 discovered 240 cases. Twenty selected desktop and phone-size c
 
 ## Where to resume
 
-1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R03/R16 with a restored manual bill and payment. Verify weekly counts, the original daily schedule, and replay on an isolated destination.
+1. On a Node 24 runner that permits loopback listeners, run the two commands below. This session cannot open a loopback listener, and a free hosted runner could not be verified. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
+2. Continue R03/R32 with encrypted recovery of a manual budget and a reconciled expense. Reopen the original monthly totals and verify an archive replay preserves later spending.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

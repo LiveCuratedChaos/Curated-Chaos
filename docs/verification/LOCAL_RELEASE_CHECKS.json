@@ -874,6 +874,14 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "recoveredBillScheduleAndPayments": {
+      "date": "2026-11-24",
+      "node": "24.22.3",
+      "passed": 38,
+      "failed": 0,
+      "expandedMatchDrillPassed": true,
+      "scope": "Recurring bill and confirmed payment restored through the encrypted archive into an isolated database. Reopened daily and weekly views retained status, and replay preserved a later payment. A matched payment refused missing and changed transactions, accepted the identical source, and restored only once."
+    },
     "selectiveHistoricalTaskText": {
       "date": "2026-11-24",
       "passed": 359,
