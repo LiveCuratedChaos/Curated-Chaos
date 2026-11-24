@@ -6,3 +6,26 @@ test('missing summaries, skipped tests and blocked content scans fail closed',as
 test('an unavailable command is reported safely rather than preventing other local checks',async()=>{const report=await runOfflineChecks({runCommand:async check=>{if(check.name==='whitespace')throw Error('PRIVATE_PROCESS_ERROR');return ok[check.name];}});assert.equal(report.localChecksPassed,false);assert.equal(report.checks.whitespace,false);assert.equal(report.checks.tests,true);assert.doesNotMatch(JSON.stringify(report),/PRIVATE_PROCESS_ERROR/);});
 
 test('Linux explicitly excludes only native macOS transfer tests; macOS includes them and unexpected skips still fail',async()=>{for(const platform of ['linux','darwin']){let selected;const report=await runOfflineChecks({platform,runCommand:async check=>{if(check.name==='tests')selected=check.args;return ok[check.name];}});assert.equal(selected.some(path=>path.endsWith('/mac-calendar-native-transfer.test.mjs')),platform==='darwin');assert.deepEqual(report.platformExclusions,platform==='darwin'?[]:['mac-calendar-native-transfer.test.mjs']);assert.equal(report.localChecksPassed,true);}});
+
+
+test('offline failure summaries expose only known local test filenames',async()=>{
+ const report=await runOfflineChecks({runCommand:async check=>{
+  if(check.name!=='tests')return ok[check.name];
+  const path=check.args.find(arg=>arg.endsWith('/offline-check.test.mjs'));
+  return {code:1,stdout:`not ok 1 - PRIVATE_TEST_TITLE
+  ---
+  location: '${path}:1:1'
+  error: 'PRIVATE_FAILURE'
+  ...
+  location: '/other/PRIVATE_FILE.test.mjs:1:1'
+# tests 4
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+`};
+ }});
+ assert.equal(report.checks.tests,false);
+ assert.deepEqual(report.failedTestFiles,['offline-check.test.mjs']);
+ assert.doesNotMatch(JSON.stringify(report),/PRIVATE_|\/workspace\//);
+});

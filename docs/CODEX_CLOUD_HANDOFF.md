@@ -14,6 +14,12 @@ Resume from `codex/document-favorites-review` in the private repository `LiveCur
 - **R18:** The Favorites widget opens saved private documents in the original reader from its all-areas view. The area-specific views omit documents because the library has no document area field. The widget rejects outdated selections and refreshes after a favorite is removed.
 - **Verification:** All 48 focused Favorites, document and School-link tests passed. All 353 controller, static and search-intent checks passed. The widget follow-up passed 354 focused tests. Playwright discovered two new desktop and phone-size cases for the document collection and widget handoff. Browser assertions remain pending.
 
+## Verification follow-up
+
+- **R01:** Offline verification reports allowlisted test filenames on failure. Six regression checks passed. A fictional subprocess failure confirmed the report omits test names, failure messages and absolute paths.
+- **R02:** The direct-TLS candidate remains local. The hosting decision pauses staging and deployment, so hosted acceptance requires an approved staging environment and ingress contract.
+- Chromium still aborts at its process-singleton socket before opening a page. A runner that launches the pinned browser is required for the pending desktop and phone assertions.
+
 ## November 24 Cloud verification
 
 The Cloud copy matched the Git tree of `d4df3d077097338647db5f2c64190b7de91d2a44`. All 40 focused Favorites and search-intent tests passed. The fictional fixture started on loopback. The pinned Chromium download failed, and the installed Chromium 156 aborted at its process-singleton socket with `Operation not permitted`. All six desktop and phone-size cases stopped at browser launch before page assertions. On the pre-document baseline, the full Linux suite passed 3,424 of 3,428 checks. The report provides counts without names for the four failures. Privacy, whitespace and launcher checks passed on that baseline.
