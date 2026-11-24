@@ -187,3 +187,24 @@ test('the detailed week counts recurring, unpaid and confirmed bills on their du
  const off=privateWorkspaceFixture(t,{...features,allowBriefDates:false}).tab();await off.login();
  await assert.rejects(off.client.briefBillWeek(fields));
 });
+
+test('bill changes retire pending bill figures and preserve the open budget',async t=>{
+ const now=Date.now();
+ const budget={type:'budget',id:'budget-widget',...hidden};
+ const bills={type:'bills',id:'bills-widget',...hidden};
+ const result=(type,label)=>({type,month,total:1,rows:[{label,date:today}],expiresAt:now+10000});
+ let finishBills;
+ const ui=createFinanceWidgets({clock:()=>now,enabled:()=>true,concealed:()=>false,onChange(){},client:{
+  financeWidget:type=>type==='budget'?Promise.resolve(result(type,'Recorded expenses')):new Promise(resolve=>{finishBills=resolve;})
+ }});
+ t.after(()=>ui.reset());
+ await ui.open(budget);
+ const pending=ui.open(bills);
+ assert.match(ui.render(bills),/Opening saved figures/);
+ ui.reset('bills');
+ finishBills(result('bills','Fictional stale bill'));await pending;
+ assert.doesNotMatch(ui.render(bills),/Fictional stale bill/);
+ assert.match(ui.render(budget),/Recorded expenses/);
+ const fresh=ui.open(bills);finishBills(result('bills','Fictional updated bill'));await fresh;
+ assert.match(ui.render(bills),/Fictional updated bill/);
+});
