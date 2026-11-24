@@ -52,3 +52,28 @@ test('planner opt-in requires reviewed private budgets',async t=>{
  const tab=privateWorkspaceFixture(t,{allowManualFinance:true,allowManualBudgets:true}).tab();
  assert.equal((await(await tab.fetcher('/dev-config.json')).json()).privateBudgetPlanner,undefined);
 });
+
+test('an expired planner discards amounts and rejects a late proposal approval',async t=>{
+ let now=Date.parse('2026-01-10T17:00:00Z'), resolveReview;
+ const expiresAt=now+300000;
+ const panel=createManualBudgetPanel({allowPlanner:true,clock:()=>now,client:{
+  manualBudgetOpen:async()=>({budget:original,period,version:1,expiresAt:now+300000}),
+  manualBudgetReview:()=>new Promise(resolve=>{resolveReview=resolve;}),
+  manualBudgetSave:async()=>assert.fail('Expired proposals must not be saved'),
+ }});
+ t.after(()=>panel.reset());
+ const click=action=>panel.click({target:{closest:()=>({dataset:{budgetAction:action}})}});
+ const submit=id=>panel.submit({target:{id},preventDefault(){}});
+ const turn=()=>new Promise(resolve=>setImmediate(resolve));
+ submit('budget-period');await turn();click('planner');
+ panel.input({target:{form:{id:'budget-plan'},name:'reserveAmount',value:'20'}});
+ submit('budget-plan');click('amounts');click('proposal-reserve');
+ now=expiresAt;
+ assert.equal(panel.blocked(),false);
+ assert.match(panel.render(),/budget view expired/);
+ submit('budget-period');await turn();
+ resolveReview({budget:manualBudgetProposals(original,2000)[1].budget,source:null,reviewId:'r'.repeat(43),expiresAt});await turn();
+ click('approve');
+ assert.match(panel.render(),/Compare budget proposals/);
+ assert.doesNotMatch(panel.render(),/Approve budget save|40\.01/);
+});

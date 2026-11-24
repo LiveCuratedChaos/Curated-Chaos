@@ -88,7 +88,8 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
  }
  reset();
  function fresh(){return view&&view.expiresAt>clock();}
- function expire(){reset();notice='The budget view expired. Open the period again.';onChange();}
+ function expire(){reset();notice='The budget view expired. Open the period again.';}
+ function discardExpired(){if(view&&!fresh())expire();}
  async function open(selection,history=false){
   reset();transactionsOnly=history;period=selection;const run=sequence;busy=true;onChange();
   try {
@@ -98,7 +99,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
       !Number.isFinite(v.expiresAt)||v.expiresAt<=clock()||v.expiresAt>clock()+300000||
       (v.version===0)!==(v.budget===null)||v.budget&&!samePeriod(normalizeManualBudget(v.budget),selection))throw Error();
    if(v.budget)calculateManualBudget(v.budget);
-   view=v;timer=setTimeout(expire,Math.max(1,v.expiresAt-clock()));timer.unref?.();
+   view=v;timer=setTimeout(()=>{expire();onChange();},Math.max(1,v.expiresAt-clock()));timer.unref?.();
   }catch{if(run===sequence)notice='Could not open this budget period.';}
   finally{if(run===sequence){busy=false;onChange();}}
  }
@@ -131,6 +132,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   try{
    const value=await client.manualBudgetSave(review.reviewId);
    if(run!==sequence)return;
+   if(!fresh()){expire();onChange();return;}
    if(value?.saved!==true||value.version!==view.version+1)throw Error();
    await open(period,transactionsOnly);
   }catch{if(run===sequence){reset();notice='Save could not be confirmed. Open the period to check before retrying.';onChange();}}
@@ -180,6 +182,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   finally{if(n===sequence){busy=false;onChange();}}
  }
  function render(){
+  discardExpired();
   const heading='<h2>'+(transactionsOnly?'Manual transactions':'Manual budget')+'</h2><p role="status">'+esc(busy?'Checking the budget…':notice)+'</p>';
   const group=html=>'<fieldset '+(busy?'disabled':'')+'>'+html+'</fieldset>';
   if(!fresh())return heading+'<form id="budget-period">'+group('<legend>Choose a budget period</legend><label>Period<select name="period"><option value="month">Monthly</option><option value="pay_period" '+(period.period==='pay_period'?'selected':'')+'>Pay period</option></select></label>'+
@@ -233,8 +236,9 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   }
   return heading+group(html+button('close','Choose another period'));
  }
- return {render,reset,blocked:()=>Boolean(draft||review||planner||busy),input(event){
+ return {render,reset,blocked(){discardExpired();return Boolean(draft||review||planner||busy);},input(event){
   const el=event.target,form=el.form?.id;
+  discardExpired();
   if(form==='budget-plan'&&el.name==='reserveAmount'&&planner&&!busy&&!review){planner.reserve=el.value;return true;}
   if(el.name==='priorStart'&&fresh()&&!busy){priorStart=el.value;return true;}
   if(form==='budget-period'&&!view&&!busy&&Object.hasOwn(period,el.name)){period[el.name]=el.value;if(el.name==='period')onChange();return true;}
@@ -251,6 +255,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   }
   return true;
  },submit(event){
+  discardExpired();
   if(event.target.id==='budget-plan'){
    event.preventDefault();
    if(fresh()&&planner&&!review&&!busy){
@@ -270,6 +275,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
  },click(event){
   const action=event.target.closest('[data-budget-action]')?.dataset.budgetAction;
   if(!action)return false;
+  discardExpired();
   if(busy)return true;
   if(action==='transactions'&&!view&&canOpen()){
    try{void open(period.period==='month'?monthRange(period.periodStart):manualBudgetPeriod(period),true);}
