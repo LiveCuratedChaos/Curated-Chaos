@@ -3,6 +3,12 @@
   "timezone": "America/New_York",
   "command": "npm run check:offline",
   "documentFavoritesFollowup": {
+    "widgetFollowup": {
+      "focusedPassed": 354,
+      "focusedFailed": 0,
+      "browserCasesDiscovered": 2,
+      "browserAssertionsRun": 0
+    },
     "date": "2026-11-24",
     "scope": "Private document Favorites and named collections",
     "focused": {

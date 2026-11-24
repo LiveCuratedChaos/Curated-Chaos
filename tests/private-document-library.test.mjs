@@ -124,7 +124,7 @@ test('search can continue after an empty scan and revisit earlier pages without 
 
 test('reviewed document favorites reopen the current original with its saved collection',async t=>{
  const collection='540fb908-c8c9-4e0a-a8c7-ade4caeb6793';
- const app=privateWorkspaceFixture(t,{allowDocuments:true,allowFavorites:true});
+ const app=privateWorkspaceFixture(t,{allowDocuments:true,allowFavorites:true,allowWidgetLayouts:true});
  const first=app.tab(),second=app.tab();
  await first.login();await second.login();
  const a=first.client,b=second.client;
@@ -143,10 +143,16 @@ test('reviewed document favorites reopen the current original with its saved col
  assert.deepEqual(saved.collections,['Receipts']);
  await assert.rejects(b.favoriteDocumentOpen(saved.documentToken));
  await assert.rejects(a.documentDownload(saved.documentToken));
+ const beforeWidget=await a.favoriteWidget('all');
+ assert.equal(beforeWidget.items.length,1);
+ assert.deepEqual(Object.keys(beforeWidget.items[0]).sort(),['choice','title','type']);
+ assert.equal(beforeWidget.items[0].type,'document');
+ assert.deepEqual((await a.favoriteWidget('Home')).items,[]);
  const [other]=(await b.documentList(0)).documents;
  const name='Renamed receipt.pdf';
  await b.documentSave((await b.documentOrganize(other.choice,{name,folder:fields.folder,tags:fields.tags})).reviewId);
  await assert.rejects(a.favoriteDocumentOpen(saved.documentToken));
+ await assert.rejects(a.favoriteWidgetSelect({filter:'all',choice:beforeWidget.items[0].choice}));
  const fresh=await a.favoriteDocumentsList(0,collection);
  assert.equal(fresh.documents[0].title,name);
  const downloaded=[];
@@ -161,10 +167,17 @@ test('reviewed document favorites reopen the current original with its saved col
  await new Promise(resolve=>setImmediate(resolve));
  assert.deepEqual(downloaded,[bytes]);
  await assert.rejects(a.favoriteDocumentOpen(key));
- const remove=await a.favoriteDocumentRead(choice);
+ const widget=await a.favoriteWidget('all');
+ const widgetChoice=await a.favoriteWidgetSelect({filter:'all',choice:widget.items[0].choice});
+ assert.equal(widgetChoice.row.title,name);
+ const opened=await a.favoriteDocumentOpen(widgetChoice.row.documentToken);
+ assert.equal((await a.documentDownload(opened.document.choice)).data,bytes.toString('base64'));
+ const remove=await a.favoriteDocumentRead(opened.document.choice);
  assert.deepEqual(remove.members,[collection]);
  await a.favoriteDocumentSave((await a.favoriteDocumentReview({baseTag:remove.baseTag,favorite:false,members:[]})).reviewId);
  assert.equal((await a.favoriteDocumentsList(0,collection)).count,0);
+ assert.deepEqual((await a.favoriteWidget('all')).items,[]);
+ await assert.rejects(a.favoriteWidgetSelect({filter:'all',choice:widget.items[0].choice}));
  assert.equal((await a.documentList(0)).documents[0].name,name);
  const off=privateWorkspaceFixture(t,{allowFavorites:true}).tab();await off.login();
  await assert.rejects(off.client.favoriteDocumentsList(0));

@@ -128,8 +128,10 @@ export function mountPrivateBrief(root,{client=createPrivateWorkspaceClient(),cl
    const region=!financePrivacy?.hidden&&root.querySelector?.('#private-transaction-categories');
    if(region)region.innerHTML=categoryPanel.render();
   }}) : null;
- const documentsPanel=allowDocuments&&!recordWorkspace?createDocumentPanel({client,clock,allowFavorites,onNameSearch:allowSavedSearches?(offer,filters)=>savedPanel?.startDocumentOffer(offer,filters):null,allowSchoolLinks:allowSchoolRead&&allowSchoolEdit,canOpen:()=>Boolean(user&&!dateBlocked()),onChange:()=>{
-  const region=root.querySelector?.('#private-document-library');if(region)region.innerHTML=documentsPanel.render();
+ const documentsPanel=allowDocuments&&(!recordWorkspace||allowFavorites&&canvasActive)?createDocumentPanel({client,clock,allowFavorites,onNameSearch:allowSavedSearches?(offer,filters)=>savedPanel?.startDocumentOffer(offer,filters):null,allowSchoolLinks:allowSchoolRead&&allowSchoolEdit,canOpen:()=>Boolean(user&&!dateBlocked()),onChange:()=>{
+  const region=root.querySelector?.('#private-document-library');
+  if(recordWorkspace&&Boolean(region)!==documentsPanel.visible())render();
+  else if(region)region.innerHTML=documentsPanel.render();
  }}):null;
  const brokeragePanel=allowBrokerage&&!recordWorkspace&&(!curationWorkspace||canvasPage==='finances')?createBrokeragePanel({client,clock,
   canOpen:()=>Boolean(user&&!dateBlocked()),onChange:()=>{
@@ -192,11 +194,13 @@ export function mountPrivateBrief(root,{client=createPrivateWorkspaceClient(),cl
  if(allowSchoolRead&&allowFavorites){
   for(const type of ['program','course'])favoriteOpeners[type]=(key,row,expiresAt)=>openSchoolFavorite(type,key,row,expiresAt);
  }
+ if(allowFavorites&&documentsPanel)favoriteOpeners.document=(key,row,expiresAt)=>{
+  void documentsPanel.openFavorite(key,row,expiresAt);
+  render();
+  const region=root.querySelector?.('#private-document-library');region?.setAttribute?.('tabindex','-1');region?.focus?.();
+ };
  if(allowFavorites&&canvasActive)favoriteWidgetSource=createFavoriteWidgetSource({client,clock,pages:favoritePages,openers:favoriteOpeners,canOpen:()=>Boolean(user&&!disposed&&!dateBlocked()&&!smartTaskText.trim()&&navigator.onLine!==false),isOnline:()=>Boolean(user&&!disposed&&navigator.onLine!==false),onChange:updateCurationSource});
- if(allowFavorites)favoritesPanel=createFavoritesPanel({client,clock,onOpenNote:favoriteOpeners.note,onOpenTask:favoriteOpeners.task,onOpenEvent:favoriteOpeners.event,onOpenProject:favoriteOpeners.project,onOpenSchool:allowSchoolRead?openSchoolFavorite:null,onOpenDocument:documentsPanel?(key,row,expiresAt)=>{
-   render();void documentsPanel.openFavorite(key,row,expiresAt);
-   const region=root.querySelector?.('#private-document-library');region?.setAttribute?.('tabindex','-1');region?.focus?.();
-  }:null,pages:favoritePages,
+ if(allowFavorites)favoritesPanel=createFavoritesPanel({client,clock,onOpenNote:favoriteOpeners.note,onOpenTask:favoriteOpeners.task,onOpenEvent:favoriteOpeners.event,onOpenProject:favoriteOpeners.project,onOpenSchool:allowSchoolRead?openSchoolFavorite:null,onOpenDocument:favoriteOpeners.document,pages:favoritePages,
   activePage:curationWorkspace?canvasPage:taskWorkspace?'tasks':notesWorkspace?'notes':calendarWorkspace?'calendar':'brief',
   canUse:()=>Boolean(user&&!disposed&&!busy&&!draft&&!taskDraft&&!appearanceDraft&&!recordReview&&!review&&!noteReview&&!creationReview&&!appearanceReview&&!setupPanel?.blocked()&&!quickSettings?.blocked()&&!listTemplatePanel?.blocked()&&!otherSavedBlocked()&&!smartTaskText.trim()&&navigator.onLine!==false),
   onChange:focus=>{if(focus)focusTarget=focus;render();},onSaved:()=>favoriteWidgetSource?.changed()});
@@ -303,7 +307,7 @@ export function mountPrivateBrief(root,{client=createPrivateWorkspaceClient(),cl
   if(categoryPanel&&user&&!financePrivacy?.hidden)content+='<section class="panel" id="private-transaction-categories">'+categoryPanel.render()+'</section>';
   if(user&&favoritesPanel)content+=favoritesPanel.render();
   if(user&&setupPanel)content+=setupPanel.render();
-  if(documentsPanel&&user)content+='<section class="panel" id="private-document-library">'+documentsPanel.render()+'</section>';
+  if(documentsPanel&&user&&(!recordWorkspace||documentsPanel.visible()))content+='<section class="panel" id="private-document-library">'+documentsPanel.render()+'</section>';
   if(brokeragePanel&&user&&!financePrivacy?.hidden)content+='<section class="panel" id="private-brokerage">'+brokeragePanel.render()+'</section>';
   if(holdingPanel&&user&&!financePrivacy?.hidden)content+='<section class="panel" id="private-manual-holdings">'+holdingPanel.render()+'</section>';
   if(billPanel&&user&&!financePrivacy?.hidden)content+='<section class="panel" id="private-manual-bills">'+billPanel.render()+'</section>';

@@ -92,7 +92,13 @@ export function createPrivateFavoriteDocuments({api,now,library}){
   view.items.delete(key);
   return library.openFavorite(id,actor,latest.doc,view.expiresAt);
  }
- return {...service,open,clear,dispose(){for(const id of choices.keys())clear(id);service.dispose();}};
+ async function widgetOriginal(id,actor,expiresAt,ref,current){
+  const latest=await lookup(actor,ref.id);
+  if(!current()||!latest||latest.version!==ref.version||latest.payload.title!==ref.title)throw Error('Document changed.');
+  const issue=inventoryReader.begin(id,actor.ownerId,expiresAt);
+  return {title:latest.payload.title,...issue(latest)};
+ }
+ return {...service,open,widgetOriginal,clear,dispose(){for(const id of choices.keys())clear(id);service.dispose();}};
 }
 function createFavoriteRecords({api,now,selectedReader,inventoryReader},policy){
  const store=createPrivateFavoriteItemStore({api,now}),states=new Map();

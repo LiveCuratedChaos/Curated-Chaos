@@ -220,7 +220,6 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
  const favoriteProjects=favoriteProjectReader?createPrivateFavoriteProjects({api,now,selectedReader:projectSelectionReader,inventoryReader:favoriteProjectReader}):null;
  const favoriteTasks=favoriteTaskReader?createPrivateFavoriteTasks({api,now,selectedReader:taskReaderFor,inventoryReader:favoriteTaskReader,taskOptions:{allowUndated:allowUndatedTasks,allowHomeCleaning,allowHomeGroceries,allowHomeDeliveries}}):null;
  const favoriteNotes=favoriteNoteReader?createPrivateFavoriteNotes({api,now,selectedReader,inventoryReader:favoriteNoteReader}):null;
- const favoritesWidget=favorites&&allowWidgetLayouts?createFavoritesWidget({favorites,now,services:{note:favoriteNotes,task:favoriteTasks,project:favoriteProjects,event:favoriteEvents,program:favoritePrograms,course:favoriteCourses}}):null;
  function colorReaderFor(id,token){
   const task=taskReaderFor(id,token);if(task)return {selectedRecord:task.selectedRecord,current:task.current};
   const original=[searchProjectReader,briefProjectReader,favoriteProjectReader].find(reader=>reader?.current(id,token));
@@ -253,6 +252,7 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
  const schoolLibrary=allowSchoolRead&&allowDocuments?createSchoolLibrary({api,reader:schoolReader,storage:api.documentStorage,now}):null;
  const documents=allowDocuments?createDocumentLibrary({storage:api.documentStorage,now}):null;
  const favoriteDocuments=allowFavorites&&documents?createPrivateFavoriteDocuments({api,now,library:documents}):null;
+ const favoritesWidget=favorites&&allowWidgetLayouts?createFavoritesWidget({favorites,now,services:{note:favoriteNotes,task:favoriteTasks,project:favoriteProjects,event:favoriteEvents,program:favoritePrograms,course:favoriteCourses,document:favoriteDocuments}}):null;
  const documentSchoolReader=allowSchoolRead&&allowSchoolEdit&&documents?createPrivateSchoolReader({api,now}):null;
  const schoolDocumentMatch=documentSchoolReader?createSchoolDocumentMatch({api,reader:documentSchoolReader,documents,now}):null;
  const manualBudgets=allowManualBudgets?createPrivateBudgetReview({api,now,documentStorage:allowDocuments?api.documentStorage:null}):null;

@@ -11,7 +11,8 @@ Resume from `codex/document-favorites-review` in the private repository `LiveCur
 ## Completed November 24
 
 - **R13:** Save a private document to Favorites and assign it to named collections from the Document Library. Favorites lists reopen the current original through the existing document reader, including after a rename. Unavailable originals are omitted, and stale, expired and cross-session choices are rejected. Removing the favorite keeps the file. Encrypted recovery into isolated PostgreSQL preserved the document, its collection and the original bytes.
-- **Verification:** All 48 focused Favorites, document and School-link tests passed. All 353 controller, static and search-intent checks passed. Browser assertions remain pending.
+- **R18:** The Favorites widget opens saved private documents in the original reader from its all-areas view. The area-specific views omit documents because the library has no document area field. The widget rejects outdated selections and refreshes after a favorite is removed.
+- **Verification:** All 48 focused Favorites, document and School-link tests passed. All 353 controller, static and search-intent checks passed. The widget follow-up passed 354 focused tests. Playwright discovered two new desktop and phone-size cases for the document collection and widget handoff. Browser assertions remain pending.
 
 ## November 24 Cloud verification
 
@@ -26,12 +27,12 @@ Playwright 1.65.1 discovered 230 cases. Six relevant cases are pending across de
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback and can launch the pinned Chromium build, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Verify the document Favorites workflow in a browser that can launch the fixture. Open the Document Library, manage a favorite, assign it to a named collection, then reopen the original from that collection. Continue R18 widget coverage or the next ready checklist row independently of the browser blocker.
+2. Verify the document Favorites workflow in a browser that can launch the fixture. Open the Document Library, manage a favorite, assign it to a named collection, then reopen the original from that collection. Continue the next ready checklist row independently of the browser blocker.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
-npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews'
+npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|document Favorites reopens'
 ```
 
 Earlier Calendar and Favorites contributions passed 432 focused tests. The previous full attempt passed 3,441 of 3,476. Historical logs under `/tmp` belong to the originating Mac. Linux omits the macOS-native Calendar transfer check.

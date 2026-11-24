@@ -262,7 +262,7 @@ export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=fals
    (view.offset||view.hasPrevious?button('previous','Previous documents'):'')+(view.hasMore?button('next','Next documents'):'');
   return html+(view.favorite&&!draft&&!reading&&!review&&!duplicate&&!scan&&!view.criteria?button('list','Back to my documents'):'')+button('close','Close document library')+'</fieldset>'+(scan&&busy?button('content-stop','Stop content search'):'');
  }
- return {render,reset,openFavorite,openContentSearch,openSavedSearch,blocked:()=>Boolean(draft||review||busy),input(event){
+ return {render,reset,openFavorite,visible:()=>Boolean(busy||view||status),openContentSearch,openSavedSearch,blocked:()=>Boolean(draft||review||busy),input(event){
   const field=event.target.dataset?.documentField;if(!field)return false;
   if(!draft&&!reading&&!scan&&!busy&&field==='contentQuery'){contentQuery=event.target.value;return true;}
   if(reading&&!busy&&field==='textQuery'){readQuery=event.target.value;return true;}
