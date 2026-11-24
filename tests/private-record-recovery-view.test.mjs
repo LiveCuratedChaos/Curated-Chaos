@@ -30,3 +30,10 @@ test('recovery review refuses unsupported scope or ambiguous approval identity',
  for(const patch of [{title:''},{title:' '.repeat(5)},{title:'x'.repeat(201)},{type:'note',section:'Calendar'},{type:'task',section:'Calendar'},{type:'project'},{restoring:1},{reviewId:'bad'},{retentionDays:30}])assert.throws(()=>verifyPrivateRecoveryReview({...review(),...patch},{now}));
  for(const value of [null,undefined,[],{}]){assert.throws(()=>verifyPrivateRecoveryList(value,{now}));assert.throws(()=>verifyPrivateRecoveryReview(value,{now}));}
 });
+test('an older reply cannot display a removed title past the inclusive cutoff',()=>{
+ const response=list(),boundary=now+1;
+ response.records[0].deletedAt=new Date(boundary-90*86400000).toISOString();
+ for(const time of [now,boundary])assert.equal(verifyPrivateRecoveryList(response,{now:time}).expiresAt,boundary+1);
+ assert.throws(()=>verifyPrivateRecoveryList(response,{now:boundary+1}));
+ assert.equal(response.expiresAt,now+300000);
+});

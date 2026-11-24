@@ -874,6 +874,12 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "recentlyDeletedDeadline": {
+      "passed": 185,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Recently Deleted, temporary widget selections, original archive deadlines, isolated database restoration at the exact anniversary and refusal after expiry."
+    },
     "dailyBriefBillPaging": {
       "passed": 369,
       "failed": 0,

@@ -5,6 +5,7 @@ const paths=new Set(['/src/private-work-note-panel.mjs','/src/private-project-no
 paths.add('/src/private-brief-bills.mjs');
 paths.add('/src/private-school-search-types.mjs');
 paths.add('/src/private-record-recovery-view.mjs');
+paths.add('/src/private-record-retention.mjs');
 paths.add('/src/private-common-task-link-panel.mjs');
 paths.add('/src/private-common-task-link-view.mjs');
 paths.add('/src/private-project-hierarchy-panel.mjs');

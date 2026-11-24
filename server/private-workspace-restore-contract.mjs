@@ -16,7 +16,7 @@ import {incomeSourceType,incomePaymentType} from './private-income-records.mjs';
 import {decodeManualFinanceRow} from './private-manual-finance-storage.mjs';
 import {createTokenSealer} from './token-sealer.mjs';
 import {normalizeHomeGrocery} from '../src/private-home-grocery.mjs';import {normalizeHomeDelivery} from '../src/private-home-delivery.mjs';
-import {PRIVATE_RECOVERY_DAYS} from './private-record-recovery.mjs';
+import {withinPrivateRecoveryWindow} from '../src/private-record-retention.mjs';
 import {safeSavedAt} from './snapshot-freshness.mjs';
 import {privateAllDayEvent} from './private-event-all-day.mjs';
 import {privateEventRange} from './private-event-range.mjs';
@@ -200,7 +200,7 @@ export function privateWorkspaceRestoreDigest(rows){
 }
 
 // Restore a tombstone as a tombstone; never restart the approved recovery period.
-export function withinArchivedDeletedRetention(row,{now=Date.now()}={}){const value=safeSavedAt(row?.deleted_at);return Boolean(Number.isFinite(now)&&value&&Date.parse(value)<=now&&Date.parse(value)>=now-PRIVATE_RECOVERY_DAYS*86400000);}
+export function withinArchivedDeletedRetention(row,{now=Date.now()}={}){const value=safeSavedAt(row?.deleted_at);return Boolean(Number.isFinite(now)&&value&&withinPrivateRecoveryWindow(value,now));}
 export function supportsArchivedDeletedWorkspaceRestore(row,options={}){return row?.item_type!=='brief_preferences'&&withinArchivedDeletedRetention(row,options)&&supportsOrdinaryWorkspaceRestore({...row,deleted_at:null});}
 
 function supportsSeriesRecord(row){

@@ -1,5 +1,5 @@
 import {MAX_WORKSPACE_FILE,compareArchivedDocuments,schoolDocumentIds} from './private-document-archive.mjs';
-import {PRIVATE_RECOVERY_DAYS} from './private-record-recovery.mjs';
+import {PRIVATE_RECOVERY_DAYS,privateRecoveryDeadline} from '../src/private-record-retention.mjs';
 import {verifyRecordVersionRecovery} from './private-record-version-provenance.mjs';
 import {stableStringify} from './stable-json.mjs';
 import {retainedRecordVersionPlan} from './private-record-version-recovery.mjs';
@@ -87,7 +87,7 @@ export function createPrivateWorkspaceRestoreExecutor({repository,resolveActor,p
     const again=await session(actor);if(marker.revoked||!same(s,again)||first.fingerprint!==value.fingerprint||firstReady!==nextReady||first.historySchemaReady!==value.historySchemaReady)throw Error('Workspace or recovery session changed during review.');
     if(!usable(value))return summary(value);
     if(reviews.size>=20)throw Error('Too many pending recovery reviews.');
-    const expiresAt=Math.min(now()+300000,s.expiresAt,again.expiresAt,...(allowArchivedDeletedRestore?value.inserts.filter(r=>r.deleted_at!==null).map(r=>Date.parse(r.deleted_at)+PRIVATE_RECOVERY_DAYS*86400000):[])),reviewId=randomBytes(32).toString('base64url');
+    const expiresAt=Math.min(now()+300000,s.expiresAt,again.expiresAt,...(allowArchivedDeletedRestore?value.inserts.filter(r=>r.deleted_at!==null).map(r=>privateRecoveryDeadline(r.deleted_at)):[])),reviewId=randomBytes(32).toString('base64url');
     if(expiresAt<=now())throw Error('Recovery review expired.');
     const entry={bytes:owned,binding:s.binding,ownerId:s.ownerId,expiresAt,fingerprint:value.fingerprint,revoked:false};
     entry.timer=setTimeout(()=>forget(reviewId),Math.max(1,expiresAt-now()));entry.timer.unref?.();reviews.set(reviewId,entry);retained=true;

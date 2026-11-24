@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R03 / R12** aligned Recently Deleted, widget selections and encrypted recovery on the inclusive 90-day boundary. Removed titles and counts expire with their earliest source. A selected widget action cannot extend its original deadline through approval. All 185 focused checks passed, including exact-anniversary encrypted restoration in isolated PostgreSQL.
+
 - **R16** pages days with more than ten bills. The eleven-bill fixture opened the last bill’s own schedule, returned to the first page and refused to mix pages after an edit. All 369 related checks passed.
 
 - **R16** now opens an individual bill’s original schedule from the Brief. Same-named bills retain separate selections. The original schedule shows its dates, frequency and current payment status. A changed occurrence requires a refresh, and looking at it preserves a pending payment review. All 490 related checks passed with the in-process HTTP transport.
@@ -35,7 +37,7 @@ Playwright 1.65.1 discovered 236 cases. Twelve selected desktop and phone-size c
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12 by verifying the expired-deletion boundary across Recently Deleted, restoration and encrypted recovery. At the exact 90-day cutoff, apply one consistent rule to selection, review and restore. Verify cases just before, at, and just after the cutoff.
+2. Continue R12/R13 by applying the same inclusive deadline to removed saved-search lists, review and approval, including a shortcut expiring while its panel is open. Then check School assessment and step restoration against its separate history policy.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

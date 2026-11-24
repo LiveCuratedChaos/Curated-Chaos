@@ -21,3 +21,41 @@ test('bounded recovery pagination exposes no storage identifiers or bodies',asyn
 test('uncertain acknowledgement and changed reread never retry the same mutation',async t=>{for(const mode of ['lost','ack','reread']){const x=setup(t),view=await x.review(),claim=x.service.claim('ctx',owner,view.reviewId),original=x.api.setPrivateRecordDeletedAt;assert.equal(await x.service.authorize(claim,x.actor),true);x.api.setPrivateRecordDeletedAt=async(...args)=>{const result=await original(...args);if(mode==='lost')throw Error('Lost response');if(mode==='ack')return[];x.s.row.version++;return result;};await assert.rejects(x.service.save(claim,x.actor));await assert.rejects(x.service.save(claim,x.actor));assert.equal(x.s.writes,1);}});
 test('equivalent PostgreSQL timestamp formatting does not invalidate restoration',async t=>{const x=setup(t);x.s.row.deleted_at='2026-11-09T12:00:00+00:00';const view=await x.review();x.s.row.deleted_at='2026-11-09T12:00:00.000Z';assert.deepEqual(await x.save(view),{saved:true,restored:true});});
 test('claimed reviews require successful exact-state preflight before any mutation',async t=>{const x=setup(t),view=await x.review(),claim=x.service.claim('ctx',owner,view.reviewId);await assert.rejects(x.service.save(claim,x.actor));assert.equal(x.s.writes,0);assert.equal(await x.service.authorize(claim,x.actor),true);await x.service.save(claim,x.actor);assert.equal(x.s.writes,1);});
+test('lists, opaque selections and approvals use the first ineligible millisecond',async t=>{
+ const x=setup(t),boundary=x.s.clock+1;
+ x.s.row.deleted_at=new Date(boundary-90*86400000).toISOString();
+ const view=await x.service.list('ctx',x.actor,boundary+30000);
+ assert.equal(view.expiresAt,boundary+1);
+ const token=view.records[0].recordToken;
+ x.s.clock=boundary;
+ const review=await x.service.prepare('ctx',x.actor,token);
+ assert.equal(review.expiresAt,boundary+1);
+ assert.equal(x.service.current('ctx',review.reviewId),true);
+ x.s.clock++;
+ assert.equal(x.service.current('ctx',review.reviewId),false);
+ assert.equal(x.service.hasAction('ctx',token),false);
+ assert.throws(()=>x.service.claim('ctx',owner,review.reviewId));
+ assert.equal((await x.service.list('ctx',x.actor,x.s.clock+30000)).matchCount,0);
+ assert.equal(x.s.writes,0);
+});
+test('shorter widget selections expire during preflight or before the final write',async t=>{
+ for(const stage of ['claim','preflight','save']){
+  const x=setup(t),original=x.issue(),deadline=x.s.clock+20;
+  const added=x.service.add('ctx',owner,deadline,x.sparse());
+  const review=await x.service.prepare('ctx',x.actor,added.recordToken);
+  assert.equal(review.expiresAt,deadline);
+  if(stage==='claim'){
+   x.s.clock=deadline;
+   assert.equal(x.service.current('ctx',review.reviewId),false);
+   assert.throws(()=>x.service.claim('ctx',owner,review.reviewId));
+  }else{
+   const claim=x.service.claim('ctx',owner,review.reviewId);
+   if(stage==='preflight')x.api.getPrivateRecordState=async()=>{x.s.clock=deadline;return [x.sparse()];};
+   assert.equal(await x.service.authorize(claim,x.actor),stage==='save');
+   x.s.clock=deadline;
+   await assert.rejects(x.service.save(claim,x.actor));
+  }
+  assert.equal(x.service.hasAction('ctx',original),true);
+  assert.equal(x.s.writes,0);
+ }
+});
