@@ -1,6 +1,6 @@
 # Curated Chaos development handoff
 
-Resume from `codex/document-favorites-review` in the private repository `LiveCuratedChaos/Curated-Chaos`. This review branch builds on the Cloud verification checkpoint and the November 23 School Favorites branch. The local handoff snapshot and that GitHub commit had the same file tree. The original Mac development checkout is on `codex/browser-checks`.
+Resume from `codex/verification-followup` in the private repository `LiveCuratedChaos/Curated-Chaos`. This review branch builds on the Cloud verification checkpoint and the November 23 School Favorites branch. The local handoff snapshot and that GitHub commit had the same file tree. The original Mac development checkout is on `codex/browser-checks`.
 
 ## Completed November 23
 
@@ -18,6 +18,7 @@ Resume from `codex/document-favorites-review` in the private repository `LiveCur
 
 - **R01:** Offline verification reports allowlisted test filenames on failure. Six regression checks passed. A fictional subprocess failure confirmed the report omits test names, failure messages and absolute paths.
 - **R02:** The direct-TLS candidate remains local. The hosting decision pauses staging and deployment, so hosted acceptance requires an approved staging environment and ingress contract.
+- **R03:** A full isolated database snapshot retained a fictional encrypted document byte-for-byte. The restored engine denies an unrelated account and old revoked sessions, then opens the file through the original decryptor for a freshly authenticated owner. Hosted and separate-device recovery remain pending.
 - Chromium still aborts at its process-singleton socket before opening a page. A runner that launches the pinned browser is required for the pending desktop and phone assertions.
 
 ## November 24 Cloud verification

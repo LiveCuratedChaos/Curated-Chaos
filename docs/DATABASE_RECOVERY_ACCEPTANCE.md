@@ -12,6 +12,10 @@ A complete authentication snapshot can contain sign-in sessions that were revoke
 
 `tests/household-current-policies.test.mjs` additionally tests every current migration together: write permission implies read only within its section; read-only sections cannot be edited; household ownership does not expose another adult's private records; members cannot elevate grants; departing members lose access even to records they contributed to the household; their independent private records remain theirs; reactivated membership with empty grants restores no old section rights; missing/revoked/wrong-owner sessions cannot read records or membership metadata.
 
+## November 24 encrypted document snapshot
+
+The full-engine drill now inserts a fictional encrypted PDF through the authenticated owner scope before taking the snapshot. The restored engine has the exact document metadata and encrypted file envelope. It denies foreign and revoked sessions. After quarantine and fresh sign-in, the owner decrypts the original bytes with the separate fictional key. This extends the existing isolated engine drill. Managed Auth, hosted storage and separate-device recovery still require an approved isolated destination.
+
 ## Hosted recovery release gate
 
 Before treating database recovery as complete:
