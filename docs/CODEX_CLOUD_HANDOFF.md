@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R30 / R31** Personal Life and Home routine streaks now verify that the series contains the same selected occurrence, including its area and completion state. The read refuses inconsistent snapshots even at the same revision. All 354 related checks passed, including signed-in completion and encrypted recovery.
+
 - **R29** Work task-list browsing now hides expired names and selections immediately and refuses to use them when a suspended tab resumes. Responses cannot extend the five-minute window. All 331 related checks passed.
 
 - **R28** Study Planner rechecks saved availability before showing approval. In a signed-in two-tab test, a newly approved Calendar event blocked the old study proposal and save. The course agenda stayed unchanged, and checking again offered the next free time. All 18 related checks passed.

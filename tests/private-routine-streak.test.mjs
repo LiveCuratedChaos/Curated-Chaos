@@ -34,6 +34,15 @@ test('foreign, deleted, duplicate, misaligned, and incomplete histories cannot p
   assert.throws(()=>summary(rows,'2026-11-03'));
  }
 });
+test('the routine history must agree with the selected occurrence at the same revision',()=>{
+ const rows=series(['2026-11-01']),selected=structuredClone(rows[0]);
+ assert.equal(summary(rows,'2026-11-02',selected).completed,1);
+ rows[0].payload.done=false;
+ assert.throws(()=>summary(rows,'2026-11-02',selected),/complete routine history/);
+ rows[0].payload.done=true;
+ rows[0].section='Personal Life';
+ assert.throws(()=>summary(rows,'2026-11-02',selected),/complete routine history/);
+});
 test('selection expiry while the series loads suppresses the late result',async()=>{
  const rows=series(['2026-11-01']),record=rows[0],now=()=>Date.parse('2026-11-02T17:00:00Z');let current=true;
  const options={reader:{selectedRecord:async()=>({record,expiresAt:now()+1000}),current:()=>current},actor:{ownerId:owner,accessToken:'fictional'},

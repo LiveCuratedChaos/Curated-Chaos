@@ -1,9 +1,14 @@
 import {nextTaskOccurrence,validateTaskRecurrence} from '../src/task-recurrence.mjs';
 import {newYorkTaskDay} from '../src/private-smart-task.mjs';
+import {stableStringify} from './stable-json.mjs';
 
 const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const activeArea=section=>section==='Home'||section==='Personal Life';
 const unavailable=()=>{throw Error('The complete routine history could not be verified.');};
+const routineSnapshot=({section,version,payload})=>stableStringify([
+ section,version,payload.day,payload.done,payload.recurrence,payload.recurrence_completion??null,
+ payload.recurrence_predecessor??null,payload.recurrenceStopped===true
+]);
 export function analyzeRoutineSeries(rows,{owner,selected,now=Date.now()},areaAllowed){
  const today=newYorkTaskDay(now),series=selected?.payload?.recurrence?.seriesId;
  if(!uuid(series)||!uuid(owner)||!areaAllowed(selected.section)||!Array.isArray(rows)||!rows.length||rows.length>2000)unavailable();
@@ -17,7 +22,10 @@ export function analyzeRoutineSeries(rows,{owner,selected,now=Date.now()},areaAl
      row.deleted_at!==null||row.item_type!=='task'||!areaAllowed(row.section)||p?.fictional!==true||
      typeof p.done!=='boolean'||r?.seriesId!==series||r.anchorDay!==anchorDay||r.frequency!==frequency||
      r.interval!==interval||!Number.isInteger(r.ordinal)||r.ordinal<0||byOrdinal.has(r.ordinal))unavailable();
-  if(row.id===selected.id && row.version===selected.version)sourceMatched=true;
+  if(row.id===selected.id){
+   if(routineSnapshot(row)!==routineSnapshot(selected))unavailable();
+   sourceMatched=true;
+  }
   ids.add(row.id);byOrdinal.set(r.ordinal,row);
  }
  if(!sourceMatched)unavailable();
