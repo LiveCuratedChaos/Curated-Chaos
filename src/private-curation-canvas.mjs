@@ -7,8 +7,10 @@ import {renderPrivateClock} from './private-clock-widget.mjs';
 import {verifyCurationWidgetSources} from './private-curation-sources.mjs';
 // Saved arrangements over existing authorized title/action summaries; no data fetches or writes.
 import {escapeHtml as e} from './core.mjs';
-import {validatePrivateWidgetLayouts,FINANCE_WIDGET_TYPES,WIDGET_TYPES,DASHBOARD_DEVICES} from './private-widget-layout.mjs';
+import {validatePrivateWidgetLayouts,FINANCE_WIDGET_TYPES,WIDGET_TYPES,DASHBOARD_DEVICES,TASK_FILTERS} from './private-widget-layout.mjs';
 const types=new Map(WIDGET_TYPES.map(w=>[w.id,w]));
+const searchSections=new Map(TASK_FILTERS.map(area=>['#workspace-search-'+area.toLowerCase().replaceAll(' ','-'),area]));
+export const widgetSearchSection=fragment=>searchSections.get(fragment)??null;
 export function curationDevice(width){return Number.isFinite(width)&&width<680?'phone':Number.isFinite(width)&&width<1020?'tablet':'desktop';}
 export function curationWidgetSource(widget,data){
  if(widget.type==='coming_up'){
@@ -26,7 +28,7 @@ export function curationWidgetSource(widget,data){
  const matching=widget.filter==='all'?rows:rows.filter(r=>r.section===widget.filter);
  return{available:true,rows:matching.slice(0,widget.limit??6),total:widget.filter==='all'?sourceCount:matching.length,filteredPreview:widget.filter!=='all'&&capped};
 }
-export function renderPrivateCuration({layouts,pageTitle='The Curation',device='desktop',data,expiresAt,now=Date.now(),renderList,links={},schoolReadEnabled=false,schoolBlocked=false,briefRenderer=null,projectReadEnabled=false,projectBlocked=false,financeRenderer=null,emailRenderer=null,favoritesRenderer=null,categoryColors={sections:{},items:{}}}){
+export function renderPrivateCuration({layouts,pageTitle='The Curation',device='desktop',data,expiresAt,now=Date.now(),renderList,links={},searchEnabled=false,searchBlocked=false,scopedSearch=false,schoolReadEnabled=false,schoolBlocked=false,briefRenderer=null,projectReadEnabled=false,projectBlocked=false,financeRenderer=null,emailRenderer=null,favoritesRenderer=null,categoryColors={sections:{},items:{}}}){
  if(!DASHBOARD_DEVICES.includes(device)||typeof renderList!=='function')throw Error('Explicit Curation screen and original action renderer required.');
  const saved=validatePrivateWidgetLayouts(layouts);
  if(!Number.isFinite(expiresAt)||expiresAt<=now)return'<section class="panel" aria-label="'+e(pageTitle)+' widgets"><p role="status">Saved widget view expired. Fetch latest to check the current arrangement.</p></section>';
@@ -34,6 +36,12 @@ export function renderPrivateCuration({layouts,pageTitle='The Curation',device='
  for(const widget of widgets){const type=types.get(widget.type),source=(['notes','projects'].includes(widget.type)&&widget.sourceAssociationId)?{available:true,rows:[],total:1}:curationWidgetSource(widget,data);let body='';
   if((widget.type==='notes'||widget.type==='projects')&&widget.sourceAssociationId){const source=(data?.associatedSources??data?.widgetSources)?.[widget.sourceAssociationId],expected=widget.type==='notes'?'note':'project';if(source?.type!==expected||!validWidgetSourceRead(source,expiresAt,now))body='<p role="status">This linked '+(expected==='note'?'note':'project')+' is unavailable or expired. Fetch latest to check its current source.</p>';else body='<p class="tiny muted">Linked saved '+expected+' · '+e(source.section)+(expected==='project'?' · '+e(source.status):'')+'</p><p class="linked-widget-title" data-category-color="'+e(source.displayColor??categoryColorFor({section:source.section,preferences:categoryColors}))+'"><strong>'+e(source.title)+'</strong></p><button type="button" class="btn btn-small" '+(expected==='note'?'data-private-note="'+e(source.noteToken)+'"':'data-private-search-project="'+e(source.projectReadToken)+'"')+'>'+('Open '+expected)+'</button>'+(source.recordToken?'<button type="button" class="btn btn-small" data-private-record-review="'+e(source.recordToken)+'">Review removal</button>':'');}
   else if(FINANCE_WIDGET_TYPES.includes(widget.type))body=financeRenderer?financeRenderer(widget):'<p role="status">This financial source is unavailable.</p>';
+  else if(widget.type==='search'){
+   const label=widget.filter==='all'?'Search saved titles':'Search saved titles in '+e(widget.filter);
+   if(!searchEnabled)body='<p role="status">Workspace search is unavailable.</p>';
+   else if(scopedSearch&&!searchBlocked)body='<a class="btn" href="/dev-dashboard.html#workspace-search-'+widget.filter.toLowerCase().replaceAll(' ','-')+'">'+label+'</a>';
+   else body='<button type="button" class="btn" data-private-widget-search="'+e(widget.id)+'"'+(searchBlocked?' disabled':'')+'>'+label+'</button>';
+  }
   else if(widget.type==='favorites')body=favoritesRenderer?favoritesRenderer(widget):'<p role="status">Favorites are unavailable in this workspace.</p>';
   else if(widget.type==='email')body=typeof emailRenderer==='function'?emailRenderer(widget):'<p role="status">Saved email is unavailable. Widget settings do not grant email access.</p>';
   else if(widget.type==='projects')body=renderPrivateProjectWidget(widget,data?.projectOverview,{now,canRead:projectReadEnabled,blocked:projectBlocked,canBrowse:Boolean(links.tasks),categoryColors});

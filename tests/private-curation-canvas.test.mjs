@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {curationDevice,curationWidgetSource,renderPrivateCuration} from '../src/private-curation-canvas.mjs';
+import {curationDevice,curationWidgetSource,renderPrivateCuration,widgetSearchSection} from '../src/private-curation-canvas.mjs';
 import {defaultWidgetLayouts} from '../src/private-widget-layout.mjs';import {escapeHtml} from '../src/core.mjs';
 function source(){return{counts:{dueTasks:2,upcomingTasks:1,undatedTasks:1,eventsToday:1,upcomingEvents:0,notes:1},dueTasks:[{title:'Exact <Work>',section:'Work'},{title:'Exact Home',section:'Home'}],upcomingTasks:[{title:'Later Work',section:'Work'}],undatedTasks:[{title:'No date Work',section:'Work'}],eventsToday:[{title:'Saved event',section:'Calendar'}],upcomingEvents:[],notes:[{title:'Saved note',section:'Personal Life'}]};}
 const renderList=(rows,total)=>'<p>'+rows.length+' of '+total+'</p>'+rows.map(row=>'<strong>'+escapeHtml(row.title)+'</strong>').join('');
@@ -17,4 +17,21 @@ test('individual note and project widgets show only their current original reade
 
 test('private Curation navigation is explicit and points to the cookie canvas rather than the legacy workspace',async()=>{
  const {renderConnectedShell}=await import('../src/dev-cloud-shell.mjs');const off=renderConnectedShell('Body',{privateReadOnly:true}),on=renderConnectedShell('Body',{privateWorkspace:true,privateCurationWorkspace:true,active:'curation'});assert.doesNotMatch(off,/dev-curation/);assert.equal((on.match(/href="\/dev-curation.html"/g)||[]).length,2);assert.match(on,/THE CURATION/);assert.doesNotMatch(on,/dev-workspace|Development QA tools/);
+});
+
+test('compact Search respects enabled access, scoped pages and locked or expired widget layouts',()=>{
+ const layouts=defaultWidgetLayouts();
+ layouts.phone=[{id:'phone-search',type:'search',width:'full',hidden:false,filter:'Personal Life'}];
+ const render=options=>renderPrivateCuration({layouts,device:'phone',data:source(),expiresAt:100,now:1,renderList,...options});
+ assert.match(render({}),/Workspace search is unavailable/);
+ assert.match(render({searchEnabled:true}),/data-private-widget-search="phone-search"/);
+ const scoped=render({searchEnabled:true,scopedSearch:true});
+ assert.match(scoped,/href="\/dev-dashboard\.html#workspace-search-personal-life"/);
+ assert.equal(widgetSearchSection('#workspace-search-personal-life'),'Personal Life');
+ assert.equal(widgetSearchSection('#workspace-search-private-title'),null);
+ assert.doesNotMatch(render({searchEnabled:true,scopedSearch:true,searchBlocked:true}),/href=/);
+ assert.match(render({searchEnabled:true,searchBlocked:true}),/data-private-widget-search="phone-search" disabled/);
+ assert.doesNotMatch(render({searchEnabled:true,now:100}),/data-private-widget-search/);
+ layouts.phone[0].hidden=true;
+ assert.doesNotMatch(render({searchEnabled:true}),/data-private-widget-search/);
 });
