@@ -4,7 +4,7 @@ import {TASK_FILTERS} from '../src/private-widget-layout.mjs';
 const pageAreas={work:'Work',home:'Home',school:'School',personal:'Personal Life',notes:'Personal Life'};
 const maxItems=10; // Largest selectable widget limit.
 
-export function createFavoritesWidget({favorites,services,now}){
+export function createFavoritesWidget({favorites,services,now,readColors=()=>null}){
  function clear(context){
   for(const view of context.favoriteWidgetViews?.values()??[])clearTimeout(view.timer);
   context.favoriteWidgetViews=null;
@@ -36,13 +36,13 @@ export function createFavoritesWidget({favorites,services,now}){
   view.timer=setTimeout(()=>{if(views.get(filter)===view)views.delete(filter);},Math.max(1,view.expiresAt-now()));
   view.timer.unref?.();
   const snapshot=await favorites.widgetSnapshotFor(actor);
-  const {matches,incomplete}=await eligible(actor,snapshot.items,filter);
+  const [{matches,incomplete},colorFor]=await Promise.all([eligible(actor,snapshot.items,filter),readColors(actor)]);
   if(!current()||context.favoriteWidgetViews!==views||views.get(filter)!==view||view.expiresAt<=now())throw Error('Widget expired.');
   matches.sort((a,b)=>a.row.payload.title.localeCompare(b.row.payload.title)||a.type.localeCompare(b.type)||a.row.id.localeCompare(b.row.id));
   const items=matches.slice(0,maxItems).map(({type,row})=>{
    const choice=randomBytes(32).toString('base64url'),title=row.payload.title;
    view.choices.set(choice,{id:row.id,version:row.version,type,title,section:row.section});
-   return {type,title,choice};
+   return {type,title,choice,...colorFor?.(row)};
   });
   return {readOnly:true,filter,incomplete,pages:snapshot.pages.filter(page=>filter==='all'||pageAreas[page]===filter),items,itemCount:matches.length,expiresAt:view.expiresAt};
  }

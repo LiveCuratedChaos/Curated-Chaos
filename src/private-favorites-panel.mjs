@@ -1,3 +1,4 @@
+import {CATEGORY_COLOR_TOKENS} from './private-category-colors.mjs';
 import {createFavoriteItemPanel,favoriteTokenFields,validFavoriteOriginal} from './private-favorite-item-panel.mjs';
 import {escapeHtml as e} from './core.mjs';
 import {FAVORITE_PAGES,validateFavoritePages,favoritePageChanges} from './private-favorites.mjs';
@@ -187,7 +188,7 @@ export function createFavoriteWidgetSource({client,pages,clock=Date.now,onChange
    if(!data||Object.keys(data).sort().join(',')!=='expiresAt,filter,incomplete,itemCount,items,pages,readOnly'||typeof data.incomplete!=='boolean'||data.filter!==filter||data.readOnly!==true||!fresh(data.expiresAt)
     ||!Array.isArray(data.pages)||new Set(data.pages).size!==data.pages.length||data.pages.some(page=>!pages.includes(page))
     ||!Number.isInteger(data.itemCount)||data.itemCount<0||data.itemCount>500||!Array.isArray(data.items)||data.items.length!==Math.min(10,data.itemCount)
-    ||data.items.some(row=>!row||Object.keys(row).sort().join(',')!=='choice,title,type'||!token(row.choice)||!Object.hasOwn(openers,row.type)||typeof row.title!=='string'||!row.title.trim()||row.title.length>200)
+    ||data.items.some(row=>!row||Object.keys(row).sort().join(',')!==(Object.hasOwn(row,'displayColor')?'choice,displayColor,title,type':'choice,title,type')||Object.hasOwn(row,'displayColor')&&!CATEGORY_COLOR_TOKENS.includes(row.displayColor)||!token(row.choice)||!Object.hasOwn(openers,row.type)||typeof row.title!=='string'||!row.title.trim()||row.title.length>200)
     ||new Set(data.items.map(row=>row.choice)).size!==data.items.length)throw Error();
    view.state='ready';view.data=data;
    view.timer=setTimeout(()=>{if(views.get(filter)===view){view.data=null;view.state='expired';onChange();}},Math.max(1,data.expiresAt-clock()));view.timer.unref?.();
@@ -229,7 +230,7 @@ export function createFavoriteWidgetSource({client,pages,clock=Date.now,onChange
    const [label,path]=FAVORITE_PAGES[key];entries.push('<li><a href="'+path+'">'+e(label)+'</a></li>');
   }
   for(const item of shownItems){
-   entries.push('<li><button type="button" class="btn" data-favorite-widget-choice="'+item.choice+'" data-area="'+e(filter)+'"'+(selecting?' disabled':'')+'>'+e(item.title)+'</button> <small>'+e(item.type)+'</small></li>');
+   entries.push('<li'+(item.displayColor?' class="item" data-category-color="'+item.displayColor+'"':'')+'><button type="button" class="btn" data-favorite-widget-choice="'+item.choice+'" data-area="'+e(filter)+'"'+(selecting?' disabled':'')+'>'+e(item.title)+'</button> <small>'+e(item.type)+'</small></li>');
   }
   const count=data.pages.length+data.itemCount;
   const list=entries.length?'<ul>'+entries.join('')+'</ul>':data.incomplete?'':'<p>No favorites in this view.</p>';

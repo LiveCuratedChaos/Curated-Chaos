@@ -412,3 +412,29 @@ test('a document favorite rejects missing originals and revoked document choices
  await assert.rejects(service.open(context,actor,restored.documentToken,()=>true));
  await assert.rejects(service.read(context,actor,deadline,selection.choice));
 });
+
+test('the Favorites widget projects the current original color without exposing the color map',async t=>{
+ const f=privateWorkspaceFixture(t,{allowFavorites:true,allowWidgetLayouts:true,allowNoteRead:true,
+  allowAppearance:true,allowAppearanceSave:true,allowCategoryColorPreferences:true});
+ const tab=f.tab();await tab.login();const {client}=tab;
+ const note=(await client.brief()).notes[0];
+ const favorite=await client.favoriteNoteRead(note.noteToken);
+ await client.favoriteNoteSave((await client.favoriteNoteReview({baseTag:favorite.baseTag,favorite:true,members:[]})).reviewId);
+ const preferences=await client.preferences();
+ const sectionReview=await client.reviewPreferences({baseTag:preferences.baseTag,changes:{...preferences.preferences,
+  categoryColors:{sections:{'Personal Life':'positive'},items:{}}}});
+ await client.savePreferences(sectionReview.reviewId);
+ assert.equal((await client.favoriteWidget('all')).items[0].displayColor,'positive');
+ const original=await client.itemColor(note.noteToken);
+ const review=await client.reviewPreferences({baseTag:original.baseTag,itemColorToken:note.noteToken,changes:{itemColor:'warning'}});
+ await client.savePreferences(review.reviewId);
+ const result=await client.favoriteWidget('all');
+ assert.deepEqual(Object.keys(result.items[0]).sort(),['choice','displayColor','title','type']);
+ assert.equal(result.items[0].displayColor,'warning');
+ const {createFavoriteWidgetSource}=await import('../src/private-favorites-panel.mjs');
+ const source=createFavoriteWidgetSource({client,pages:['brief'],canOpen:()=>true,isOnline:()=>true,
+  onChange:()=>{},openers:{note:()=>{}}});
+ t.after(()=>source.reset());
+ source.show(['all']);await turn();
+ assert.match(source.render({filter:'all'}),/data-category-color="warning"/);
+});

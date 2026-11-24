@@ -116,12 +116,12 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
  function clearCommonTaskPicker(c){c.commonTaskGeneration=(c.commonTaskGeneration??0)+1;commonTaskPicker?.clear(c.id);}
  const searchSchoolReader=allowSchoolRead&&allowSearch?createPrivateSchoolReader({api,now}):null;
  const schoolReader=allowSchoolRead?createPrivateSchoolReader({api,now,allowRecordHistory:allowSchoolHistory}):null;
- async function readRecordColors(actor){
+ async function readRecordColors(actor,options){
   const rows=await api.listPrivateAppearance(actor.accessToken,actor.ownerId,{allowCategoryColorPreferences:true});
   if(!privateWorkspaceAppearance(rows,actor.ownerId).available)return null;
-  return withRecordColors(null,rows[0]?.payload?.categoryColors);
+  return withRecordColors(null,rows[0]?.payload?.categoryColors,options);
  }
- function visibleRecordColors(actor){return allowCategoryColorPreferences?readRecordColors(actor).catch(()=>null):null;}
+ function visibleRecordColors(actor,options){return allowCategoryColorPreferences?readRecordColors(actor,options).catch(()=>null):null;}
  const calendarDays=allowCalendarDayRead?createPrivateCalendarDay({api,now,readColors:allowCategoryColorPreferences?readRecordColors:null,allowAllDay:allowAllDayEvents,allowRanges:allowEventRanges}):null;
  const calendarPresentations=allowCalendarPresentation?createPrivateCalendarPresentation({api,now}):null;
  if(typeof allowQuickAddPreferences!=='boolean'||allowQuickAddPreferences&&(!allowBriefRead||!allowTaskCreate))throw Error('Quick Add settings require the private workspace and reviewed creation.');
@@ -254,7 +254,7 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
  const schoolLibrary=allowSchoolRead&&allowDocuments?createSchoolLibrary({api,reader:schoolReader,storage:api.documentStorage,now}):null;
  const documents=allowDocuments?createDocumentLibrary({storage:api.documentStorage,now}):null;
  const favoriteDocuments=allowFavorites&&documents?createPrivateFavoriteDocuments({api,now,library:documents}):null;
- const favoritesWidget=favorites&&allowWidgetLayouts?createFavoritesWidget({favorites,now,services:{note:favoriteNotes,task:favoriteTasks,project:favoriteProjects,event:favoriteEvents,program:favoritePrograms,course:favoriteCourses,document:favoriteDocuments}}):null;
+ const favoritesWidget=favorites&&allowWidgetLayouts?createFavoritesWidget({favorites,now,readColors:actor=>visibleRecordColors(actor,{inheritSections:true}),services:{note:favoriteNotes,task:favoriteTasks,project:favoriteProjects,event:favoriteEvents,program:favoritePrograms,course:favoriteCourses,document:favoriteDocuments}}):null;
  const documentSchoolReader=allowSchoolRead&&allowSchoolEdit&&documents?createPrivateSchoolReader({api,now}):null;
  const schoolDocumentMatch=documentSchoolReader?createSchoolDocumentMatch({api,reader:documentSchoolReader,documents,now}):null;
  const manualBudgets=allowManualBudgets?createPrivateBudgetReview({api,now,documentStorage:allowDocuments?api.documentStorage:null}):null;

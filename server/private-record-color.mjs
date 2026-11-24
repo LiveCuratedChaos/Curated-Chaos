@@ -22,10 +22,10 @@ export function prepareRecordColor(preferences,rows,owner,record,baseTag,choice)
 }
 
 // Only a display token travels with a visible original. Identifier mappings stay server-side.
-export function withRecordColors(action,rawColors){
+export function withRecordColors(action,rawColors,{inheritSections=false}={}){
  const colors=normalizeCategoryColors(rawColors);
  return row=>{
-  const token=['task','note','event','project'].includes(row.item_type)?colors.items[row.id]:null;
+  const token=['task','note','event','project'].includes(row.item_type)?(colors.items[row.id]??(inheritSections?colors.sections[row.section]:undefined)):null;
   return {...action?.(row),...(token?{displayColor:token}:{})};
  };
 }
