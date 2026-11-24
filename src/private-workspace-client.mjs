@@ -1,4 +1,8 @@
 // Same-origin cookie client. No provider tokens, Supabase keys or browser storage.
+function schoolFavoritePath(type,action){
+ if(type!=='program'&&type!=='course')throw Error('Choose a School program or course.');
+ return 'favorites/'+type+'s-'+action;
+}
 export function createPrivateWorkspaceClient(fetcher=fetch){let csrf='',generation=0;
  async function request(path,method='GET',body,seq=generation,signal){const response=await fetcher('/auth/workspace/'+path,{method,credentials:'same-origin',cache:'no-store',redirect:'error',...(signal?{signal}:{}),headers:{'X-CC-Request':'workspace-session',...(method==='POST'?{'Content-Type':'application/json','X-CC-CSRF':csrf}:{})},...(body?{body:JSON.stringify(body)}:{})}),data=await response.json();if(seq!==generation)throw Error('Private session changed.');if(!response.ok){const error=Error(data.error||'Private workspace could not be checked.');if(data.code==='SCHOOL_IDENTITIES_REQUIRED'||path.startsWith('brokerage/')&&['access-denied','reconnect-required','selection-changed','session-ended','incomplete-read','source-unavailable'].includes(data.code))error.code=data.code;throw error;}if(!data||typeof data!=='object'||['accessToken','refreshToken','sessionId','password'].some(key=>Object.hasOwn(data,key)))throw Error('Unexpected sign-in response.');if(typeof data.csrf==='string')csrf=data.csrf;return data;}
  async function status(){return request('status');}
@@ -92,6 +96,12 @@ export function createPrivateWorkspaceClient(fetcher=fetch){let csrf='',generati
   manualAccountsReview:values=>request('manual-accounts/review','POST',values),
   manualAccountsSave:reviewId=>request('manual-accounts/save','POST',{approved:true,reviewId}),
   manualAccountsCancel:()=>request('manual-accounts/cancel','POST',{}),
+  favoriteSchoolList:(type,offset,collection)=>request(schoolFavoritePath(type,'list'),'POST',{offset,...(collection!==undefined?{collection}:{})}),
+  favoriteSchoolRead:(type,schoolReadToken)=>request(schoolFavoritePath(type,'read'),'POST',{schoolReadToken}),
+  favoriteSchoolReview:(type,values)=>request(schoolFavoritePath(type,'review'),'POST',values),
+  favoriteSchoolSave:(type,reviewId)=>request(schoolFavoritePath(type,'save'),'POST',{reviewId,approved:true}),
+  favoriteSchoolCancel:type=>request(schoolFavoritePath(type,'cancel'),'POST',{}),
+  openFavoriteSchool:(type,schoolReadToken)=>request(schoolFavoritePath(type,'open'),'POST',{schoolReadToken}),
   favoriteEventsList:(offset,collection)=>request('favorites/events-list','POST',{offset,...(collection!==undefined?{collection}:{})}),favoriteEventRead:eventReadToken=>request('favorites/events-read','POST',{eventReadToken}),
   favoriteEventReview:values=>request('favorites/events-review','POST',values),favoriteEventSave:reviewId=>request('favorites/events-save','POST',{reviewId,approved:true}),favoriteEventCancel:()=>request('favorites/events-cancel','POST',{}),openFavoriteEvent:eventReadToken=>request('favorites/events-open','POST',{eventReadToken}),
   favoriteProjectsList:(offset,collection)=>request('favorites/projects-list','POST',{offset,...(collection!==undefined?{collection}:{})}),favoriteProjectRead:projectReadToken=>request('favorites/projects-read','POST',{projectReadToken}),

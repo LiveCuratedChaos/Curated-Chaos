@@ -9,7 +9,7 @@ export function createFavoritesWidget({favorites,services,now}){
   for(const view of context.favoriteWidgetViews?.values()??[])clearTimeout(view.timer);
   context.favoriteWidgetViews=null;
  }
- const inventoryGroup=type=>type==='project'?'projects':'brief';
+ const inventoryGroup=type=>({project:'projects',program:'school',course:'school'}[type]??'brief');
  async function eligible(actor,refs,filter){
   const inventories=new Map(),matches=[];
   let incomplete=false;

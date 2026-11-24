@@ -812,3 +812,27 @@ test('individual note and event colors remain on their originals across navigati
  const schedule=page.getByRole('region',{name:'Date schedule'});
  await expect(schedule.getByRole('listitem').filter({hasText:'Fictional check-in'})).toHaveAttribute('data-category-color','positive');
 });
+
+test('School title search previews the filters and reopens a favorite course after reload',async({page})=>{
+ const title='Fictional Values-Based Leadership';
+ const searchField=page.getByRole('textbox',{name:'Search titles',exact:true});
+ await searchField.fill('find School records about Leadership');
+ await page.getByRole('button',{name:'Interpret search',exact:true}).click();
+ await expect(page.locator('#private-search-intent-panel')).toContainText('School programs and courses');
+ await page.getByRole('button',{name:'Search interpreted filters',exact:true}).click();
+ const results=page.locator('[aria-labelledby="private-search-results-title"]');
+ await results.locator('[data-private-search-school]').click();
+ const details=page.locator('#private-search-school-panel');
+ await expect(details.getByRole('heading',{name:title,exact:true})).toBeVisible();
+ await details.getByRole('button',{name:'Manage course favorite',exact:true}).click();
+ await page.getByLabel('Save this course in Favorites').check();
+ await page.getByRole('button',{name:'Review favorite course change',exact:true}).click();
+ await page.getByRole('button',{name:'Approve favorite course change',exact:true}).click();
+ await expect(page.getByRole('button',{name:title,exact:true})).toBeVisible();
+ await page.reload();
+ await page.getByRole('button',{name:'Favorites',exact:true}).click();
+ await page.getByRole('button',{name:'View favorite courses',exact:true}).click();
+ await page.getByRole('button',{name:title,exact:true}).click();
+ await expect(details).toContainText('Exact fictional course notes');
+ await expect(details.getByRole('button',{name:'Manage course favorite'})).toBeVisible();
+});

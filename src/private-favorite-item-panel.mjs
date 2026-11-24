@@ -8,7 +8,12 @@ const title=v=>typeof v==='string'&&v.trim().length>0&&v.length<=200;
 const keys=(v,expected)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).sort().join(',')===expected;
 const control=(action,title)=>'<button type="button" class="btn" data-favorite-item-action="'+action+'">'+e(title)+'</button>';
 const heading='#private-favorite-items-title';
-export const favoriteTokenFields=Object.freeze({event:'eventReadToken',project:'projectReadToken',task:'taskReadToken',note:'noteToken'});
+export const favoriteTokenFields=Object.freeze({program:'schoolReadToken',course:'schoolReadToken',event:'eventReadToken',project:'projectReadToken',task:'taskReadToken',note:'noteToken'});
+export function schoolFavoriteButton(kind,selection){
+ if(!token(selection)||!['degree','course'].includes(kind))return '';
+ const type=kind==='degree'?'program':'course';
+ return '<button type="button" class="btn" data-kind="'+type+'" data-favorite-item-action="select" data-selection="'+e(selection)+'">Manage '+type+' favorite</button>';
+}
 export function validFavoriteOriginal(type,row,withCollections=false){
  if(!Object.hasOwn(favoriteTokenFields,type))return false;
  const field=favoriteTokenFields[type],fields=[field,'title'];
@@ -27,6 +32,11 @@ export function createFavoriteItemPanel({client,clock,onChange,canUse,openers,on
   note:{field:'noteToken',list:client.favoriteNotesList,read:client.favoriteNoteRead,review:client.favoriteNoteReview,save:client.favoriteNoteSave,cancel:client.favoriteNoteCancel},
   task:{field:'taskReadToken',list:client.favoriteTasksList,read:client.favoriteTaskRead,review:client.favoriteTaskReview,save:client.favoriteTaskSave,cancel:client.favoriteTaskCancel}
  };
+ for(const type of ['program','course']){
+  services[type]={field:'schoolReadToken',list:(offset,collection)=>client.favoriteSchoolList(type,offset,collection),
+   read:key=>client.favoriteSchoolRead(type,key),review:values=>client.favoriteSchoolReview(type,values),
+   save:reviewId=>client.favoriteSchoolSave(type,reviewId),cancel:()=>client.favoriteSchoolCancel(type)};
+ }
  let type='note';
  const service=()=>services[type],noun=()=>type+'s',capital=()=>type[0].toUpperCase()+type.slice(1);
 

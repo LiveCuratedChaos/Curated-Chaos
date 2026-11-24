@@ -1,30 +1,28 @@
 # Curated Chaos development handoff
 
-Use the private repository `LiveCuratedChaos/Curated-Chaos` and select `codex/cloud-handoff-20261123` for the Cloud task. The source came from the Mac checkout of `codex/browser-checks` at `718596e1cf72f6087c2d887a1458f93b0287287b`, plus its on-disk changes. GitHub's copy of `codex/browser-checks` was at `25f7d65451929df870fbf8015cbeb6d339087f17` when the handoff was prepared.
+Resume from `codex/school-favorites-review` in the private repository `LiveCuratedChaos/Curated-Chaos`. This review branch builds on `codex/cloud-handoff-20261123` at `b88f7dd0b9351310bfa0fcea89351502b955e72e`. The local handoff snapshot and that GitHub commit had the same file tree. The original Mac development checkout is on `codex/browser-checks`.
+
+## Completed November 23
+
+- **R13:** School and search result details now offer reviewed favorites for programs and courses. Named collections reopen the original, including after a rename. Selection checks the current owner, access, record kind, revision and expiry. Removing a collection keeps the original favorites. Encrypted recovery reopened both a program and course with identical titles from the same collection.
+- **R18:** The optional Favorites widget includes programs and courses when School reads are enabled. School-area filtering and opening the current course notes passed in the signed-in Curation controller.
+- **R13:** “Find School records about leadership” previews the program and course title filters. Applying the preview uses the existing protected search. The parser rejects unsupported dates and task status filters for School.
+
+## Verification and blockers
+
+The 538 focused tests passed on Node 24.22.3 in a clean copy of the handoff with the review changes applied. The full macOS suite passed 3,447 of 3,482 tests. All 35 failures reported `listen EPERM`. The privacy content scan, whitespace check and launcher syntax check passed.
+
+Playwright 1.65.1 discovered 230 cases. Six relevant cases are pending across desktop and phone-size Chromium. The fictional fixture could not bind `127.0.0.1:5316`, so browser assertions did not run. They cover the Calendar day handoff, removing an original from the Favorites widget, and interpreting a School title search and reopening its favorite after reload. All checks used fictional records and local dependencies.
 
 ## Where to resume
 
-Use [the fixed release checklist](RELEASE_CHECKLIST.md) for approved scope and status. The latest entry in [the completion plan](COMPLETION_PLAN.md) describes the Calendar and Favorites work. [Local release evidence](verification/LOCAL_RELEASE_CHECKS.json) records the results. Paths under `/tmp` in earlier reports refer to the originating Mac.
-
-The Favorites widget opens private notes, tasks, projects and Calendar events through their original readers. Opening a favorite from a Calendar day closes the drawer after the event opens successfully. Closing the event returns focus to the same date. The day stays available after a failed read.
-
-1. Verify the four new desktop and phone-size Chromium cases, then record the result under R13, R18 and R21.
-2. Continue R13 by adding School programs and courses to Favorites. Reuse the selected School reader and the existing collection membership workflow. Verify reopening a renamed original, rejecting an inaccessible or expired original, and preserving memberships through recovery.
-3. Update the fixed checklist and the local verification record with what actually ran. Use fictional records for local development. Keep production deployment, paid services and live provider connections off.
-
-## Run the checks
-
-Use Node 24 and the pinned npm lockfile. From the repository root, install dependencies with `npm ci --ignore-scripts` if the environment needs them. Full offline checks use zsh. The browser tests use the locked Playwright version, its matching Chromium install, and a fictional HTTP fixture on loopback port 5316.
+1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
+2. The next independent R13 workflow is favoriting saved private documents. Use the current authorized document reader, reviewed collection membership and the original document after a rename. Cover loss of access, deletion, and encrypted recovery before marking it verified.
+3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
-npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens'
+npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews'
 ```
 
-These checks require no account credentials. Linux omits the macOS-native Calendar transfer test. Run native acceptance on macOS when that workflow changes.
-
-## Starting evidence
-
-All 432 focused checks passed. The final Mac offline run passed 3,441 of 3,476 tests. All 35 failures in the diagnostic run involved a denied loopback listener. Privacy, whitespace and launcher syntax passed. Playwright discovered 228 cases, including the four new cases. The fixture could not start for those four in the managed Mac session. A fresh Cloud browser run is still due.
-
-The handoff covers the development source, tests, SQL drafts and migrations, native helpers, and release documentation. Local credentials, provider snapshots, installed dependencies and 22 unreferenced generated PNGs were excluded.
+Earlier Calendar and Favorites contributions passed 432 focused tests. The previous full attempt passed 3,441 of 3,476. Historical logs under `/tmp` belong to the originating Mac. Linux omits the macOS-native Calendar transfer check.

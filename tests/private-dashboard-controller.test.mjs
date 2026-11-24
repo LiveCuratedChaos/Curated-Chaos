@@ -858,3 +858,66 @@ test('Work browses adjacent shift weeks and a chosen week across New Year, start
  await click('[data-private-browse]',{privateBrowse:'note'});assert.equal(queries.at(-1)?.type,'note');assert.equal(queries.at(-1)?.eventCategory,undefined);
  assert.doesNotMatch(s.root.innerHTML,/Previous shift week/);
 });
+
+test('signed-in School details save a course favorite and reopen its current notes from Favorites',async t=>{
+ const {privateWorkspaceFixture}=await import('./support/private-workspace-fixture.mjs');
+ const fixture=privateWorkspaceFixture(t,{allowFavorites:true,allowSchoolRead:true}),tab=fixture.tab();
+ await tab.login();
+ const s=await setup(t,{allowFavorites:true,allowSchoolRead:true,workspaceClient:tab.client,clock:Date.now});
+ async function click(selector,dataset={}){
+  s.events.click({target:{closest:q=>q===selector?{dataset}:null}});
+  for(let i=0;i<5;i++)await turn();
+ }
+ const title='Fictional Values-Based Leadership';
+ await click('#private-school-open');
+ const source=s.root.innerHTML.match(/data-school-read="([^"]+)"[^>]*>Open School record: Fictional Values-Based Leadership/);
+ assert.ok(source,'the School panel offers the original course');
+ await click('[data-school-read]',{schoolRead:source[1]});
+ assert.match(s.root.innerHTML,/Manage course favorite/);
+ await click('[data-favorite-item-action]',{favoriteItemAction:'select',kind:'course',selection:source[1]});
+ s.events.input({target:{dataset:{favoriteItemField:'favorite'},checked:true}});
+ await click('[data-favorite-item-action]',{favoriteItemAction:'review'});
+ assert.equal((await tab.client.favoriteSchoolList('course',0)).count,0);
+ await click('[data-favorite-item-action]',{favoriteItemAction:'approve'});
+ const selected=s.root.innerHTML.match(/data-favorite-item-action="open" data-selection="([^"]+)"/);
+ assert.ok(selected);
+ await click('[data-favorite-item-action]',{favoriteItemAction:'open',selection:selected[1]});
+ assert.ok(s.root.innerHTML.includes('id="private-search-school-title" tabindex="-1">'+title));
+ assert.match(s.root.innerHTML,/Exact fictional course notes/);
+ assert.doesNotMatch(s.root.innerHTML,/Edit saved School record/);
+ await click('[data-favorite-item-action]',{favoriteItemAction:'select',kind:'course',selection:selected[1]});
+ assert.match(s.root.innerHTML,/data-favorite-item-field="favorite" checked/);
+});
+
+test('an interpreted School title opens the authorized course and a School widget reopens the same favorite',async t=>{
+ const {privateWorkspaceFixture}=await import('./support/private-workspace-fixture.mjs');
+ const fixture=privateWorkspaceFixture(t,{allowFavorites:true,allowSchoolRead:true,allowSearch:true,allowWidgetLayouts:true});
+ const tab=fixture.tab();await tab.login();
+ const client=tab.client,layout=await client.widgetLayoutRead(),layouts=structuredClone(layout.layouts);
+ layouts.desktop=[{id:'study-favorites',type:'favorites',width:'half',hidden:false,filter:'School',limit:4}];
+ await client.widgetLayoutSave((await client.widgetLayoutReview({baseTag:layout.baseTag,layouts})).reviewId);
+ const canvas={innerHTML:'',contains:()=>false};
+ const s=await setup(t,{allowSearch:true,allowSchoolRead:true,allowFavorites:true,allowWidgetLayouts:true,curationWorkspace:true,
+  workspaceClient:client,canvasRegion:canvas,clock:Date.now});
+ const settle=async()=>{for(let i=0;i<5;i++)await turn();};
+ const click=async(selector,dataset={})=>{s.events.click({target:{closest:q=>q===selector?{dataset}:null}});await settle();};
+ let searches=0;
+ s.client.search=values=>{searches++;return client.search(values);};
+ setIntentText(s,'find school records about leadership');
+ await click('#private-search-interpret');
+ assert.equal(searches,0);assert.match(s.root.innerHTML,/Record type<\/dt><dd>School programs and courses/);
+ await click('#private-search-intent-apply');
+ assert.equal(searches,1);
+ const key=s.root.innerHTML.match(/data-private-search-school="([^"]+)"/)?.[1];assert.ok(key);
+ await click('[data-private-search-school]',{privateSearchSchool:key});
+ assert.match(s.root.innerHTML,/Exact fictional course notes/);
+ await click('[data-favorite-item-action]',{favoriteItemAction:'select',kind:'course',selection:key});
+ s.events.input({target:{dataset:{favoriteItemField:'favorite'},checked:true}});
+ await click('[data-favorite-item-action]',{favoriteItemAction:'review'});
+ await click('[data-favorite-item-action]',{favoriteItemAction:'approve'});
+ await click('[data-favorite-item-action]',{favoriteItemAction:'close'});
+ const choice=(canvas.innerHTML||s.root.innerHTML).match(/data-favorite-widget-choice="([^"]+)"/)?.[1];assert.ok(choice);
+ await click('[data-favorite-widget-choice]',{favoriteWidgetChoice:choice,area:'School'});
+ assert.match(s.root.innerHTML,/id="private-search-school-title" tabindex="-1">Fictional Values-Based Leadership/);
+ assert.match(s.root.innerHTML,/Exact fictional course notes/);
+});

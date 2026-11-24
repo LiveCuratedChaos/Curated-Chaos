@@ -282,3 +282,99 @@ test('a capped Favorites widget retains page links during a source outage and ex
  fail=false;await source.refresh('all');const recovered=source.render({filter:'all',limit:2});
  assert.match(recovered,/Showing 2 of 17 favorites/);assert.match(recovered,/Task 00/);assert.doesNotMatch(recovered,/Some favorite items could not be loaded/);
 });
+
+test('School favorites follow the renamed program and course through their original readers and collections',async t=>{
+ const fixture=privateWorkspaceFixture(t,{allowFavorites:true,allowSchoolRead:true,allowSchoolEdit:true,allowWidgetLayouts:true,allowSearch:true});
+ const tab=fixture.tab(),other=fixture.tab();
+ await tab.login();await other.login();
+ const {client}=tab,otherClient=other.client;
+ const settings=await client.favoritesRead();
+ const collections=[{id,name:'Study plan'}],favorites={...defaultFavorites(),collections};
+ await client.favoritesSave((await client.favoritesReview({baseTag:settings.baseTag,layout:favorites})).reviewId);
+ const overview=await client.schoolOverview();
+ const search=await client.search({type:'school',section:'School',query:'Fictional course 1',status:'all',offset:0});
+ const course=search.results[0];assert.equal(course.schoolKind,'course');
+ for(const [type,source] of [['program',overview.programs[0]],['course',course]]){
+  const selected=await client.favoriteSchoolRead(type,source.schoolReadToken);
+  const review=await client.favoriteSchoolReview(type,{baseTag:selected.baseTag,favorite:true,members:[id]});
+  assert.equal((await client.favoriteSchoolList(type,0,id)).count,0);
+  await client.favoriteSchoolSave(type,review.reviewId);
+  await assert.rejects(client.favoriteSchoolSave(type,review.reviewId));
+ }
+ const widget=await client.favoriteWidget('School');
+ assert.deepEqual(widget.items.map(v=>v.type).sort(),['course','program']);
+ assert.equal((await client.favoriteWidget('Work')).itemCount,0);
+ for(const [type,plural] of [['course','courses'],['program','programs']]){
+  const otherType=type==='course'?'program':'course';
+  const item=(await client.favoriteSchoolList(type,0,id))[plural][0];
+  assert.deepEqual(Object.keys(item).sort(),['collections','schoolReadToken','title']);
+  assert.deepEqual(item.collections,['Study plan']);
+  const key=item.schoolReadToken;
+  const detail=await client.openFavoriteSchool(type,key);
+  assert.equal(detail.title,item.title);assert.equal(detail.readOnly,true);
+  await assert.rejects(otherClient.openFavoriteSchool(type,key));
+  await assert.rejects(client.openFavoriteSchool(otherType,key));
+  await assert.rejects(client.favoriteSchoolRead(otherType,key));
+  await assert.rejects(client.schoolEditRead(key));
+  const beforeEdit=await client.favoriteWidget('School');
+  const editSource=(await otherClient.schoolOverview())[plural].find(row=>row.title===item.title);
+  const edit=await otherClient.schoolEditRead(editSource.schoolReadToken);
+  const newTitle='Renamed '+type;
+  const revised=await otherClient.schoolEditReview({editToken:edit.editToken,fields:{...edit.fields,title:newTitle}});
+  await otherClient.schoolEditSave(revised.reviewId);
+  await assert.rejects(client.openFavoriteSchool(type,key));
+  await assert.rejects(client.favoriteWidgetSelect({filter:'School',choice:beforeEdit.items.find(v=>v.type===type).choice}));
+  const updated=await client.favoriteSchoolList(type,0,id);
+  assert.equal(updated.count,1);assert.equal(updated[plural][0].title,newTitle);
+  assert.deepEqual(updated[plural][0].collections,['Study plan']);
+  const inventory=await client.favoriteWidget('School'),choice=inventory.items.find(v=>v.type===type);
+  const original=await client.favoriteWidgetSelect({filter:'School',choice:choice.choice});
+  assert.equal((await client.openFavoriteSchool(type,original.row.schoolReadToken)).title,newTitle);
+ }
+ const refreshed=await client.favoritesRead();
+ await client.favoritesSave((await client.favoritesReview({baseTag:refreshed.baseTag,layout:defaultFavorites()})).reviewId);
+ for(const type of ['course','program']){
+  await assert.rejects(client.favoriteSchoolList(type,0,id));
+  const list=await client.favoriteSchoolList(type,0);
+  assert.deepEqual(list[type+'s'][0].collections,[]);
+ }
+ const off=privateWorkspaceFixture(t,{allowFavorites:true}).tab();await off.login();
+ await assert.rejects(off.client.favoriteSchoolList('program',0));
+});
+
+test('a School original must stay accessible through review, approval, and reopening',async t=>{
+ const {fixture,owner,id:recordId}=await import('./fixtures/common-task-memberships.mjs');
+ const {createPrivateSchoolReader}=await import('../server/private-school-read.mjs');
+ const {createPrivateFavoriteSchool}=await import('../server/private-favorite-records.mjs');
+ const {makeBriefPreferencesRecord}=await import('../src/dev-preferences-model.mjs');
+ const {degree,course}=fixture(),actor={ownerId:owner},context='signed-in';
+ let now=Date.now(),current=course;
+ const settings={...degree,...makeBriefPreferencesRecord({},owner),id:recordId(12)};
+ settings.payload.favoriteItems={version:1,items:[{type:'course',id:course.id,collections:[]}]};
+ const api={listBriefPreferences:async()=>[settings],addBriefPreferences:assert.fail,updateBriefPreferences:assert.fail,
+  listPrivateSchoolSummaries:async()=>[degree,...(current?[current]:[])],
+  getPrivateSchoolRecord:async(_access,id)=>current?.id===id?[current]:[]};
+ const reader=createPrivateSchoolReader({api,now:()=>now});
+ const service=createPrivateFavoriteSchool({api,now:()=>now,inventoryReader:reader,
+  selectedReader:()=>({current:reader.isCurrentToken,selectedSource:reader.selectedSource})},'course');
+ t.after(()=>{service.dispose();reader.dispose();});
+ const list=()=>service.list(context,actor,now+10000,0,()=>true);
+ for(const inaccessible of [null,{...course,deleted_at:course.updated_at},{...course,visibility:'household'},{...course,owner_id:recordId(20)}]){
+  current=course;
+  const item=(await list()).courses[0],key=item.schoolReadToken;
+  const view=await service.read(context,actor,now+20000,key);
+  const review=await service.review(context,actor,{baseTag:view.baseTag,favorite:false,members:[]});
+  current=inaccessible;
+  await assert.rejects(reader.read(context,actor,key));
+  await assert.rejects(service.authorize(service.claim(context,actor,review.reviewId),actor));
+  assert.equal((await list()).count,0);
+ }
+ current=course;
+ const expiry=now+10000,item=(await list()).courses[0];
+ const selected=await service.read(context,actor,now+20000,item.schoolReadToken);
+ assert.equal(selected.expiresAt,expiry);
+ now=expiry;
+ await assert.rejects(reader.read(context,actor,item.schoolReadToken));
+ await assert.rejects(service.review(context,actor,{baseTag:selected.baseTag,favorite:false,members:[]}));
+ assert.equal(settings.payload.favoriteItems.items.length,1);
+});

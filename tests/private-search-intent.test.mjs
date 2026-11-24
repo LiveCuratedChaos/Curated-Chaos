@@ -41,3 +41,13 @@ test('source, title and option bounds fail with one friendly error that never ec
  const secret='PRIVATE_INPUT_NEVER_ECHO';for(const source of [null,{},[],true,42,'',' '.repeat(301),'notes about "'+'x'.repeat(101)+'"','notes about foo\nbar','notes about foo\u0000bar','find '+secret]){let error;try{parse(source);}catch(value){error=value;}assert.ok(error);assert.doesNotMatch(error.message,/PRIVATE_INPUT_NEVER_ECHO|foo|bar/);assert.match(error.message,/explicit filters|supported phrase/);}
  for(const extra of [{allowProjects:1},{allowPriority:'yes'},{allowDates:null},{allowUndated:0},{weekStart:-1},{weekStart:7},{weekStart:1.5},{weekStart:'0'},{weekStart:true},{now:NaN},{now:Infinity},{now:'today'},{now:false},{now:Date.parse('1999-12-31T12:00:00Z')}])assert.throws(()=>parse('tasks',extra));assert.throws(()=>parsePrivateSearchIntent('tasks',null));assert.throws(()=>parsePrivateSearchIntent('tasks',[]));
 });
+
+test('School record phrases propose the authorized program and course title filter',()=>{
+ const scoped={allowSchoolRead:true};
+ assert.deepEqual(parse('Find School records about Leadership',scoped).fields,fields({query:'Leadership',type:'school',section:'School'}));
+ assert.deepEqual(parse('all school records',scoped).fields,fields({type:'school',section:'School'}));
+ assert.equal(parse('School records about "work due tomorrow"',scoped).fields.query,'work due tomorrow');
+ for(const phrase of ['work school records','school notes','completed School records','high priority school records','school records due tomorrow','school records without a due date','find courses about math'])assert.throws(()=>parse(phrase,scoped));
+ assert.throws(()=>parse('school records'));assert.throws(()=>parse('school records',{allowSchoolRead:1}));
+ assert.deepEqual(parse('school tasks').fields,fields({section:'School'}));
+});

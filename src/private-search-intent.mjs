@@ -24,12 +24,17 @@ function dates(phrase,anchor,weekStart){
 export function parsePrivateSearchIntent(text,options={}){
  try{
   if(!options||typeof options!=='object'||Array.isArray(options))fail();
-  const {now=Date.now(),allowProjects=false,allowPriority=false,allowDates=false,allowUndated=false,weekStart=0}=options;
-  if(!Number.isFinite(now)||[allowProjects,allowPriority,allowDates,allowUndated].some(value=>typeof value!=='boolean')||!Number.isInteger(weekStart)||weekStart<0||weekStart>6||typeof text!=='string'||!text.trim()||text.length>300||/[\u0000-\u001f\u007f]/.test(text))fail();
+  const {now=Date.now(),allowProjects=false,allowSchoolRead=false,allowPriority=false,allowDates=false,allowUndated=false,weekStart=0}=options;
+  if(!Number.isFinite(now)||[allowProjects,allowSchoolRead,allowPriority,allowDates,allowUndated].some(value=>typeof value!=='boolean')||!Number.isInteger(weekStart)||weekStart<0||weekStart>6||typeof text!=='string'||!text.trim()||text.length>300||/[\u0000-\u001f\u007f]/.test(text))fail();
   const anchorDay=newYorkTaskDay(now);if(!day(anchorDay))fail();
   let remaining=text.trim(),type,status,section,priority,overdue=false;
   const leading=remaining.match(/^(?:show|find)\b\s*/i);if(leading)remaining=remaining.slice(leading[0].length);
   while(remaining){
+   const schoolRecords=remaining.match(/^school\s+records?\b\s*/i);
+   if(schoolRecords){
+    if(!allowSchoolRead||section!==undefined)fail();
+    type='school';section='School';remaining=remaining.slice(schoolRecords[0].length).trim();break;
+   }
    const record=remaining.match(/^(tasks?|events?|notes?|projects?)\b\s*/i);
    if(record){type=record[1].toLowerCase().replace(/s$/,'');remaining=remaining.slice(record[0].length).trim();break;}
    const personal=remaining.match(/^personal\s+life\b\s*/i),word=remaining.match(/^([a-z]+)\b\s*/i);if(!word)fail();

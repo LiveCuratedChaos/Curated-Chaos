@@ -231,3 +231,36 @@ test('recovered tasks with legacy checklist positions can complete and reopen th
   const [saved]=await read(null,row.id);assert.equal(saved.payload.status,reopening?'Not Started':'Completed');assert.deepEqual(saved.payload.subtasks,subtasks);
  }
 });
+
+test('encrypted recovery reopens the same School program and course from their original favorite collection',async t=>{
+ const dst=await setup(t);
+ const {makeSchoolCourse,makeSchoolDegree}=await import('../src/dev-school-model.mjs');
+ const {makeBriefPreferencesRecord}=await import('../src/dev-preferences-model.mjs');
+ const {createPrivateSchoolReader}=await import('../server/private-school-read.mjs');
+ const {createPrivateFavoriteSchool}=await import('../server/private-favorite-records.mjs');
+ const program=record(makeSchoolDegree(i.a,{title:'Study plan'}));
+ const course=record(makeSchoolCourse(i.a,{title:'Study plan',degreeId:program.id,notes:'Original course notes'}));
+ const profile=record(makeBriefPreferencesRecord({},i.a)),collection=randomUUID();
+ profile.payload.favorites={version:1,pages:[],collections:[{id:collection,name:'This term'}]};
+ profile.payload.favoriteItems={version:1,items:[{type:'program',id:program.id,collections:[collection]},{type:'course',id:course.id,collections:[collection]}]};
+ const bytes=seal([course,profile,program]),review=await dst.executor.prepare(dst.who,{bytes});
+ assert.equal(review.canRestore,true);
+ assert.equal((await dst.executor.execute(dst.who,{approved:true,reviewId:review.reviewId})).restored,3);
+ assert.equal((await dst.executor.prepare(dst.who,{bytes})).insertCount,0);
+ const rows=await dst.repository.readPrivateRows(dst.who,i.a);
+ assert.deepEqual(rows.find(row=>row.id===profile.id).payload.favoriteItems,profile.payload.favoriteItems);
+ const api={listBriefPreferences:async()=>rows.filter(row=>row.id===profile.id),addBriefPreferences:assert.fail,updateBriefPreferences:assert.fail,
+  listPrivateSchoolSummaries:async()=>rows.filter(row=>row.item_type==='school_fixture'),
+  getPrivateSchoolRecord:async(_token,id,owner)=>rows.filter(row=>row.id===id&&row.owner_id===owner)};
+ const reader=createPrivateSchoolReader({api}),actor={ownerId:i.a};
+ t.after(()=>reader.dispose());
+ for(const [type,source] of [['program',program],['course',course]]){
+  const service=createPrivateFavoriteSchool({api,now:Date.now,inventoryReader:reader},type);
+  t.after(()=>service.dispose());
+  const list=await service.list('recovered',actor,Date.now()+300000,0,()=>true,collection);
+  assert.equal(list.count,1);
+  const [item]=list[type+'s'];assert.deepEqual(item.collections,['This term']);
+  const selected=await reader.selectedRecord('recovered',actor,item.schoolReadToken);
+  assert.equal(selected.id,source.id);assert.deepEqual(selected.payload,source.payload);
+ }
+});

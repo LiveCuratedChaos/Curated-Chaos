@@ -1,3 +1,4 @@
+import {privateSchoolState} from './private-school-read.mjs';
 import {privateProjectState} from './private-projects.mjs';
 import {normalizeCloudRecords} from '../src/dev-brief-model.mjs';
 import {isPrivateNoteSummary} from './private-note-source.mjs';
@@ -20,6 +21,20 @@ export function createPrivateFavoriteProjects(options){
  function summary(row,owner){try{privateProjectState(row,owner,{summary:true});return true;}catch{return false;}}
  return createFavoriteRecords(options,{type:'project',lookup:'getPrivateProject',tokenField:'projectReadToken',selected:(reader,id,actor,key)=>reader.selectedRecord(id,actor,key),summary,
   inventory:(api,actor)=>api.listPrivateProjects(actor.accessToken,actor.ownerId),fields:row=>({section:row.section,projectStatus:row.payload.status})});
+}
+export function createPrivateFavoriteSchool(options,type){
+ const kind=type==='program'?'degree':type;
+ if(type!=='program'&&type!=='course')throw Error('Choose a School program or course.');
+ function summary(row,owner){
+  try{return privateSchoolState(row,owner).fields.kind===kind;}catch{return false;}
+ }
+ async function selected(reader,id,actor,key){
+  const source=await reader.selectedSource(id,actor,key);
+  if(source.record.payload.kind!==kind)throw Error('Select the current School original.');
+  return source;
+ }
+ return createFavoriteRecords(options,{type,lookup:'getPrivateSchoolRecord',tokenField:'schoolReadToken',summary,selected,
+  inventory:(api,actor)=>api.listPrivateSchoolSummaries(actor.accessToken,actor.ownerId)});
 }
 function createFavoriteRecords({api,now,selectedReader,inventoryReader},policy){
  const store=createPrivateFavoriteItemStore({api,now}),states=new Map();

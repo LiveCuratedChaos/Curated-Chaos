@@ -5,13 +5,14 @@
   "latestAttempt": {
     "date": "2026-11-23",
     "platform": "darwin",
+    "node": "24.22.3",
     "command": "npm run check:offline",
     "result": {
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3476,
-        "passed": 3441,
+        "total": 3482,
+        "passed": 3447,
         "failed": 35,
         "cancelled": 0,
         "skipped": 0
@@ -26,11 +27,10 @@
         "unprotectedPaths": 0,
         "trackedPrivateFiles": 0,
         "checkedIgnoreRules": 11,
-        "binarySourcesSkipped": 32
+        "binarySourcesSkipped": 10
       }
     },
-    "log": "/tmp/cc-favorites-finished-offline.log",
-    "note": "The final summary was recovered on reconnect. A diagnostic run identified local listener permission errors in all 35 failures."
+    "note": "The diagnostic TAP output identified listen EPERM in every one of the 35 failed tests."
   },
   "result": {
     "platformExclusions": [],
@@ -56,10 +56,12 @@
     }
   },
   "browser": {
-    "preparedCases": 228,
+    "preparedCases": 230,
     "freshExecutionVerified": false,
-    "reason": "Four new desktop and mobile Chromium cases were discovered. The fictional loopback fixture could not listen in the managed Mac session.",
-    "attemptLog": "/tmp/cc-favorites-finished-browser.log"
+    "selectedCases": 6,
+    "selectedCasesExecuted": 0,
+    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews'",
+    "reason": "The fictional fixture could not bind 127.0.0.1:5316 in the managed Mac session."
   },
   "releaseComplete": false,
   "productionChanged": false,
@@ -96,9 +98,11 @@
     "R20 now has default-off, reviewed section color preferences through the original owner-private settings CAS; current task/project list accents are integrated. Per-item controls, all approved consumers and browser/device acceptance remain unfinished."
   ],
   "latestFocusedChecks": {
-    "command": "node --test tests/private-operation-bridge-contract.test.mjs tests/private-operation-receipts-database.test.mjs tests/private-widget-source-association-contract.test.mjs tests/private-widget-source-associations-database.test.mjs tests/private-widget-layout-service.test.mjs tests/private-widget-pages.test.mjs tests/private-widget-layout-panel.test.mjs",
-    "passed": 35,
-    "failed": 0
+    "command": "node --test --test-concurrency=3 tests/private-favorites.test.mjs tests/private-school-panel.test.mjs tests/private-school-read-*.test.mjs tests/private-school-edit-*.test.mjs tests/private-school-search-http.test.mjs tests/private-search-school-panel.test.mjs tests/private-search-intent*.test.mjs tests/private-workspace-restore-repository.test.mjs tests/private-school-restore*.test.mjs tests/private-workspace-static.test.mjs tests/private-workspace-client.test.mjs tests/private-dashboard-controller.test.mjs",
+    "node": "24.22.3",
+    "passed": 538,
+    "failed": 0,
+    "scope": "School favorites in School, search, named collections and the Favorites widget. Includes stale selections, inaccessible originals, encrypted recovery and interpreted School title search."
   },
   "targetedChecks": {
     "total": 532,
@@ -874,7 +878,7 @@
     "failed": 0,
     "scope": "Canonical shared task/project progress and links, manual status independence, deduplicated hierarchy, recovery/archive boundaries and protected original details. Reuses existing project engine for Personal Life goals."
   },
-  "nextAction": "Run the four Calendar and Favorites Chromium cases in a local-listener-enabled environment, then continue R13 School program and course Favorites with collection membership and the original School reader.",
+  "nextAction": "Run the six selected desktop and phone-size Chromium cases and the full offline suite on a runner that permits loopback listeners. Continue R13 with saved private document Favorites and the original document reader.",
   "pendingDecisions": [],
   "resolvedHomeCleaningRollover": {
     "requirement": "R31 Home cleaning rollover semantics",
@@ -916,5 +920,35 @@
       }
     },
     "log": "/tmp/cc-fav-event-offline.log"
+  },
+  "precedingCalendarFavoritesAttempt": {
+    "date": "2026-11-23",
+    "platform": "darwin",
+    "command": "npm run check:offline",
+    "result": {
+      "platformExclusions": [],
+      "localChecksPassed": false,
+      "automatedTests": {
+        "total": 3476,
+        "passed": 3441,
+        "failed": 35,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "checks": {
+        "tests": false,
+        "privacy": true,
+        "whitespace": true,
+        "launcher": true
+      },
+      "privacy": {
+        "unprotectedPaths": 0,
+        "trackedPrivateFiles": 0,
+        "checkedIgnoreRules": 11,
+        "binarySourcesSkipped": 32
+      }
+    },
+    "log": "/tmp/cc-favorites-finished-offline.log",
+    "note": "The final summary was recovered on reconnect. A diagnostic run identified local listener permission errors in all 35 failures."
   }
 }

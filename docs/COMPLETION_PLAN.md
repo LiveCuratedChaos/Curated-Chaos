@@ -3974,3 +3974,9 @@ The optional Favorites widget opens saved pages and original notes, tasks, proje
 All 432 focused tests passed, including the signed-in Curation controller with the actual client and fictional HTTP handlers. Four new desktop and phone-size Chromium cases cover Calendar and Curation. Their local fixture listener could not start in this sandbox. See the current verification record for full-suite results.
 
 Next verify the two workflows in desktop and phone-size Chromium on a runner that permits the local fixture. The next independent R13 workflow is favorite School programs and courses through the existing selected School reader, including collection membership and reopening the renamed original.
+
+### November 23 — School Favorites and interpreted School title searches
+
+Programs and courses now use the reviewed Favorites flow from School and search. Named collections and area-filtered Favorites widgets reopen the selected School original. Renaming a record updates its favorite title on the next read. Removing a collection keeps its favorites. A recovered collection with a same-titled program and course reopened each by its original identity. The local search interpreter can preview a search across saved School program and course titles.
+
+The signed-in controllers exercised both entry points, the read-only course details and the widget. All 538 focused tests passed. The full offline run and the six pending Chromium cases are recorded in the [development handoff](CODEX_CLOUD_HANDOFF.md).

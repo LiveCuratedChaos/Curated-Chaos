@@ -1,10 +1,10 @@
 import {escapeHtml as e} from './core.mjs';
 import {parsePrivateSearchIntent} from './private-search-intent.mjs';
 import {newYorkTaskDay} from './private-smart-task.mjs';
-const display=(key,value)=>({type:{all:'All',task:'Tasks',note:'Notes',event:'Workspace events',project:'Projects'},status:{all:'All statuses',open:'Open',completed:'Completed'},section:{all:'All areas'},priority:{all:'All priorities'},dateStatus:{all:'All dates',dated:'With a due date',undated:'No due date'}}[key]?.[value]||value||({query:'Any title',dateFrom:'No lower date bound',dateTo:'No upper date bound'}[key]||'Any'));
+const display=(key,value)=>({type:{all:'All',task:'Tasks',note:'Notes',event:'Workspace events',project:'Projects',school:'School programs and courses'},status:{all:'All statuses',open:'Open',completed:'Completed'},section:{all:'All areas'},priority:{all:'All priorities'},dateStatus:{all:'All dates',dated:'With a due date',undated:'No due date'}}[key]?.[value]||value||({query:'Any title',dateFrom:'No lower date bound',dateTo:'No upper date bound'}[key]||'Any'));
 const names={query:'Title phrase',type:'Record type',section:'Area',status:'Task status',priority:'Task priority',dateFrom:'From date',dateTo:'Through date',dateStatus:'Date status'};
 export function createSearchIntentPanel({clock=Date.now,canUse=()=>false,options={},onChange=()=>{},onSearch=()=>{}}={}){
- const scope=Object.fromEntries(['allowProjects','allowPriority','allowDates','allowUndated'].map(key=>[key,options[key]===true]));
+ const scope=Object.fromEntries(['allowProjects','allowSchoolRead','allowPriority','allowDates','allowUndated'].map(key=>[key,options[key]===true]));
  let view=null,phrase='',error='',disposed=false;
  const changed=focus=>{if(!disposed)onChange(canUse()?focus:undefined);};
  function reset(){view=null;phrase='';error='';}
