@@ -49,8 +49,8 @@ export function lifeSuggestions(rows){
     const p=row?.payload;
     const t=LIFE_EXAMPLES.find(x=>x.id===p?.template_id);
     if(row?.deleted_at!=null||!t||!UUID.test(row?.id||'')||!validDay(p?.day))return [];
-    if(t.id==='course-assessment')return [{id:`life-fixture-${row.id}`,recordId:row.id,sourceVersion:row.version,source:'school',rule:'school_to_task',section:'School',day:p.day,title:'Review fictional assessment checklist',reason:`Your saved fictional school record “${t.title}” is approaching. This task requires approval.`}];
-    if(t.id==='maintenance')return [{id:`life-fixture-${row.id}`,recordId:row.id,sourceVersion:row.version,source:'household',rule:'household_to_task',section:'Home',day:p.day,title:'Check fictional filter replacement',reason:`Your saved fictional household record “${t.title}” has a due date. This task requires approval.`}];
+    if(t.id==='course-assessment')return [{id:`life-fixture-${row.id}`,recordId:row.id,sourceId:row.id,sourceVersion:row.version,uncertainty:'Confirm the assessment date and whether it still needs preparation.',source:'school',rule:'school_to_task',section:'School',day:p.day,title:'Review fictional assessment checklist',reason:`Your saved fictional school record “${t.title}” is approaching. This task requires approval.`}];
+    if(t.id==='maintenance')return [{id:`life-fixture-${row.id}`,recordId:row.id,sourceId:row.id,sourceVersion:row.version,uncertainty:'Confirm the filter still needs replacement and the saved date is current.',source:'household',rule:'household_to_task',section:'Home',day:p.day,title:'Check fictional filter replacement',reason:`Your saved fictional household record “${t.title}” has a due date. This task requires approval.`}];
     return [];
   });
 }

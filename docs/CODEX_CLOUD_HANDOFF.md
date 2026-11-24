@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R26** Fictional School and household suggestions now retain their source identity and show the uncertainty to confirm in the review. The open review is hidden if suggestions are disabled. All 56 related checks passed. Live cross-app automation and audit acceptance remain pending.
+
 - **R25** Chase and brokerage previews distinguish HTTP 401 reconnect and 403 access denial even when the provider response cannot be decoded as JSON. All 18 related checks passed using fictional records. Institution-specific live reconnect and refresh remain unverified.
 
 - **R24** The selected Gmail message preview no longer suggests Appointment solely from generic website links or shipment scheduling language. It still recognizes explicit appointment and upcoming-visit wording. All 24 related tests passed.

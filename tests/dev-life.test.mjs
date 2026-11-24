@@ -44,6 +44,8 @@ test('school and household sample suggestions are linked to saved rows; finance 
  assert.equal(suggestions.length,2);assert.ok(suggestions.every(isLifeFixtureSuggestion));
  assert.deepEqual(suggestions.map(x=>x.source),['school','household']);
  for(const suggestion of suggestions){
+   assert.equal(suggestion.sourceId,suggestion.recordId);
+   assert.match(suggestion.uncertainty,/Confirm/);
    assert.equal(validateSuggestedTask(suggestion,{title:suggestion.title,section:suggestion.section,day:suggestion.day}).day,suggestion.day);
    const decision=makeSuggestionDismissal(suggestion,owner);
    assert.equal(normalizedDismissals([decision],owner,[suggestion.id]).has(suggestion.id),true);

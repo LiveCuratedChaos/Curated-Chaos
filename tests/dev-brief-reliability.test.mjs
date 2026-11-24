@@ -10,11 +10,12 @@ import * as decisions from '../src/dev-decision-model.mjs';
 import {lifeSuggestions,normalizeFictionalLife} from '../src/dev-life-model.mjs';
 import {emailSuggestions,normalizeFictionalEmails} from '../src/dev-email-model.mjs';
 import {cloudFreshness} from '../src/dev-sync-model.mjs';
+import {reviewAutomationSuggestion} from '../src/private-automation-policy.mjs';
 const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 function screen(){
  const listeners={},root={addEventListener:(name,fn)=>listeners[name]=fn};
  const source=readFileSync(new URL('../src/dev-brief.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').split('// M1G: best-effort')[0];
- const context=vm.createContext({dayString,e:escapeHtml,...intelligence,...brief,...preferences,...decisions,lifeSuggestions,normalizeFictionalLife,emailSuggestions,normalizeFictionalEmails,cloudFreshness,document:{getElementById:()=>root,body:{dataset:{}}},window:{},sessionStorage:{removeItem(){},setItem(){}},FormData:class{constructor(form){this.values=form.values;}get(key){return this.values[key];}entries(){return Object.entries(this.values);}},Date});
+ const context=vm.createContext({reviewAutomationSuggestion,dayString,e:escapeHtml,...intelligence,...brief,...preferences,...decisions,lifeSuggestions,normalizeFictionalLife,emailSuggestions,normalizeFictionalEmails,cloudFreshness,document:{getElementById:()=>root,body:{dataset:{}}},window:{},sessionStorage:{removeItem(){},setItem(){}},FormData:class{constructor(form){this.values=form.values;}get(key){return this.values[key];}entries(){return Object.entries(this.values);}},Date});
  vm.runInContext(source,context);vm.runInContext(`render=()=>{};user={id:'${owner}'};session={};auth={get:()=>session,getAccessToken:async()=>'fixture'};api={listBriefRecords:async()=>[],listSuggestionDecisions:async()=>[],listFictionalEmails:async()=>[],listFictionalLife:async()=>[],listBriefPreferences:async()=>[]};lastSuccessAt=Date.now();`,context);
  return{context,listeners};
 }
@@ -65,4 +66,14 @@ test('enabled atomic approval calls only the transaction endpoint and never fall
   const s=screen();await openReview(s);let calls=0,legacy=0;s.context.approve=async args=>{calls++;assert.equal(args.sourceId,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');assert.equal(args.expectedVersion,1);if(!succeeds)throw Error('Atomic fixture unavailable');return{task_id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',already_saved:false};};s.context.legacy=()=>{legacy++;throw Error('Legacy write must never run');};vm.runInContext('config={atomicFictionalApprovals:true};api.approveFictionalSuggestion=(_token,args)=>approve(args);api.addFictionalTask=legacy;api.addSuggestionDecision=legacy',s.context);
   await s.listeners.submit({target:{id:'sample-approve',values:{suggestionId:'fixture-review',title:'Edited fixture',day:'2026-11-09',section:'School'}},preventDefault(){}});assert.equal(calls,1);assert.equal(legacy,0);assert.equal(vm.runInContext('reviewDraft===null',s.context),succeeds);if(!succeeds)assert.match(vm.runInContext('error',s.context),/Atomic fixture unavailable/);
  }
+});
+
+
+test('suggestion review shows escaped uncertainty and is hidden when suggestions are disabled',async()=>{
+ const s=screen();await openReview(s);
+ vm.runInContext("suggestion.uncertainty='Verify <original> details.'",s.context);
+ const render=()=>vm.runInContext('renderReviewModal({suggestions:[suggestion]})',s.context);
+ assert.match(render(),/Verify &lt;original&gt; details/);
+ vm.runInContext("preferences={...preferences,automationMode:'disabled'}",s.context);
+ assert.equal(render(),'');
 });
