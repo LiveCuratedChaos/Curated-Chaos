@@ -20,3 +20,18 @@ test('the offline reporter separates denied local listeners from ordinary failur
  assert.deepEqual(result.failureReasons,{loopbackListenerDenied:2,assertionWithDeniedListener:1,unclassified:3});
  assert.equal(result.localChecksPassed,false);assert.equal(result.automatedTests.failed,6);
 });
+test('unexpected failures expose only bounded local lookup codes and never raw diagnostics',async()=>{
+ const {default:report,offlineSuiteId}=await import('../tools/offline-test-reporter.mjs');
+ const {locateOfflineFailure}=await import('../tools/check-offline.mjs');
+ const path='/private/FICTIONAL_PRIVATE_DIRECTORY/tests/offline-check.test.mjs';
+ const events=[{type:'test:fail',data:{name:'DO_NOT_PRINT',file:path,line:5,details:{error:Error('DO_NOT_PRINT')}}}];
+ for(const text of ['tests 1','pass 0','fail 1','skipped 0','cancelled 0'])events.push({type:'test:diagnostic',data:{nesting:0,message:text}});
+ let stdout='';for await(const line of report(events))stdout+=line;
+ const code=offlineSuiteId(path)+':5';
+ assert.doesNotMatch(stdout,/offline-check|PRIVATE|DO_NOT_PRINT/);
+ const result=await runOfflineChecks({runCommand:async gate=>gate.name==='tests'?{code:1,stdout}:ok[gate.name]});
+ assert.deepEqual(result.unclassifiedSites,[code]);
+ assert.equal(result.localChecksPassed,false);
+ assert.equal(locateOfflineFailure(code),'tests/offline-check.test.mjs:5');
+ for(const invalid of ['../private','0000000000000000:4',code+'\ninvalid',code.split(':')[0]+':0'])assert.equal(locateOfflineFailure(invalid),null);
+});

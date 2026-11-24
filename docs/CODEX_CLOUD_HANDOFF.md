@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R01** added local lookup codes for unexpected failures. The offline summary still withholds paths, test names and error contents. On the same checkout, `node tools/check-offline.mjs --locate <entry>` resolves a code to a file and line without rerunning checks. All seven runner tests passed.
+
 - **R03 / R12** verified the removal and Undo audit trail with both PostgreSQL triggers installed. Tasks, notes, events and projects each retained the exact prior active and removed versions. An expired restore left the source and ledger intact, even with a stale application clock. All three database scenarios passed.
 
 - **R12** added Undo removal for a verified private task, note, event or project removal. An explicit Undo opens the ordinary restore review for that exact version. The latest action survives the acknowledgment refresh for up to five minutes. All 382 targeted checks passed, including duplicate note titles, a newer deletion, same-account tab isolation, sign-out and lost acknowledgments.
@@ -48,14 +50,14 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Verification and blockers
 
-The latest full macOS check through Undo passed 3,502 of 3,527 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Sixteen failures directly reported denied local listeners, eight assertions received the same denial, and one further failure is under investigation. Privacy, whitespace and launcher checks passed. The earlier full check through the private database restore-window guard passed 3,493 of 3,517 with all 24 failures attributed to listeners.
+The latest full macOS check through Undo passed 3,502 of 3,527 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Sixteen failures directly reported denied local listeners, eight assertions received the same denial, and one further failure did not repeat in a full two-group diagnostic. The first group passed 2,694 of 2,718 with all 24 failures explained by listener restrictions, and the remaining group passed 809 of 809. The original unexpected failure could not be identified retroactively. Privacy, whitespace and launcher checks passed. The earlier full check through the private database restore-window guard passed 3,493 of 3,517 with all 24 failures attributed to listeners.
 
 Playwright 1.65.1 discovered 238 cases. Sixteen selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, selective earlier note text and Undo removal. All local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Identify the additional failure in the full check through Undo. The aggregate check deliberately omits raw test output. The local diagnostic for the remaining suites writes just test filenames and line numbers to /tmp/cc-remaining-diagnostic.log. After resolving it, continue R12/R13 with versions of explicitly named saved searches.
+2. Continue R03/R12/R13 with protected versions of explicitly saved shortcuts. Verify rename, removal and restoration snapshots through isolated SQL and encrypted recovery. Keep ordinary unsaved searches outside the version ledger. On the next full check, any new unexpected failure with a location is locally resolvable.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

@@ -35,7 +35,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "Full gate through confirmed removal Undo. Twenty-four listener failures and one additional failure under investigation. The combined PostgreSQL Undo audit ran separately."
+    "note": "Full gate through confirmed removal Undo. Twenty-four listener failures and one additional failure. The latter did not repeat in the two-group diagnostic (2,694/2,718 with only listener denials, then 809/809). The combined PostgreSQL Undo audit ran separately."
   },
   "result": {
     "platformExclusions": [],
@@ -873,6 +873,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "offlineFailureLocations": {
+      "passed": 7,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Bounded opaque codes for unexpected failures, local resolution to known test files, raw details excluded, existing failed gate semantics retained."
     },
     "removalUndoAudit": {
       "passed": 3,

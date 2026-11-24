@@ -141,3 +141,7 @@ Removed the duplicated GitHub repository-contents API preflight from the offline
 ## November 22 local verification
 
 On macOS, `npm run check:offline` passed all 3,363 tests, privacy/content scanning, whitespace and launcher syntax. The runner uses up to five workers, bounded by available processors. Native Calendar tests compile with a temporary Swift module cache and remove it at teardown. The release evidence JSON records the counts. No hosted job was triggered.
+
+## Locating an unexpected offline failure
+
+When an unexpected test failure includes a source location, the offline report includes an entry in `unclassifiedSites`. Run `node tools/check-offline.mjs --locate <entry>` in the same checkout to print its test file and line. This lookup reads the local test directory and runs no tests. The aggregate report keeps test names, paths, messages and stack traces private. Known listener failures keep their existing counts.
