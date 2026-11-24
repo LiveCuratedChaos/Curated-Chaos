@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R03 / R12 / R13** recovered a removed School shortcut from an encrypted archive into isolated PostgreSQL with the restore-window guard installed. Only the original reviewed shortcut action returned it to active use. Its filters were exact, an expired shortcut stayed absent, and replaying the archive preserved the newer state. All 16 repository drills passed.
+
 - **R12** prepared a PostgreSQL restore-window guard for private tasks, notes, events, projects and saved searches. It checks elapsed time when the database processes the row and protects its original removal timestamp. All 24 related checks passed, including installation and rollback on fictional data. Hosted installation is pending.
 
 - **R12** bounded School assessment and step restore approvals to their original removal times. The original course history still shows expired entries, with restoration unavailable. All 149 academic recovery and editing checks passed.
@@ -36,14 +38,14 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Verification and blockers
 
-The latest full macOS check passed 3,479 of 3,503 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. The subsequent original-bill selection passed 490 focused checks. Sixteen failures directly reported a denied local listener and eight assertions received that denial. No failures were unclassified. Privacy, whitespace and launcher checks passed. The earlier default-transport run through School search passed 3,460 of 3,495 and reported 35 listener-related failures.
+The latest full macOS check, through the private database restore-window guard, passed 3,493 of 3,517 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. The subsequent removed-shortcut archive drill passed in the 16-test repository suite. Sixteen failures directly reported a denied local listener and eight assertions received that denial. No failures were unclassified. Privacy, whitespace and launcher checks passed. The earlier default-transport run through School search passed 3,460 of 3,495 and reported 35 listener-related failures.
 
 Playwright 1.65.1 discovered 236 cases. Twelve selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget and Daily Brief bills. All local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R03/R12 with an encrypted removed-shortcut drill. Recover a deleted shortcut into an isolated database with the restore-window guard installed, verify it stays removed, and use the ordinary reviewed saved-search flow to restore and reopen its original filters. Include an already-expired shortcut.
+2. Continue R12 at the nested School SQL guard. Its current calendar-day subtraction can change the elapsed recovery period at daylight-saving transitions. Apply the fixed elapsed-time rule to assessment and step restoration while preserving history. Check the existing original trigger and its protected readiness check.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

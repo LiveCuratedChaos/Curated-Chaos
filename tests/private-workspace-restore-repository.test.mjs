@@ -1,13 +1,15 @@
 // Complete executor/repository workflow on fictional embedded PostgreSQL only.
 import test from 'node:test';import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';
 import {createIsolatedDevelopmentDatabase,actor,administrator,identities as i} from './fixtures/isolated-development-database.mjs';
+import {readFile} from 'node:fs/promises';
+import {createPrivateSavedSearches} from '../server/private-saved-searches.mjs';
 import {createPrivateWorkspaceRestoreRepository} from '../server/private-workspace-restore-repository.mjs';
 import {createPrivateWorkspaceRestoreExecutor} from '../server/private-workspace-restore-executor.mjs';
 import {sealPrivateWorkspace} from '../server/private-workspace-backup.mjs';
 import {privateWorkspaceRestoreDigest as digest} from '../server/private-workspace-restore-contract.mjs';
 const projectRef='fictionalrecovery',key=Buffer.alloc(32,4);
 const record=(patch={})=>({id:randomUUID(),owner_id:i.a,household_id:null,visibility:'private',section:'Personal Life',item_type:'note',origin:'PRIVATE_COOKIE_NOTE_CREATE',version:8,created_at:'2026-11-01T12:00:00.123456Z',updated_at:'2026-11-02T12:00:00.234567Z',deleted_at:null,payload:{fictional:true,title:'Fictional recovered note',body:'Exact\n<literal>',source:'M0C_DEV_LOGIN_TEST'},...patch});
-async function setup(t){const db=await createIsolatedDevelopmentDatabase();t.after(()=>db.close());const repository=createPrivateWorkspaceRestoreRepository({projectRef,verifyTarget:async(connection,ref)=>connection===db&&ref===projectRef,withConnection:async(who,callback)=>{await actor(db,who.owner,who.session);return callback(db);}}),who={owner:i.a,session:i.sa};const executor=createPrivateWorkspaceRestoreExecutor({repository,projectRef,key,resolveActor:async a=>({ownerId:a.owner,sessionBinding:a.session,expiresAt:Date.now()+600000}),authorizeWrite:async()=>true});t.after(()=>executor.dispose());return{db,repository,executor,who};}
+async function setup(t,{allowArchivedDeletedRestore=false}={}){const db=await createIsolatedDevelopmentDatabase();t.after(()=>db.close());const repository=createPrivateWorkspaceRestoreRepository({projectRef,allowArchivedDeletedRestore,verifyTarget:async(connection,ref)=>connection===db&&ref===projectRef,withConnection:async(who,callback)=>{await actor(db,who.owner,who.session);return callback(db);}}),who={owner:i.a,session:i.sa};const executor=createPrivateWorkspaceRestoreExecutor({repository,projectRef,key,allowArchivedDeletedRestore,resolveActor:async a=>({ownerId:a.owner,sessionBinding:a.session,expiresAt:Date.now()+600000}),authorizeWrite:async()=>true});t.after(()=>executor.dispose());return{db,repository,executor,who};}
 const seal=rows=>sealPrivateWorkspace({projectRef,ownerId:i.a,key,rows}).bytes;
 test('atomic authenticated SQL restore preserves original microseconds, contents and revisions without touching existing records',async t=>{
  const s=await setup(t),rows=[record(),record({item_type:'task',origin:'PRIVATE_COOKIE_TASK_CREATE',section:'Home',payload:{fictional:true,title:'Fictional recovered undated task',day:null,done:false,source:'M0D_DEV_BRIEF_TEST',priority:'Normal',description:'Preserve task text',subtasks:[{id:randomUUID(),title:'Preserve step',done:true}]}}),record({item_type:'project',section:'Work',origin:'PRIVATE_COOKIE_PROJECT',payload:{fictional:true,schemaVersion:1,title:'Fictional recovered project',description:'Preserve project text',status:'On hold',separateRecurring:true}})];
@@ -264,4 +266,47 @@ test('encrypted recovery reopens the same School program and course from their o
   const selected=await reader.selectedRecord('recovered',actor,item.schoolReadToken);
   assert.equal(selected.id,source.id);assert.deepEqual(selected.payload,source.payload);
  }
+});
+
+test('encrypted recovery keeps removed shortcuts out of active search until their own restore is approved',async t=>{
+ const s=await setup(t,{allowArchivedDeletedRestore:true}),day=86400000;
+ await administrator(s.db);
+ await s.db.exec(await readFile(new URL('../supabase/drafts/private_record_restore_window.sql',import.meta.url),'utf8'));
+ const filters={type:'school-course',section:'School',query:'leadership',status:'all',dateFrom:'',dateTo:'',priority:'all',dateStatus:'all'};
+ const now=Date.now(),shortcuts=[3,91].map(age=>record({
+  item_type:'saved_search',origin:'PRIVATE_COOKIE_SAVED_SEARCH',deleted_at:new Date(now-age*day).toISOString(),
+  created_at:new Date(now-100*day).toISOString(),updated_at:new Date(now-age*day).toISOString(),
+  payload:{source:'PRIVATE_SAVED_SEARCH_V1',schemaVersion:1,fictional:true,title:'Leadership courses',filters}
+ }));
+ const archive=seal(shortcuts),review=await s.executor.prepare(s.who,{bytes:archive});
+ assert.equal(review.canRestore,true);
+ assert.equal(review.deletedRecordRestoreCount,1);
+ assert.equal((await s.executor.execute(s.who,{reviewId:review.reviewId,approved:true})).restoredDeleted,1);
+ const imported=(await s.repository.readPrivateRows(s.who,i.a)).filter(r=>r.item_type==='saved_search');
+ assert.equal(digest(imported),digest([shortcuts[0]]));
+ const query=async(sql,args)=>(await s.db.query(sql,args)).rows.map(value=>value.row);
+ const actor={ownerId:i.a,accessToken:'fictional'},fail=()=>{throw Error('Unexpected shortcut mutation');};
+ const service=createPrivateSavedSearches({allowSchool:true,api:{
+  listPrivateSavedSearches:(_token,owner,removed)=>query("select to_jsonb(r) row from public.cc_records r where owner_id=$1 and item_type='saved_search' and (deleted_at is not null)=$2",[owner,removed]),
+  getPrivateSavedSearch:(_token,id,owner)=>query("select to_jsonb(r) row from public.cc_records r where owner_id=$1 and id=$2 and item_type='saved_search'",[owner,id]),
+  setPrivateSavedSearchDeletedAt:(_token,selected,owner,date)=>query('update public.cc_records r set deleted_at=$1 where id=$2 and owner_id=$3 and version=$4 and deleted_at=$5 returning to_jsonb(r) row',[date,selected.id,owner,selected.version,selected.deleted_at]),
+  addPrivateSavedSearch:fail,updatePrivateSavedSearch:fail
+ }});
+ t.after(()=>service.dispose());
+ const list=removed=>service.list('fixture',actor,Date.now()+300000,{removed});
+ assert.equal((await list(false)).matchCount,0);
+ const removed=await list(true);
+ assert.equal(removed.matchCount,1);
+ assert.equal(removed.records[0].deletedAt,shortcuts[0].deleted_at);
+ const proposal=await service.prepare('fixture',actor,{action:'restore',savedSearchToken:removed.records[0].savedSearchToken});
+ const claim=service.claim('fixture',i.a,proposal.reviewId);
+ assert.equal(await service.authorize(claim,actor),true);
+ assert.equal(digest((await s.repository.readPrivateRows(s.who,i.a)).filter(r=>r.item_type==='saved_search')),digest([shortcuts[0]]));
+ assert.deepEqual(await service.save(claim,actor),{saved:true,action:'restore'});
+ const active=await list(false);
+ assert.equal(active.matchCount,1);
+ assert.deepEqual(await service.load('fixture',actor,active.records[0].savedSearchToken),{name:'Leadership courses',filters});
+ const again=await s.executor.prepare(s.who,{bytes:archive});
+ assert.equal(again.canRestore,false);
+ assert.equal((await list(true)).matchCount,0);
 });
