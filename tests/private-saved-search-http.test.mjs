@@ -62,3 +62,23 @@ test('saving an interpreted interval retains the original dates when the relativ
  assert.equal(rerun.data.dateFrom,'2026-11-17');
  assert.equal(rerun.data.dateTo,'2026-11-18');
 });
+
+test('named School course and program searches preserve their type through review, load and rerun',async t=>{
+ const {privateWorkspaceFixture}=await import('./support/private-workspace-fixture.mjs');
+ const {savedSearchSummary}=await import('../src/private-saved-search-panel.mjs');
+ const tab=privateWorkspaceFixture(t,{...features,allowSavedSearches:true,allowSchoolRead:true}).tab();
+ await tab.login();
+ for(const [type,kind,label] of [['school-course','course','School courses'],['school-program','degree','School programs']]){
+  const query={...filters,type,section:'School',query:''};
+  const result=await tab.client.search(query);
+  assert.ok(result.matchCount>0);assert.ok(result.results.every(row=>row.schoolKind===kind));
+  const review=await tab.client.reviewSavedSearch({action:'create',name:label,saveSearchToken:result.saveSearchToken});
+  await tab.client.saveSavedSearch(review.reviewId);
+  const list=await tab.client.savedSearches({removed:false,offset:0});
+  const shortcut=list.records.find(row=>row.name===label);
+  const loaded=await tab.client.loadSavedSearch(shortcut.savedSearchToken);
+  assert.deepEqual(loaded.filters,query);assert.ok(savedSearchSummary(loaded.filters).includes(label));
+  const rerun=await tab.client.search(loaded.filters);
+  assert.deepEqual(rerun.results.map(row=>row.title),result.results.map(row=>row.title));
+ }
+});

@@ -842,6 +842,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Current editor, standalone earlier due date, undated scope, current fields, review and approval, recurring chore refusal and PostgreSQL history capture."
+    },
+    "schoolSearchKinds": {
+      "passed": 483,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Course and degree-program filters, natural queries, authorized counts and paging, saved-filter reload, original reads and refusal after scope loss. Expanded encrypted shortcut restoration also passed individually."
     }
   },
   "widgetSourceAssociations": {

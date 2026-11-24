@@ -47,7 +47,7 @@ test('School record phrases propose the authorized program and course title filt
  assert.deepEqual(parse('Find School records about Leadership',scoped).fields,fields({query:'Leadership',type:'school',section:'School'}));
  assert.deepEqual(parse('all school records',scoped).fields,fields({type:'school',section:'School'}));
  assert.equal(parse('School records about "work due tomorrow"',scoped).fields.query,'work due tomorrow');
- for(const phrase of ['work school records','school notes','completed School records','high priority school records','school records due tomorrow','school records without a due date','find courses about math'])assert.throws(()=>parse(phrase,scoped));
+ for(const phrase of ['work school records','school notes','completed School records','high priority school records','school records due tomorrow','school records without a due date','completed courses about math'])assert.throws(()=>parse(phrase,scoped));
  assert.throws(()=>parse('school records'));assert.throws(()=>parse('school records',{allowSchoolRead:1}));
  assert.deepEqual(parse('school tasks').fields,fields({section:'School'}));
 });
@@ -60,4 +60,12 @@ test('inclusive task and event ranges preview exact dates and retain quoted titl
  assert.equal(parse('events between 2028-02-29 and 2028-02-29').fields.dateTo,'2028-02-29');
  for(const phrase of ['tasks from tomorrow through yesterday','events between 2026-02-29 and today','tasks from this week to next week','overdue tasks from today to tomorrow','notes from today to tomorrow','tasks due between today or tomorrow','tasks between today and tomorrow without a due date'])assert.throws(()=>parse(phrase));
  assert.throws(()=>parse('tasks between today and tomorrow',{allowDates:false}));
+});
+
+test('specific course and program phrases require authorized School reads',()=>{
+ const opts={allowSchoolRead:true};
+ assert.deepEqual(parse('find courses about leadership',opts).fields,fields({query:'leadership',type:'school-course',section:'School'}));
+ assert.deepEqual(parse('find School programs about "work"',opts).fields,fields({query:'work',type:'school-program',section:'School'}));
+ for(const phrase of ['School courses due tomorrow','open programs','home courses','programs without a due date'])assert.throws(()=>parse(phrase,opts));
+ for(const phrase of ['courses','school courses','school programs','programs'])assert.throws(()=>parse(phrase));
 });

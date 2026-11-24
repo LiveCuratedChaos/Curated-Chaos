@@ -39,10 +39,10 @@ export function parsePrivateSearchIntent(text,options={}){
   let remaining=text.trim(),type,status,section,priority,overdue=false;
   const leading=remaining.match(/^(?:show|find)\b\s*/i);if(leading)remaining=remaining.slice(leading[0].length);
   while(remaining){
-   const schoolRecords=remaining.match(/^school\s+records?\b\s*/i);
+   const schoolRecords=remaining.match(/^(?:school\s+(records?)|(?:school\s+)?(courses?|programs?))\b\s*/i);
    if(schoolRecords){
     if(!allowSchoolRead||section!==undefined)fail();
-    type='school';section='School';remaining=remaining.slice(schoolRecords[0].length).trim();break;
+    type=schoolRecords[1]?'school':'school-'+schoolRecords[2].toLowerCase().replace(/s$/,'');section='School';remaining=remaining.slice(schoolRecords[0].length).trim();break;
    }
    const record=remaining.match(/^(tasks?|events?|notes?|projects?)\b\s*/i);
    if(record){type=record[1].toLowerCase().replace(/s$/,'');remaining=remaining.slice(record[0].length).trim();break;}

@@ -15,3 +15,7 @@ The unchanged resumed checkout passes all2,409 local tests with zero failures/sk
 Prior fictional browser acceptance verified sparse School titles, protected exact academic details with no edit controls,390px layout (375px document), explicit School type in shortcut review, approved shortcut reuse after reload and sign-out clearing.118 automated desktop/narrow browser cases are prepared/discovered, not claimed executed; standalone Chromium remains restricted. Temporary fictional servers/sessions/tabs were cleaned up and viewport overrides reset before disconnection. This checkpoint documentation was recovered after access returned; browser acceptance has not been rerun merely to restore documentation.
 
 This completes the bounded local School title-search workflow, not all universal search or release acceptance. No database migration, provider refresh or source write is needed. Disabling the existing School read scope removes the search type/source while retaining saved records and other search workflows.
+
+## Course and program filters
+
+The record type selector supports all School titles, just programs, or just courses. “Find courses about leadership” and “School programs” preview the same filters. The protected search checks the full authorized School inventory, filters by kind before counting or paging, and issues read handles only for displayed originals. A shortcut saves its type and title query. It can be restored with the encrypted workspace and needs current School access to run.

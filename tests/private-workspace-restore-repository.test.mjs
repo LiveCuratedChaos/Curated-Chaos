@@ -69,14 +69,15 @@ test('restored first routine occurrence completes using its original monthly anc
  assert.deepEqual(result.nextRecord.payload.homeGrocery,row.payload.homeGrocery);
 });
 
-test('encrypted recovery restores exact named Work and document searches without saving their results',async t=>{
+test('encrypted recovery restores exact named Work, document, course and program searches without saving results',async t=>{
  const s=await setup(t);
  const items=[
   {type:'task',section:'Work',query:'follow up',status:'open',dateFrom:'',dateTo:'',priority:'all',dateStatus:'all'},
   {type:'document-text',query:'Fictional course hours'},
-  {type:'document-library',query:'',collection:'pdf'}
+  {type:'document-library',query:'',collection:'pdf'},
+  ...['school-course','school-program'].map(type=>({type,section:'School',query:'leadership',status:'all',dateFrom:'',dateTo:'',priority:'all',dateStatus:'all'}))
  ].map((filters,index)=>record({item_type:'saved_search',origin:'PRIVATE_COOKIE_SAVED_SEARCH',payload:{source:'PRIVATE_SAVED_SEARCH_V1',schemaVersion:1,fictional:true,title:'Saved view '+index,filters}}));
- const r=await s.executor.prepare(s.who,{bytes:seal(items)});assert.equal(r.canRestore,true);assert.equal((await s.executor.execute(s.who,{reviewId:r.reviewId,approved:true})).restored,3);
+ const r=await s.executor.prepare(s.who,{bytes:seal(items)});assert.equal(r.canRestore,true);assert.equal((await s.executor.execute(s.who,{reviewId:r.reviewId,approved:true})).restored,items.length);
  const actual=(await s.repository.readPrivateRows(s.who,i.a)).filter(row=>items.some(item=>item.id===row.id));assert.equal(digest(actual),digest(items));
  const again=await s.executor.prepare(s.who,{bytes:seal(items)});assert.equal(again.insertCount,0);
  for(const payload of [{...items[1].payload,results:['Private file text']},{...items[1].payload,filters:{...items[1].payload.filters,choice:'old choice'}}]){

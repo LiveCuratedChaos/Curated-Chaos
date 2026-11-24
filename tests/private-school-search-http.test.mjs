@@ -60,7 +60,9 @@ test('an older slow search cannot invalidate a newer displayed School capability
  const s=await setup(t),read=s.api.listPrivateSchoolSummaries;let release,first=true;s.api.listPrivateSchoolSummaries=(...args)=>{if(first){first=false;return new Promise(resolve=>release=async()=>resolve(await read(...args)));}return read(...args);};const old=s.list({query:'First course'});while(!release)await new Promise(resolve=>setImmediate(resolve));const newer=await s.list({query:'Second course'});assert.equal(newer.status,200);const token=newer.data.results[0].schoolReadToken;await release();const stale=await old;assert.equal(stale.status,409);const details=await s.read(token);assert.equal(details.status,200);assert.equal(details.data.title,'Second course');
 });
 test('saved School shortcut cannot be loaded or run when School source scope is disabled',async t=>{
- const s=await setup(t,{school:false,saved:true});s.state.savedRows=[{id:id(300),owner_id:owner,household_id:null,visibility:'private',section:'Personal Life',item_type:'saved_search',origin:'PRIVATE_COOKIE_SAVED_SEARCH',version:1,created_at:stamp,updated_at:stamp,deleted_at:null,payload:{fictional:true,source:'PRIVATE_SAVED_SEARCH_V1',schemaVersion:1,title:'Fictional School shortcut',filters:{query:'course',type:'school',section:'School',status:'all',priority:'all',dateFrom:'',dateTo:'',dateStatus:'all'}}}];const list=await s.call('saved-searches/list',{});assert.equal(list.status,200);assert.equal(list.data.records.length,1);const denied=await s.call('saved-searches/load',{savedSearchToken:list.data.records[0].savedSearchToken});assert.equal(denied.status,409);assert.equal((await s.call('search',s.state.savedRows[0].payload.filters)).status,409);assert.equal(s.state.reads,0);assert.equal(s.state.selected,0);assert.equal(s.state.writes,0);
+ for(const type of ['school','school-course','school-program']){
+ const s=await setup(t,{school:false,saved:true});s.state.savedRows=[{id:id(300),owner_id:owner,household_id:null,visibility:'private',section:'Personal Life',item_type:'saved_search',origin:'PRIVATE_COOKIE_SAVED_SEARCH',version:1,created_at:stamp,updated_at:stamp,deleted_at:null,payload:{fictional:true,source:'PRIVATE_SAVED_SEARCH_V1',schemaVersion:1,title:'Fictional School shortcut',filters:{query:'course',type,section:'School',status:'all',priority:'all',dateFrom:'',dateTo:'',dateStatus:'all'}}}];const list=await s.call('saved-searches/list',{});assert.equal(list.status,200);assert.equal(list.data.records.length,1);const denied=await s.call('saved-searches/load',{savedSearchToken:list.data.records[0].savedSearchToken});assert.equal(denied.status,409);assert.equal((await s.call('search',s.state.savedRows[0].payload.filters)).status,409);assert.equal(s.state.reads,0);assert.equal(s.state.selected,0);assert.equal(s.state.writes,0);
+ }
 });
 test('a Brief refresh supersedes pending School search before new capabilities are issued',async t=>{
  const s=await setup(t);let release;s.api.listPrivateSchoolSummaries=()=>new Promise(resolve=>release=()=>resolve(fixtures()));const pending=s.list({query:'course'});while(!release)await new Promise(resolve=>setImmediate(resolve));assert.equal((await s.call('brief')).status,200);release();const late=await pending;assert.equal(late.status,409);assert.doesNotMatch(late.text,/PRIVATE_|First course|schoolReadToken|11111111/);assert.equal(s.state.selected,0);assert.equal(s.state.writes,0);
@@ -95,4 +97,18 @@ test('Work list pages retain choices across pages and expire with the view and s
  for(const invalid of [{choices:[]},{choices:[selection.choices[0],selection.choices[0]]},{choices:[id(1)]},{expiresAt:first.expiresAt+1},{section:'Home'}])assert.equal((await s.call('search/work-tasks',{...selection,...invalid})).status,409);
  s.state.clock=first.expiresAt;assert.equal((await s.call('search/work-tasks',selection)).status,409);
  const off=await setup(t,{saved:false});assert.equal((await off.call('saved-searches/work-lists',{})).status,404);assert.equal((await off.call('search/work-tasks',selection)).status,404);
+});
+
+test('a course-only title search opens its original and a program-only search skips unrelated inventories',async t=>{
+ const s=await setup(t,{projects:true});
+ s.state.rows.forEach(row=>{row.payload.title='Shared school title';});
+ for(const [type,kind,count] of [['school-course','course',2],['school-program','degree',1]]){
+  const result=await s.list({type,query:'Shared school title'});
+  assert.equal(result.status,200);
+  assert.equal(result.data.matchCount,count);
+  assert.ok(result.data.results.every(row=>row.schoolKind===kind));
+  const opened=await s.read(result.data.results[0].schoolReadToken);
+  assert.equal(opened.status,200);assert.equal(opened.data.kind,kind);
+ }
+ assert.equal(s.state.briefReads,0);assert.equal(s.state.reads,2);assert.equal(s.state.writes,0);
 });

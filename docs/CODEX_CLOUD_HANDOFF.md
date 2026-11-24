@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R13** now supports separate School course and program searches. Choosing a type or reviewing “find courses about leadership” narrows counts, pages and readable selections to that kind. Named shortcuts preserve the distinction through reload and encrypted restoration. All 483 focused checks passed, and the expanded recovery case passed.
+
 - **R12** now offers the earlier due date by itself in task history. The current editor retains the title, description, section, priority and checklist. A date change still requires review and approval. Isolated database tests verified the saved date, the audit record and rejection for an active recurring chore. All 364 related checks passed.
 
 - **R13** now interprets inclusive task and event date ranges. The preview displays both dates and saved searches retain them when reopened on a later day. All 424 related checks passed.
@@ -25,7 +27,7 @@ Playwright 1.65.1 discovered 232 cases. Eight relevant cases are pending across 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R13 with separate School course and program filters. Apply the chosen type before result counts and pagination, carry it through saved searches and verify that a disabled School scope refuses the shortcut.
+2. Add the approved optional Search widget to the private canvases. Reuse the original authorized search and keyboard focus behavior. Verify multiple instances, layout recovery and scoped Calendar navigation.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
