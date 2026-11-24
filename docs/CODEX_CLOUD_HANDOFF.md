@@ -4,6 +4,10 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R12** Recently Deleted refuses short pages and replies with unexpected fields before rendering or offering approval. All 346 focused checks passed, including two-page browsing and an explicitly approved restoration.
+
+- **R01** The subsequent Node 26 Mac working-tree run passed 3,566 of 3,570 tests. The four remaining failures are the native HTTPS password and workspace cases, the Gmail text preview socket case, and the shared-host cookie-jar socket case. All failed at loopback binding. Privacy, staged and unstaged whitespace, and launcher checks passed.
+
 - **R04** Verified in isolated PostgreSQL that narrowing a household grant immediately removes the active session’s old section access and prevents edits even to its own shared records, while independent private records remain editable. All four current-policy checks passed.
 
 - **R01 / R04** The existing restricted-runner mode now covers the staged cookie acceptance suite through the original request handler. It retains socket transport by default. All 71 related checks passed, recovering 20 tests that previously stopped at a denied listener. Release-environment and actual socket acceptance remain separate.

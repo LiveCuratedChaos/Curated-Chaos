@@ -19,15 +19,15 @@ test('expiry cannot be extended beyond the five-minute server review bound',()=>
  }
 });
 test('removed list rejects false pagination, duplicate capabilities and malformed records',()=>{
- for(const patch of [{offset:50},{limit:100},{matchCount:-1},{matchCount:2001},{matchCount:0},{matchCount:1.5},{records:null},{records:[row,row],matchCount:2},{records:[null]}])assert.throws(()=>verifyPrivateRecoveryList({...list(),...patch},{now}));
- for(const patch of [{title:''},{title:' '},{title:'x'.repeat(201)},{type:'project'},{type:'__proto__'},{section:'Work'},{deletedAt:'bad'},{deletedAt:new Date(now+1).toISOString()},{deletedAt:new Date(now-90*86400000-1).toISOString()},{recordToken:'bad'}])assert.throws(()=>verifyPrivateRecoveryList({...list(),records:[{...row,...patch}]},{now}));
+ for(const patch of [{offset:50},{limit:100},{matchCount:-1},{matchCount:2001},{matchCount:0},{matchCount:1.5},{matchCount:2},{payload:'Unexpected field'},{records:null},{records:[row,row],matchCount:2},{records:[null]}])assert.throws(()=>verifyPrivateRecoveryList({...list(),...patch},{now}));
+ for(const patch of [{description:'Unexpected field'},{title:''},{title:' '},{title:'x'.repeat(201)},{type:'project'},{type:'__proto__'},{section:'Work'},{deletedAt:'bad'},{deletedAt:new Date(now+1).toISOString()},{deletedAt:new Date(now-90*86400000-1).toISOString()},{recordToken:'bad'}])assert.throws(()=>verifyPrivateRecoveryList({...list(),records:[{...row,...patch}]},{now}));
  for(const offset of [-1,1,2000,'0'])assert.throws(()=>verifyPrivateRecoveryList(list(),{offset,now}));
 });
 test('exact 90-day removal boundary and equivalent timestamp formats remain eligible',()=>{
  for(const deletedAt of [new Date(now-90*86400000).toISOString(),'2026-11-17T12:00:00+00:00'])assert.doesNotThrow(()=>verifyPrivateRecoveryList({...list(),records:[{...row,deletedAt}]},{now}));
 });
 test('recovery review refuses unsupported scope or ambiguous approval identity',()=>{
- for(const patch of [{title:''},{title:' '.repeat(5)},{title:'x'.repeat(201)},{type:'note',section:'Calendar'},{type:'task',section:'Calendar'},{type:'project'},{restoring:1},{reviewId:'bad'},{retentionDays:30}])assert.throws(()=>verifyPrivateRecoveryReview({...review(),...patch},{now}));
+ for(const patch of [{description:'Unexpected field'},{title:''},{title:' '.repeat(5)},{title:'x'.repeat(201)},{type:'note',section:'Calendar'},{type:'task',section:'Calendar'},{type:'project'},{restoring:1},{reviewId:'bad'},{retentionDays:30}])assert.throws(()=>verifyPrivateRecoveryReview({...review(),...patch},{now}));
  for(const value of [null,undefined,[],{}]){assert.throws(()=>verifyPrivateRecoveryList(value,{now}));assert.throws(()=>verifyPrivateRecoveryReview(value,{now}));}
 });
 test('an older reply cannot display a removed title past the inclusive cutoff',()=>{
