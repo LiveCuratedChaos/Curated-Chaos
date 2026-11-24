@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R12** prepared a PostgreSQL restore-window guard for private tasks, notes, events, projects and saved searches. It checks elapsed time when the database processes the row and protects its original removal timestamp. All 24 related checks passed, including installation and rollback on fictional data. Hosted installation is pending.
+
 - **R12** bounded School assessment and step restore approvals to their original removal times. The original course history still shows expired entries, with restoration unavailable. All 149 academic recovery and editing checks passed.
 
 - **R12 / R13** aligned removed saved searches with the inclusive 90-day deadline. An expiring shortcut on another page retires its old total and selections. A suspended panel drops an expired restore approval before it can send a write. All 61 related checks passed.
@@ -41,7 +43,7 @@ Playwright 1.65.1 discovered 236 cases. Twelve selected desktop and phone-size c
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12 by enforcing the same elapsed 90-day rule inside PostgreSQL for ordinary private tasks, notes, events, projects and saved shortcuts. Prepare and test a reversible database change with fictional records. Keep hosted installation pending.
+2. Continue R03/R12 with an encrypted removed-shortcut drill. Recover a deleted shortcut into an isolated database with the restore-window guard installed, verify it stays removed, and use the ordinary reviewed saved-search flow to restore and reopen its original filters. Include an already-expired shortcut.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

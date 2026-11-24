@@ -874,6 +874,12 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "databaseRestoreWindow": {
+      "passed": 24,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Fictional PostgreSQL, native row updates for five private record types, exact anniversary across daylight saving, unchanged records on refusal, installation and rollback."
+    },
     "schoolRecoveryDeadline": {
       "passed": 149,
       "failed": 0,
