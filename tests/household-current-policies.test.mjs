@@ -27,3 +27,27 @@ test('rollback-only household policy check verifies current sessions and leaves 
  await db.exec('rollback');
  assert.deepEqual(await visibleLabels(db),before);
 });
+
+test('signed-in household directory uses the session identity and returns only active membership names and roles',async t=>{
+ const {privateWorkspaceFixture}=await import('./support/private-workspace-fixture.mjs');
+ const db=await setup(t);
+ let readActor;
+ const app=privateWorkspaceFixture(t,{fixtureHouseholdDirectory:async actorData=>{
+  assert.match(actorData.ownerId,/^[a-f0-9-]{36}$/i);
+  readActor=actorData.ownerId;
+  await actor(db,readActor,i.sa);
+  return (await db.query(`select h.name,m.role,m.user_id from public.cc_household_memberships m
+   join public.cc_households h on h.id=m.household_id
+   where m.user_id=$1 and m.status='active' order by h.name,h.id`,[readActor])).rows;
+ }});
+ const tab=app.tab();
+ await assert.rejects(tab.client.householdDirectory());
+ await tab.login();
+ assert.deepEqual(await tab.client.householdDirectory(),{households:[{name:'Fictional home',role:'owner'}]});
+ await administrator(db);
+ await db.query("update public.cc_household_memberships set status='removed' where user_id=$1",[readActor]);
+ assert.deepEqual(await tab.client.householdDirectory(),{households:[]});
+ const disabled=privateWorkspaceFixture(t).tab();
+ await disabled.login();
+ await assert.rejects(disabled.client.householdDirectory());
+});

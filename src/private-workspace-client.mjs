@@ -93,6 +93,7 @@ export function createPrivateWorkspaceClient(fetcher=fetch){let csrf='',generati
   manualBudgetSave:reviewId=>request('manual-budgets/save','POST',{approved:true,reviewId}),
   manualBudgetCashFlow:()=>request('manual-budgets/cash-flow','POST',{}),
   manualBudgetCancel:()=>request('manual-budgets/cancel','POST',{}),
+  householdDirectory:()=>request('households/list','POST',{}),
   manualAccountsList:()=>request('manual-accounts/list','POST',{}),
   manualAccountsReview:values=>request('manual-accounts/review','POST',values),
   manualAccountsSave:reviewId=>request('manual-accounts/save','POST',{approved:true,reviewId}),
