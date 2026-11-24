@@ -71,3 +71,15 @@ test('permission loss during hierarchy acknowledgement releases busy but cannot 
  const f=fixture();await f.open();await f.choose();let release;f.client.projectHierarchySave=()=>{f.calls.push(['save']);return new Promise(resolve=>release=resolve);};await f.click('#private-project-hierarchy-save');f.setUsable(false);release({saved:true,linked:true});await settle();await settle();assert.equal(f.panel.render(),'');assert.equal(f.changes.at(-1),undefined);assert.equal(f.calls.filter(c=>c[0]==='list').length,1);
  f.setUsable(true);assert.doesNotMatch(f.panel.render(),/Project relationship saved/);await f.click('#private-project-hierarchy-save');assert.equal(f.calls.filter(c=>c[0]==='save').length,1);await f.click('#private-project-hierarchy-refresh');assert.equal(f.calls.filter(c=>c[0]==='list').length,2);f.panel.dispose();
 });
+
+test('expired hierarchy review hides child names and progress and requires a fresh structure read',async t=>{
+ const f=fixture();t.after(()=>f.panel.dispose());
+ await f.open();await f.choose();
+ assert.match(f.panel.render(),/Approve project relationship change/);
+ assert.match(f.panel.render(),/Fictional child 0/);
+ f.setNow(100);
+ assert.doesNotMatch(f.panel.render(),/Fictional child 0|Progress including subprojects|Approve project relationship change/);
+ assert.match(f.panel.render(),/Review expired/);
+ await f.click('#private-project-hierarchy-save');
+ assert.equal(f.calls.some(([action])=>action==='save'),false);
+});
