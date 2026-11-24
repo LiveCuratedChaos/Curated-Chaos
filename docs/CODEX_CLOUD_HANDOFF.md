@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R24** The selected Gmail message preview no longer suggests Appointment solely from generic website links or shipment scheduling language. It still recognizes explicit appointment and upcoming-visit wording. All 24 related tests passed.
+
 - **R22 / R23 / R24** The Google Connections preview now gives outcome-specific recovery feedback for Calendar and Gmail using fixed app text. Unrecognized outcomes use the existing generic fallback. All 75 related checks passed. Actual provider reconnect and refresh remain unverified.
 
 - **R01** The latest cumulative Node 26 Mac working-tree run passed 3,573 of 3,577 tests. All four failures were denied socket listeners, and the other three gates passed. Subsequent Calendar and Connections checkpoints passed their targeted suites.

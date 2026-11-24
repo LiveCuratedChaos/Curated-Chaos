@@ -33,6 +33,8 @@ test('common legacy Western text encodings decode without enabling HTML or attac
 test('category candidates are bounded keyword matches and keep ambiguity visible for review',()=>{
  assert.deepEqual(suggestGmailMessageCategories({subject:'Invoice due · Job application received'}),[{category:'Bill',basis:'subject'},{category:'Application',basis:'subject'}]);
  assert.deepEqual(suggestGmailMessageCategories({subject:'Update',text:'Your package was shipped. Appointment scheduled for tomorrow.'}),[{category:'Appointment',basis:'message text'},{category:'Delivery',basis:'message text'}]);
- assert.deepEqual(suggestGmailMessageCategories({subject:'Personal note',text:'Please call when you have time.'}),[]);
+ assert.deepEqual(suggestGmailMessageCategories({subject:'Personal note',text:'Please visit our website.'}),[]);
+ assert.deepEqual(suggestGmailMessageCategories({subject:'Shipment scheduled for Friday'}),[{category:'Delivery',basis:'subject'}]);
+ assert.deepEqual(suggestGmailMessageCategories({subject:'Your upcoming visit',text:'Please visit our website.'}),[{category:'Appointment',basis:'subject'}]);
  assert.throws(()=>suggestGmailMessageCategories({subject:'x'.repeat(301)}),/could not be verified/);
 });

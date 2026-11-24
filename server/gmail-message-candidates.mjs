@@ -1,6 +1,6 @@
 // Deterministic, local-only email labels. They are clues for owner review, never actions.
 const rules=Object.freeze([
- ['Appointment',/\b(?:appointment|reservation|booking|check[- ]?in|visit|scheduled for)\b/i],
+ ['Appointment',/\b(?:appointment|reservation|booking|check[- ]?in|(?:office|clinic|scheduled|upcoming) visit|visit (?:confirmed|scheduled|reminder))\b/i],
  ['Bill',/\b(?:bill|invoice|payment due|amount due|due date|statement ready)\b/i],
  ['Delivery',/\b(?:out for delivery|shipped|shipment|tracking number|delivery update|delivered)\b/i],
  ['Receipt',/\b(?:receipt|order confirmation|purchase confirmation|thanks for your order)\b/i],
