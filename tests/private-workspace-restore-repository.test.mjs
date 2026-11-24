@@ -190,7 +190,7 @@ test('encrypted recovery preserves the private profile, presentation settings, a
 test('recovery preserves earlier profile shapes and blocks unsupported or competing settings before any write',async t=>{
  const s=await setup(t);
  const {defaultBriefLayout,validateBriefLayout}=await import('../src/private-brief-layout.mjs');
- const brief={schemaVersion:1,sections:defaultBriefLayout().sections.filter(v=>v.id!=='school')};
+ const brief={schemaVersion:1,sections:defaultBriefLayout().sections.filter(v=>!['school','bills'].includes(v.id))};
  const row=record({item_type:'brief_preferences',origin:'M1F_QA_SETTINGS',payload:{fictional:true,source:'M1F_QA_SETTINGS',palette:'blush',sources:{email:false},briefLayout:brief}});
  const before=digest(await s.repository.readPrivateRows(s.who,i.a));
  for(const patch of [{palette:'unknown'},{sources:{email:'yes'}},{unexpectedCredential:'discard me'},{briefLayout:{...brief,extra:true}},{quickAddLayout:{}},{categoryColors:{sections:{Outside:'accent'},items:{}}},{onboarding:{status:'complete'}},{favorites:{version:1,pages:[{page:'foreign',collections:[]}],collections:[]}},{favoriteItems:{version:1,items:[{type:'note',id:i.a,collections:[i.a]}]}}]){
@@ -202,7 +202,7 @@ test('recovery preserves earlier profile shapes and blocks unsupported or compet
  const review=await s.executor.prepare(s.who,{bytes:seal([row])});assert.equal(review.canRestore,true);
  await s.executor.execute(s.who,{approved:true,reviewId:review.reviewId});
  const saved=(await s.repository.readPrivateRows(s.who,i.a)).find(r=>r.id===row.id);
- assert.deepEqual(saved.payload,row.payload);assert.equal(validateBriefLayout(saved.payload.briefLayout).sections.length,9);
+ assert.deepEqual(saved.payload,row.payload);assert.equal(validateBriefLayout(saved.payload.briefLayout).sections.length,10);
 });
 
 test('recovered tasks with legacy checklist positions can complete and reopen through the original review service',async t=>{

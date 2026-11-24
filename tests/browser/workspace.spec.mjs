@@ -859,3 +859,46 @@ test('a favorite document reopens the private original from a different page',as
  await library.getByRole('button',{name:'Download '+name,exact:true}).click();
  expect((await completed).suggestedFilename()).toBe(name);
 });
+
+test('compact Search widget focuses the original form and submits an area search',async({page,isMobile})=>{
+ await page.goto('/dev-curation.html');
+ await page.getByRole('button',{name:'Customize The Curation',exact:true}).click();
+ const settings=page.getByRole('region',{name:'The Curation layout settings'});
+ await settings.getByLabel('Screen layout').selectOption(isMobile?'phone':'desktop');
+ await settings.getByLabel('Widget type').selectOption('search');
+ await settings.getByRole('button',{name:'Add widget',exact:true}).click();
+ const searchSettings=settings.getByRole('listitem').filter({has:page.getByRole('heading',{name:'Search',exact:true})}).last();
+ await searchSettings.getByLabel(/area filter/).selectOption('Work');
+ await settings.getByRole('button',{name:'Review widget layout'}).click();
+ await settings.getByRole('button',{name:'Approve widget layout save'}).click();
+ const selection=page.getByRole('article',{name:'Search',exact:true}).getByRole('button',{name:'Search saved titles in Work'});
+ await selection.click();
+ const form=page.locator('#private-title-search');
+ await expect(form.getByLabel('Search titles')).toBeFocused();
+ await expect(form.getByLabel('Workspace section')).toHaveValue('Work');
+ await form.getByLabel('Search titles').fill('Fictional');
+ await form.getByRole('button',{name:'Search saved titles',exact:true}).click();
+ await expect(page.locator('#private-search-results-title')).toBeVisible();
+});
+
+test('Daily Brief bills show a reviewed schedule for the day and honor finance concealment',async({page})=>{
+ const manager=page.locator('#private-manual-bills');
+ await manager.getByRole('button',{name:'Open bills',exact:true}).click();
+ await manager.getByRole('button',{name:'Add bill',exact:true}).click();
+ await manager.getByLabel('Bill name').fill('Fictional internet for the Brief');
+ await manager.getByLabel('Expected amount').fill('45.00');
+ await manager.getByRole('button',{name:'Review bill',exact:true}).click();
+ await manager.getByRole('button',{name:'Approve and save',exact:true}).click();
+ await page.getByRole('button',{name:'Customize Daily Brief',exact:true}).click();
+ await page.getByLabel('Bills due',{exact:true}).selectOption('expanded');
+ await page.getByRole('button',{name:'Review Brief layout',exact:true}).click();
+ await page.getByRole('button',{name:'Approve Brief layout',exact:true}).click();
+ const section=page.locator('[data-private-brief-section="bills"]');
+ await expect(section).not.toContainText('Fictional internet for the Brief');
+ await section.getByRole('button',{name:'View bills due'}).click();
+ await expect(section).toContainText('Fictional internet for the Brief · Due');
+ await expect(section).not.toContainText('$45.00');
+ await page.getByRole('button',{name:'Hide financial details',exact:true}).click();
+ await expect(section).toContainText('Financial details are hidden');
+ await expect(section).not.toContainText('Fictional internet for the Brief');
+});

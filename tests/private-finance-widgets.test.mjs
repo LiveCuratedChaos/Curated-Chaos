@@ -67,3 +67,28 @@ test('widget hides expired or concealed values, escapes labels, and refuses unex
  assert.match(ui.render(widget),/Could not open/);
  work=ui.open(widget);reply({...response,expiresAt:now});await work;assert.doesNotMatch(ui.render(widget),/10%/);
 });
+
+test('selected Brief date reads scheduled and paid bills with current status and no amounts or source handles',async t=>{
+ const tab=privateWorkspaceFixture(t,{allowBriefLayout:true,allowManualFinance:true,allowManualBills:true}).tab();
+ await tab.login();
+ await tab.client.manualBillList();
+ const due='2026-01-20';
+ const review=await tab.client.manualBillReview({bill:{label:'January internet',frequency:'once',dueDay:due,amountMinor:4200,estimated:false,interval:1,endDay:''}});
+ await tab.client.manualBillSave(review.reviewId);
+ const list=await tab.client.manualBillList(),billToken=list.bills[0].billToken;
+ const before=await tab.client.briefBills(due);
+ assert.deepEqual(before.rows,[{label:'January internet',status:due<today?'Overdue':'Due'}]);
+ await tab.client.manualBillRead({billToken,from:due,to:due});
+ const confirmation=await tab.client.manualBillReview({billToken,dueDay:due,paidDay:due,amountMinor:4500});
+ await tab.client.manualBillSave(confirmation.reviewId);
+ const paid=await tab.client.briefBills(due);
+ assert.equal(paid.day,due);assert.equal(paid.currentDay,today);assert.equal(paid.total,1);
+ assert.deepEqual(paid.rows,[{label:'January internet',status:'Paid'}]);
+ assert.doesNotMatch(JSON.stringify(paid),/4200|4500|amount|billToken|owner_id|accountId/);
+ assert.equal((await tab.client.briefBills('2026-01-21')).total,0);
+ await assert.rejects(tab.client.briefBills('2026-02-30'));
+ await tab.client.signOut();await assert.rejects(tab.client.briefBills(due));
+ for(const features of [{allowBriefLayout:true},{allowManualFinance:true,allowManualBills:true}]){
+  const off=privateWorkspaceFixture(t,features).tab();await off.login();await assert.rejects(off.client.briefBills(due));
+ }
+});

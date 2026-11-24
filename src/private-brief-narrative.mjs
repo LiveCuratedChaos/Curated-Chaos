@@ -48,7 +48,7 @@ export function generateBriefNarrative(brief,layout,options={}){
   if(!options||typeof options!=='object'||Array.isArray(options))fail();const now=options.now===undefined?Date.now():options.now;
   const preferences=validateBriefLayout(layout),fresh=checkedCore(brief,now),facts=[];
   for(const section of preferences.sections){
-   if(section.display!=='expanded'||section.id==='undatedTasks'&&!fresh.undated)continue;
+   if(section.display!=='expanded'||section.id==='bills'||section.id==='undatedTasks'&&!fresh.undated)continue;
    if(section.id==='school'){
     const school=brief.schoolOverview;if(school==null||school.available===false&&Object.keys(school).length===1)continue;verifyPrivateSchoolOverview(school,{now});const completed=school.courses.filter(course=>course.status==='Completed').length;facts.push({text:`${school.programs.length} saved ${noun(school.programs.length,'program')} and ${school.courses.length} saved ${noun(school.courses.length,'course')} are currently shown; ${completed} ${noun(completed,'course')} ${is(completed)} currently marked complete.`,titles:school.courses.map(course=>course.title),expiresAt:school.expiresAt});
    }else if(section.id==='projects'){

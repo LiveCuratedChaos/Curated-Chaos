@@ -6,19 +6,19 @@
     "date": "2026-11-23",
     "platform": "darwin",
     "node": "24.22.3",
-    "command": "npm run check:offline",
+    "command": "CC_TEST_HTTP_TRANSPORT=handler npm run check:offline",
     "result": {
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3495,
-        "passed": 3460,
-        "failed": 35,
+        "total": 3503,
+        "passed": 3479,
+        "failed": 24,
         "cancelled": 0,
         "skipped": 0
       },
       "failureReasons": {
-        "loopbackListenerDenied": 27,
+        "loopbackListenerDenied": 16,
         "assertionWithDeniedListener": 8,
         "unclassified": 0
       },
@@ -35,7 +35,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "Full offline run through School course/program search, before the compact Search widget. All 35 failures were classified as direct or assertion-wrapped loopback listener permission denials."
+    "note": "Includes the compact Search widget and Daily Brief bills. Native transport checks still require loopback permission."
   },
   "result": {
     "platformExclusions": [],
@@ -61,11 +61,11 @@
     }
   },
   "browser": {
-    "preparedCases": 232,
+    "preparedCases": 236,
     "freshExecutionVerified": false,
-    "selectedCases": 8,
+    "selectedCases": 12,
     "selectedCasesExecuted": 0,
-    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens'",
+    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show'",
     "reason": "The fictional fixture could not bind 127.0.0.1:5316 in the managed Mac session."
   },
   "releaseComplete": false,
@@ -103,11 +103,17 @@
     "R20 now has default-off, reviewed section color preferences through the original owner-private settings CAS; current task/project list accents are integrated. Per-item controls, all approved consumers and browser/device acceptance remain unfinished."
   ],
   "latestFocusedChecks": {
-    "passed": 409,
-    "failed": 0,
+    "total": 488,
+    "passed": 482,
+    "failed": 6,
     "node": "24.22.3",
-    "scope": "Optional compact Search widget, multiple instances, original query submission, scoped page handoff, blocked or expired sources and encrypted tablet layout restoration.",
-    "command": "node --test --test-concurrency=3 tests/private-curation*.test.mjs tests/private-widget-layout*.test.mjs tests/private-{dashboard-controller,workspace-static,workspace-school-search,school-search-http}.test.mjs tests/dev-search-widget-reliability.test.mjs"
+    "handlerRerun": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "scope": "Default-transport focused checks for bill schedules, selected dates, older and current layouts, concealment, expiry, signed-in HTTP and encrypted preferences. Six listener denials passed through the in-process handler.",
+    "command": "node --test --test-concurrency=3 tests/private-brief-{bills,layout*,narrative}.test.mjs tests/private-{finance-widgets,manual-bill-workflow,manual-bills,dashboard-controller,workspace-restore-repository,workspace-static,workspace-client}.test.mjs"
   },
   "targetedChecks": {
     "total": 532,
@@ -855,6 +861,18 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Optional compact Search widget, multiple instances, original query submission, scoped page handoff, blocked or expired sources and encrypted tablet layout restoration."
+    },
+    "dailyBriefBills": {
+      "total": 488,
+      "passed": 482,
+      "failed": 6,
+      "node": "24.22.3",
+      "handlerRerun": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0
+      },
+      "scope": "Default-transport focused checks for bill schedules, selected dates, older and current layouts, concealment, expiry, signed-in HTTP and encrypted preferences. Six listener denials passed through the in-process handler."
     }
   },
   "widgetSourceAssociations": {

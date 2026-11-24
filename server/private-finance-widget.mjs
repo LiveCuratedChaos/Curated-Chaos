@@ -1,3 +1,4 @@
+import {validDay} from '../src/dev-brief-model.mjs';
 import {newYorkTaskDay} from '../src/private-smart-task.mjs';
 import {calculateManualBudget} from '../src/private-finance-manual.mjs';
 import {holdingSummary} from '../src/private-holdings.mjs';
@@ -9,6 +10,27 @@ import {billType,confirmationType,validateBillRow} from './private-bill-records.
 function inventory(rows,limit){
  if(!Array.isArray(rows)||rows.length>limit||new Set(rows.map(r=>r.id)).size!==rows.length)throw Error('Incomplete financial inventory.');
  return rows;
+}
+async function scheduledBills(api,{accessToken,ownerId},from,to,today){
+ const records=inventory(await api.listBills(accessToken,ownerId),100),occurrences=[];
+ for(const row of records){
+  if(row.item_type!==billType)throw Error('Invalid bill.');
+  const bill=validateBillRow(row,ownerId);
+  const history=inventory(await api.listBillConfirmations(accessToken,ownerId,row.id,from,to),367);
+  const payments=history.map(h=>{
+   if(h.item_type!==confirmationType||h.payload?.billId!==row.id)throw Error('Incorrect bill confirmation.');
+   return validateBillRow(h,ownerId);
+  });
+  occurrences.push(...billOccurrences(bill,payments,from,to,today));
+ }
+ return occurrences;
+}
+export async function readBriefBills({api,actor,day,now,expiresAt}){
+ if(typeof day!=='string'||!validDay(day))throw Error('Choose a valid Brief date.');
+ const currentDay=newYorkTaskDay(now);
+ const due=await scheduledBills(api,actor,day,day,currentDay);
+ const rows=due.map(({label,status})=>({label,status})).sort((a,b)=>a.label.localeCompare(b.label)||a.status.localeCompare(b.status));
+ return {day,currentDay,total:rows.length,rows:rows.slice(0,10),expiresAt:Math.min(expiresAt,now+300000)};
 }
 const percent=(value,base)=>base>0?Math.round((value/base)*1000)/10:null;
 export async function readFinanceWidget({api,actor,type,options,now,expiresAt}){
@@ -33,21 +55,11 @@ export async function readFinanceWidget({api,actor,type,options,now,expiresAt}){
    return item(h.label,v?.asOf??null,v?.marketValueMinor??null,v?percent(v.gainMinor,v.purchaseOutlayMinor):null);
   }).sort((a,b)=>a.label.localeCompare(b.label));
  }else if(type==='bills'){
-  const bills=inventory(await api.listBills(accessToken,ownerId),100);
-  for(const row of bills){
-   if(row.item_type!==billType)throw Error('Invalid bill.');
-   const bill=validateBillRow(row,ownerId);
-   const history=inventory(await api.listBillConfirmations(accessToken,ownerId,row.id,first,period.periodEnd),367);
-   const payments=history.map(h=>{
-    if(h.item_type!==confirmationType||h.payload?.billId!==row.id)throw Error('Incorrect bill confirmation.');
-    return validateBillRow(h,ownerId);
-   });
-   const due=billOccurrences(bill,payments,first,period.periodEnd,day);
-   for(const occurrence of due){
-    const p=occurrence.payment;
-    rows.push(item(occurrence.label+' · '+occurrence.status+(occurrence.estimated&&!p?' (estimate)':''),occurrence.dueDay,
-     p?.amountMinor??occurrence.expectedMinor,percent(p?.amountMinor??0,occurrence.expectedMinor)));
-   }
+  const due=await scheduledBills(api,actor,first,period.periodEnd,day);
+  for(const occurrence of due){
+   const p=occurrence.payment;
+   rows.push(item(occurrence.label+' · '+occurrence.status+(occurrence.estimated&&!p?' (estimate)':''),occurrence.dueDay,
+    p?.amountMinor??occurrence.expectedMinor,percent(p?.amountMinor??0,occurrence.expectedMinor)));
   }
   rows.sort((a,b)=>a.date.localeCompare(b.date)||a.label.localeCompare(b.label));
  }else throw Error('Unknown financial widget.');

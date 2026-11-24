@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R16 / R17** now include an optional Bills due section for the selected Daily Brief date. It reads current payment status only after opening and omits amounts. Concealment, sign-out, expiry and date changes retire the view. Older saved layouts retain their ordering and start with Bills hidden. The focused run passed 482 out of 488 with the default transport. The six listener-blocked cases passed using the existing in-process handler.
+
 - **R13 / R18** now include the optional compact Search widget. Each visible instance opens the protected title search for its configured area. A Calendar widget opens universal search on the Daily Brief. The widget waits for an explicit submission. All 409 focused checks passed, including layout recovery.
 
 - **R13** now supports separate School course and program searches. Choosing a type or reviewing “find courses about leadership” narrows counts, pages and readable selections to that kind. Named shortcuts preserve the distinction through reload and encrypted restoration. All 483 focused checks passed, and the expanded recovery case passed.
@@ -22,19 +24,19 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Verification and blockers
 
-The full macOS check through the School search checkpoint passed 3,460 of 3,495 tests on Node 24.22.3. Of the 35 failures, 27 directly reported a denied loopback listener and eight asserted on that denial. No failures were unclassified. Privacy, whitespace and launcher checks passed. The subsequent compact Search widget passed 409 focused tests.
+The latest full macOS check passed 3,479 of 3,503 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Sixteen failures directly reported a denied local listener and eight assertions received that denial. No failures were unclassified. Privacy, whitespace and launcher checks passed. The earlier default-transport run through School search passed 3,460 of 3,495 and reported 35 listener-related failures.
 
-Playwright 1.65.1 discovered 232 cases. Eight relevant cases are pending across desktop and phone-size Chromium. The fictional fixture could not bind `127.0.0.1:5316`, so browser assertions did not run. They cover the Calendar day handoff, removing an original from the Favorites widget, and interpreting a School title search and reopening its favorite after reload, and opening a favorite document on another page. All checks used fictional records and local dependencies.
+Playwright 1.65.1 discovered 236 cases. Twelve selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget and Daily Brief bills. All local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R16 and R17 with an optional Bills section in the Daily Brief. Keep existing layouts compatible, use the original private bill schedule, and honor the finance concealment setting. Verify the selected Brief date and privacy behavior before enabling the section.
+2. Continue R16 by letting a selected bill in the Brief open its original schedule for that date. Use the current owner and revision, distinguish same-named bills, and preserve any open review. Amounts stay concealed until the original detail is explicitly opened.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
-npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens'
+npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show'
 ```
 
 Earlier Calendar and Favorites contributions passed 432 focused tests. The previous full attempt passed 3,441 of 3,476. Historical logs under `/tmp` belong to the originating Mac. Linux omits the macOS-native Calendar transfer check.
