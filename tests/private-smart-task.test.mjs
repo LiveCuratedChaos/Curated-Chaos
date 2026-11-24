@@ -11,6 +11,10 @@ test('approved task areas are parsed locally, preserved through checklist captur
  assert.deepEqual(parse('Plan groceries area: Home'),{title:'Plan groceries',day:'',priority:'Normal',section:'Home'});
  assert.deepEqual(parse('Call family in Personal Life'),{title:'Call family',day:'',priority:'Normal',section:'Personal Life'});
  assert.deepEqual(parseSmartTaskChecklist('Finish assignment area: Work due in 2 days\n- Submit draft',{today}),{title:'Finish assignment',day:'2026-11-12',priority:'Normal',section:'Work',subtaskText:'Submit draft'});
+ assert.deepEqual(parse('File notes category: Work priority high due tomorrow'),{title:'File notes',day:'2026-11-11',priority:'High',section:'Work'});
+ assert.equal(parse('Read category names').title,'Read category names');
+ assert.throws(()=>parse('File notes category: Unknown'));
+ assert.throws(()=>parse('File notes area: School category: Work'));
  for(const phrase of ['Task area: Finance','Task in Work area: School','Task area: Home area: Work'])assert.throws(()=>parse(phrase));
 });
 test('New York date anchoring is independent of UTC midnight and DST transitions',()=>{assert.equal(newYorkTaskDay(Date.parse('2026-11-10T02:00:00Z')),'2026-11-09');assert.equal(newYorkTaskDay(Date.parse('2026-11-10T05:00:00Z')),'2026-11-10');assert.equal(newYorkTaskDay(Date.parse('2026-03-08T06:59:00Z')),'2026-03-08');assert.equal(newYorkTaskDay(Date.parse('2026-03-08T07:01:00Z')),'2026-03-08');});
