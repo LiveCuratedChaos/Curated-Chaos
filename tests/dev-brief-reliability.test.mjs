@@ -8,7 +8,7 @@ import * as brief from '../src/dev-brief-model.mjs';
 import * as preferences from '../src/dev-preferences-model.mjs';
 import * as decisions from '../src/dev-decision-model.mjs';
 import {lifeSuggestions,normalizeFictionalLife} from '../src/dev-life-model.mjs';
-import {emailSuggestions,normalizeFictionalEmails} from '../src/dev-email-model.mjs';
+import {emailSuggestions,normalizeFictionalEmails,makeFictionalEmail} from '../src/dev-email-model.mjs';
 import {cloudFreshness} from '../src/dev-sync-model.mjs';
 const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 function screen(){
@@ -48,13 +48,21 @@ test('confirmed brief task save clears only the submitted draft and preserves ed
   wait.resolve([{}]);await pending;assert.equal(vm.runInContext('taskDraft.title',s.context),edit?'New draft while waiting':'');
  }
 });
-function openReview(s){s.context.suggestion={id:'fixture-review',emailId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',sourceVersion:1,source:'email',rule:'email_to_task',title:'Original fixture',day:'2026-11-09',section:'School',reason:'Fictional source'};vm.runInContext('allSuggestions=()=>[suggestion]',s.context);return s.listeners.click({target:{closest:selector=>selector==='[data-review]'?{dataset:{review:'fixture-review'}}:null}});}
+const emailId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const suggestionId='email-fixture-'+emailId;
+function openReview(s){
+ const row={...makeFictionalEmail('study',owner,'2026-11-07'),id:emailId,version:1};
+ s.context.sourceRows=[row];
+ s.context.suggestion=emailSuggestions([row])[0];
+ vm.runInContext('allSuggestions=()=>[suggestion];api.listFictionalEmails=async()=>sourceRows',s.context);
+ return s.listeners.click({target:{closest:selector=>selector==='[data-review]'?{dataset:{review:suggestionId}}:null}});
+}
 test('suggestion review retains edited fields through refresh and failed approval',async()=>{
  const s=screen();await openReview(s);s.listeners.input({target:{name:'title',value:'Edited <fixture>',closest:()=>({id:'sample-approve'})}});await vm.runInContext('load()',s.context);assert.equal(vm.runInContext('reviewDraft.title',s.context),'Edited <fixture>');assert.match(vm.runInContext('renderReviewModal({suggestions:[suggestion]})',s.context),/Edited &lt;fixture&gt;/);
- vm.runInContext("api.addFictionalTask=async()=>{throw Error('fictional approval offline')}",s.context);await s.listeners.submit({target:{id:'sample-approve',values:{suggestionId:'fixture-review',title:'Edited <fixture>',day:'2026-11-09',section:'School'}},preventDefault(){}});assert.equal(vm.runInContext('reviewDraft.title',s.context),'Edited <fixture>');assert.match(vm.runInContext('error',s.context),/approval offline/);
+ vm.runInContext("api.addFictionalTask=async()=>{throw Error('fictional approval offline')}",s.context);await s.listeners.submit({target:{id:'sample-approve',values:{suggestionId,title:'Edited <fixture>',day:'2026-11-09',section:'School'}},preventDefault(){}});assert.equal(vm.runInContext('reviewDraft.title',s.context),'Edited <fixture>');assert.match(vm.runInContext('error',s.context),/approval offline/);
 });
 test('changed suggestion source blocks approval until review is reopened; close clears review edits',async()=>{
- const s=screen();await openReview(s);let writes=0;s.context.write=()=>{writes++;return[];};vm.runInContext("suggestion.title='Changed source fixture';api.addFictionalTask=write",s.context);await s.listeners.submit({target:{id:'sample-approve',values:{suggestionId:'fixture-review',title:'Edited fixture',day:'2026-11-09',section:'School'}},preventDefault(){}});assert.equal(writes,0);assert.match(vm.runInContext('error',s.context),/suggestion changed/);assert.match(vm.runInContext('renderReviewModal({suggestions:[suggestion]})',s.context),/source changed/);
+ const s=screen();await openReview(s);let writes=0;s.context.write=()=>{writes++;return[];};vm.runInContext("suggestion.title='Changed source fixture';api.addFictionalTask=write",s.context);await s.listeners.submit({target:{id:'sample-approve',values:{suggestionId,title:'Edited fixture',day:'2026-11-09',section:'School'}},preventDefault(){}});assert.equal(writes,0);assert.match(vm.runInContext('error',s.context),/suggestion changed/);assert.match(vm.runInContext('renderReviewModal({suggestions:[suggestion]})',s.context),/source changed/);
  await s.listeners.click({target:{closest:selector=>selector==='#sample-cancel'?{}:null}});assert.equal(vm.runInContext('reviewDraft',s.context),null);
 });
 test('cleared review date or section cannot silently fall back to suggested values',()=>{
@@ -63,6 +71,16 @@ test('cleared review date or section cannot silently fall back to suggested valu
 test('enabled atomic approval calls only the transaction endpoint and never falls back after an error',async()=>{
  for(const succeeds of [false,true]){
   const s=screen();await openReview(s);let calls=0,legacy=0;s.context.approve=async args=>{calls++;assert.equal(args.sourceId,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');assert.equal(args.expectedVersion,1);if(!succeeds)throw Error('Atomic fixture unavailable');return{task_id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',already_saved:false};};s.context.legacy=()=>{legacy++;throw Error('Legacy write must never run');};vm.runInContext('config={atomicFictionalApprovals:true};api.approveFictionalSuggestion=(_token,args)=>approve(args);api.addFictionalTask=legacy;api.addSuggestionDecision=legacy',s.context);
-  await s.listeners.submit({target:{id:'sample-approve',values:{suggestionId:'fixture-review',title:'Edited fixture',day:'2026-11-09',section:'School'}},preventDefault(){}});assert.equal(calls,1);assert.equal(legacy,0);assert.equal(vm.runInContext('reviewDraft===null',s.context),succeeds);if(!succeeds)assert.match(vm.runInContext('error',s.context),/Atomic fixture unavailable/);
+  await s.listeners.submit({target:{id:'sample-approve',values:{suggestionId,title:'Edited fixture',day:'2026-11-09',section:'School'}},preventDefault(){}});assert.equal(calls,1);assert.equal(legacy,0);assert.equal(vm.runInContext('reviewDraft===null',s.context),succeeds);if(!succeeds)assert.match(vm.runInContext('error',s.context),/Atomic fixture unavailable/);
  }
+});
+
+test('approval rejects a source revision that changed after review without making a write',async()=>{
+ const s=screen();await openReview(s);
+ let writes=0;s.context.write=()=>{writes++;};
+ vm.runInContext('sourceRows=[{...sourceRows[0],version:2}];api.addFictionalTask=write;api.approveFictionalSuggestion=write',s.context);
+ await s.listeners.submit({target:{id:'sample-approve',values:{suggestionId,title:'Edited fixture',day:'2026-11-09',section:'School'}},preventDefault(){}});
+ assert.equal(writes,0);
+ assert.equal(vm.runInContext('reviewDraft',s.context),null);
+ assert.match(vm.runInContext('notice',s.context),/Review the current suggestions/);
 });

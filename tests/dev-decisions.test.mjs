@@ -56,7 +56,9 @@ test('forged or irrelevant history entries cannot affect known suggestion',()=>{
 test('workflow requires review and cloud recheck before creating task; restores only dismissal',()=>{
  const code=readFileSync(new URL('../src/dev-brief.mjs',import.meta.url),'utf8');
  assert.match(code,/Approve & save private task/);
- assert.match(code,/Promise\.all\(\[api\.listBriefRecords\(token\),api\.listSuggestionDecisions\(token,user\.id\)\]\)/);
+ assert.match(code,/Promise\.all\(\[api\.listBriefRecords\(token\),api\.listSuggestionDecisions\(token,viewer\)\]\)/);
+ assert.match(code,/currentFictionalSuggestion\(currentSourceRows,viewer,suggestion\)/);
+ assert.match(code,/readOwnerBriefPreferences\(currentPreferencesRows,viewer\)/);
  assert.match(code,/makeApprovalDecision/);
  assert.match(code,/data-restore/);
  assert.match(code,/makeRestoreDecision/);
