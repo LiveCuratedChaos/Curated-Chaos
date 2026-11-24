@@ -21,7 +21,12 @@ export function verifyCurationWidgetSources(value){
     if(Object.hasOwn(row,'homeCleaning')&&(type!=='tasks'||row.section!=='Home'||!readHomeCleaning(row.homeCleaning))||Object.hasOwn(row,'homeGrocery')&&(type!=='tasks'||row.section!=='Home'||!readHomeGrocery(row.homeGrocery))||Object.hasOwn(row,'homeDelivery')&&(type!=='tasks'||row.section!=='Home'||!readHomeDelivery(row.homeDelivery))||Object.hasOwn(row,'day')&&(typeof row.day!=='string'||row.day!==''&&!validDay(row.day))||type==='schedule'&&!time(row.time)||Object.hasOwn(row,'endDay')&&!validDay(row.endDay)||Object.hasOwn(row,'endTime')&&!time(row.endTime)||Object.hasOwn(row,'displayColor')&&!CATEGORY_COLOR_TOKENS.includes(row.displayColor)||Object.hasOwn(row,'priority')&&!TASK_PRIORITIES.includes(row.priority)||['allDay','priorityUnavailable','endTimeUnavailable','endDateUnavailable'].some(k=>Object.hasOwn(row,k)&&row[k]!==true)||Object.hasOwn(row,'priorityUnavailable')&&Object.hasOwn(row,'priority')||row.allDay===true&&(row.time!=='00:00'||Object.hasOwn(row,'endTime'))||Object.hasOwn(row,'endTime')&&Object.hasOwn(row,'endTimeUnavailable')||Object.hasOwn(row,'endDay')&&Object.hasOwn(row,'endDateUnavailable'))throw Error('Supported widget dates and display facts required.');
    }
   }
+  // Calendar items appear only in the all-area bucket.
+  if(type!=='schedule'){
+   const source=value[sourceType];
+   const areaTotal=TASK_FILTERS.filter(filter=>filter!=='all').reduce((sum,filter)=>sum+source[filter].count,0);
+   if(areaTotal!==source.all.count)throw Error('Complete widget area counts required.');
+  }
  }
- if(value.priorityTasks&&TASK_FILTERS.filter(f=>f!=='all').reduce((n,f)=>n+value.priorityTasks[f].count,0)!==value.priorityTasks.all.count)throw Error('Complete priority area counts required.');
  return value;
 }

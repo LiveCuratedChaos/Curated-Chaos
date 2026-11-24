@@ -31,3 +31,17 @@ test('Coming Up merges complete future task/event sources with one total limit a
  for(const mutate of [v=>delete v.widgetSources.futureSchedule,v=>v.widgetSources.futureTasks.all.rows[0].day=day,v=>v.day='2026-99-99',v=>v.widgetSources.futureTasks.Work.count=2000]){const invalid=structuredClone(brief);mutate(invalid);assert.throws(()=>curationWidgetSource(widget,invalid));}
 });
 test('widget summaries include validated grocery quantity/favorite metadata without source identity',()=>{const source=row('Home',0,{payload:{fictional:true,title:'Oat milk',day:'2026-11-20',done:false,homeGrocery:{quantity:'2 cartons',favorite:true}}}),brief=privateWorkspaceBrief({rows:[source],ownerId:owner,now,includeHomeGroceries:true,includeWidgetSections:true,includeWidgetSources:true}),projected=brief.widgetSources.tasks.Home.rows[0];assert.deepEqual(projected.homeGrocery,{quantity:'2 cartons',favorite:true});assert.deepEqual(verifyCurationWidgetSources(brief.widgetSources),brief.widgetSources);assert.doesNotMatch(JSON.stringify(projected),/owner_id|payload|bbbbbbbb/);const bad=structuredClone(brief.widgetSources);bad.tasks.Home.rows[0].homeGrocery={quantity:'',favorite:false};assert.deepEqual(verifyCurationWidgetSources(bad),bad);bad.tasks.Home.rows[0].homeGrocery.favorite=null;assert.throws(()=>verifyCurationWidgetSources(bad));});
+
+
+test('complete widget totals agree with area counts beyond the displayed rows',()=>{
+ const {brief}=fixture();
+ const inconsistent=structuredClone(brief.widgetSources);
+ inconsistent.tasks.Work.count--;
+ assert.throws(()=>verifyCurationWidgetSources(inconsistent),/Complete widget area counts/);
+ const event={...row('Work',100),section:'Calendar',item_type:'event',
+  payload:{fictional:true,title:'Fictional calendar event',day:'2026-11-21',time:'09:00'}};
+ const schedule=privateWorkspaceBrief({rows:[event],ownerId:owner,now,includeWidgetSections:true,includeWidgetSources:true}).widgetSources;
+ assert.equal(schedule.schedule.all.count,1);
+ assert.equal(schedule.futureSchedule.all.count,1);
+ assert.deepEqual(verifyCurationWidgetSources(schedule),schedule);
+});

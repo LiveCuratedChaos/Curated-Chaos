@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R18** Curation verifies that task and note totals agree with their complete area counts, including upcoming and priority task sources. Calendar remains an all-area source. All 359 related checks passed.
+
 - **R16 / R17** The selected Daily Brief shows verified due and completed routine totals. Outstanding routines appear before completed ones, so completed occurrences cannot hide a due item within the 20-row display limit. All 379 related checks passed.
 
 - **R15** Smaller-project roll-ups verify each reply against its requested original project before combining tasks. All 35 related checks passed, including signed-in hierarchy navigation and isolated SQL guards. Independent database connections and device acceptance remain pending.
