@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R16 / R17 / R18** after a bill save settles, the Daily Brief and Bills widgets drop their old results in the current tab and other open workspace tabs. This includes an uncertain save, since the write may have reached storage. The tab notice carries no bill names or amounts. All 328 related checks passed.
+
 - **R16 / R17** the Daily Brief announces loading for requested bill schedules. Expiry of a daily schedule clears only its own names and details, so a separately verified weekly summary remains visible until its own deadline. All 325 related checks passed.
 
 - **R19** Calendar event title interpretation accepts the date and category suffixes in either order, including multiword categories. Empty and duplicate fields leave the draft intact. All 323 focused checks passed.

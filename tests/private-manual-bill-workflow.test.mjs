@@ -51,7 +51,8 @@ test('Finance panel creates a bill and reviews the exact posted transaction befo
  const row=snapshot(),rows=[snapshot({pending:true}),snapshot({amountMinor:-500}),row];
  const tab=privateWorkspaceFixture(t,{...options,allowSavedFinanceRead:true,allowSavedTransactionsRead:true,fixtureSavedTransactions:rows}).tab();
  await tab.login();
- const panel=createManualBillPanel({client:tab.client,allowMatching:true});t.after(()=>panel.reset());
+ let invalidations=0;
+ const panel=createManualBillPanel({client:tab.client,allowMatching:true,onSaveSettled:()=>{invalidations++;}});t.after(()=>panel.reset());
  const turn=()=>new Promise(r=>setImmediate(r));
  const click=async action=>{panel.click({target:{closest:()=>({dataset:{billAction:action}})}});await turn();};
  const input=(form,name,value)=>panel.input({target:{form:{id:form},name,value,checked:value,type:typeof value==='boolean'?'checkbox':'text'}});
@@ -71,6 +72,7 @@ test('Finance panel creates a bill and reviews the exact posted transaction befo
  await click('amounts');assert.match(panel.render(),/81\.73/);
  await click('pay-1');input('bill-edit','paidDay','2026-02-26');input('bill-edit','amount','72.50');await submit('bill-edit');
  assert.match(panel.render(),/Manually confirmed/);await click('approve');await select();assert.match(panel.render(),/Manual confirmation/);
+ assert.equal(invalidations,3);
  const openBill=await open(tab);
  const request={billToken:openBill.billToken,dueDay:'2026-03-31'};
  const available=await tab.client.manualBillCandidates({...request,offset:0});

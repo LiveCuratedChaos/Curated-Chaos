@@ -21,7 +21,7 @@ function confirmText(payment){
  return esc(payment.label)+' · Due '+esc(payment.dueDay)+' · '+estimate(payment.expectedMinor,payment.estimated)+'<br>Paid '+
   esc(dollars(payment.amountMinor))+' on '+esc(payment.paidDay);
 }
-export function createManualBillPanel({client,clock=Date.now,canOpen=()=>true,onChange=()=>{},allowMatching=false}){
+export function createManualBillPanel({client,clock=Date.now,canOpen=()=>true,onChange=()=>{},onSaveSettled=()=>{},allowMatching=false}){
  let list,selected,detail,range,draft,review,shown,notice,busy,timer,sequence=0;
  function reset(){
   sequence++;clearTimeout(timer);list=selected=detail=draft=review=null;shown=busy=false;notice='';
@@ -106,7 +106,7 @@ export function createManualBillPanel({client,clock=Date.now,canOpen=()=>true,on
  }
  async function save(){
   const run=sequence;busy=true;notice='';onChange();
-  try{const result=await client.manualBillSave(review.reviewId);if(run!==sequence)return;
+  try{const result=await client.manualBillSave(review.reviewId).finally(onSaveSettled);if(run!==sequence)return;
    if(result?.saved!==true||!Number.isInteger(result.version)||result.version<1)throw Error();
    await load();
   }catch{if(run===sequence){reset();notice='Save could not be confirmed. Reopen bills to check the payment.';onChange();}}

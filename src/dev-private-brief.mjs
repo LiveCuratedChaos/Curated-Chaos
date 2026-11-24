@@ -104,6 +104,13 @@ export function mountPrivateBrief(root,{client=createPrivateWorkspaceClient(),cl
  const financeWidgets=canvasActive&&allowWidgetLayouts?createFinanceWidgets({client,clock,
   enabled:type=>({budget:allowManualBudgets,bills:allowManualBills,investments:allowHoldings})[type]===true,
   concealed:()=>financePrivacy?.hidden===true,onChange:()=>updateCurationSource()}):null;
+ function invalidateBillSummaries(){
+  if(!user||disposed)return;
+  briefBills?.reset();
+  financeWidgets?.reset('bills');
+  if(briefBills)renderBackground();
+  if(financeWidgets)updateCurationSource();
+ }
  function concealFinance(){
   financePrivacy.conceal();
   try{sessionChannel?.postMessage({type:'conceal-finance'});}catch{}
@@ -149,7 +156,7 @@ export function mountPrivateBrief(root,{client=createPrivateWorkspaceClient(),cl
    if(region)region.innerHTML=holdingPanel.render();
   }}) : null;
  const billPanel=allowManualBills&&allowManualFinance&&!recordWorkspace&&(!curationWorkspace||canvasPage==='finances')
-  ? createManualBillPanel({client,clock,allowMatching:allowSavedTransactionsRead,canOpen:()=>Boolean(user&&!dateBlocked()),onChange:()=>{
+  ? createManualBillPanel({client,clock,onSaveSettled:()=>{invalidateBillSummaries();announce('bills-updated');},allowMatching:allowSavedTransactionsRead,canOpen:()=>Boolean(user&&!dateBlocked()),onChange:()=>{
    const region=!financePrivacy?.hidden&&root.querySelector?.('#private-manual-bills');
    if(region)region.innerHTML=billPanel.render();
   }}) : null;
@@ -675,7 +682,7 @@ dayNoticeVisible=Boolean(user&&data&&!notesWorkspace&&dayChanged());let content=
  const hide=()=>{generation++;clear();client.clear();busy=false;notice='';error='';render();};
  const offline=()=>{favoriteWidgetSource?.reset();favoritesPanel?.reset();setupPanel?.offline();workListPanel?.reset();quickVoice?.reset();quickSettings?.reset();documentsPanel?.reset();brokeragePanel?.reset();financeWidgets?.reset();briefBills?.reset();holdingPanel?.reset();categoryPanel?.reset();billPanel?.reset();incomePanel?.reset();budgetPanel?.reset();manualFinancePanel?.reset();canvasData=null;canvasSourceExpiry=0;curationTicker?.clear();clearTimeout(curationTimer);curationLayouts=null;curationExpiry=0;widgetLayoutPanel?.offline();clearTimeout(schoolOverviewTimer);schoolOverviewState='';schoolPanel?.reset();searchIntentPanel?.reset();calendarDayPanel?.offline();calendarPresentationPanel?.offline();clearTimeout(narrativeTimer);clearTimeout(briefWeekTimer);briefWeekState='';layoutPanel?.offline();clearTimeout(projectOverviewTimer);searchSchoolPanel?.reset();searchProjectPanel?.reset();transactionsPanel?.clear();financePanel?.clear();mailPanel?.clear();calendarPanel?.clear();generation++;projectsPanel?.offline();savedPanel?.offline();clearRecordView();appearanceReview=null;appearanceNeedsLatest=Boolean(appearanceDraft);clearTimeout(appearanceTimer);searchResult=null;creationReview=null;creationLocked=Boolean(taskDraft);clearTimeout(creationTimer);data=null;note=null;noteVersions?.reset();taskDetails=null;taskVersions?.reset();eventDetails=null;eventHistoryToken=null;eventVersions?.reset();clearTimeout(eventDetailsTimer);clearTimeout(taskDetailsTimer);noteReview=null;noteDraftLocked=Boolean(draft);if(!draft)clearTimeout(noteTimer);review=null;clearTimeout(reviewTimer);busy=false;error='You are offline. Fetch latest after reconnecting to verify saved records.';render();};
  async function restore(){const n=++generation;busy=true;error='';notice='';render();try{const state=await client.status();if(n!==generation||disposed)return;if(typeof state.signedIn!=='boolean'||state.signedIn&&(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(state.user?.id||'')||!Number.isFinite(state.expiresAt)||state.expiresAt<=clock()))throw Error('Private sign-in could not be verified.');if(!state.signedIn){clear();client.clear();busy=false;render();return;}if(user&&user.id!==state.user.id)clear();user=state.user;expiresAt(state.expiresAt);busy=false;await load();if(n===generation&&!disposed)render();}catch(err){if(n!==generation||disposed)return;clear();busy=false;error=err.message;render();}}
- const peerChanged=event=>{if(!disposed&&event.data?.type==='conceal-finance'){financePrivacy?.peerConceal();return;}if(!['ended','changed'].includes(event.data?.type)||disposed)return;generation++;clear();client.clear();busy=false;error='';notice='Private sign-in changed in another tab. Recheck sign-in before continuing.';render();};
+ const peerChanged=event=>{if(!disposed&&event.data?.type==='bills-updated'){invalidateBillSummaries();return;}if(!disposed&&event.data?.type==='conceal-finance'){financePrivacy?.peerConceal();return;}if(!['ended','changed'].includes(event.data?.type)||disposed)return;generation++;clear();client.clear();busy=false;error='';notice='Private sign-in changed in another tab. Recheck sign-in before continuing.';render();};
  if(sessionChannel)sessionChannel.onmessage=peerChanged;
  let checking=false;async function checkSession(){if(disposed||!user||busy||checking||document.visibilityState==='hidden'||typeof client.check!=='function')return;const n=generation,ownerId=user.id;checking=true;try{const result=await client.check();if(n!==generation||disposed)return;if(!result.signedIn||result.user?.id!==ownerId||!Number.isFinite(result.expiresAt)||result.expiresAt<=clock())throw Error('Private sign-in could not be verified.');expiresAt(result.expiresAt);}catch{if(n!==generation||disposed)return;generation++;clear();client.clear();busy=false;notice='';error='Your private sign-in could not be verified. Sign in again before continuing.';render();}finally{checking=false;}}
  const checkDay=()=>{if(notesWorkspace||disposed||!user||!data||busy||draft||taskDraft||appearanceDraft||recordReview||savedBlocked()||review||note||taskDetails||eventDetails||document.visibilityState==='hidden'||document.activeElement?.closest?.('input,select,textarea,button,summary,a[href]'))return;if(dayNoticeVisible!==dayChanged())render();};

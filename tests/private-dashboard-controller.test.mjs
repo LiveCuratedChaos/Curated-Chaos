@@ -1035,7 +1035,8 @@ test('Daily Brief bills are hidden by default and load only for the selected day
 
 test('the detailed week opens a bill day through the original Brief and clears payment counts on concealment',async t=>{
  const layout=dateLayout();layout.sections.find(section=>section.id==='bills').display='expanded';
- const s=await setup(t,{allowBriefLayout:true,allowBriefDates:true,allowManualFinance:true,allowManualBills:true,
+ const channel={onmessage:null,postMessage(){},close(){}};
+ const s=await setup(t,{channel,allowBriefLayout:true,allowBriefDates:true,allowManualFinance:true,allowManualBills:true,
   initialBriefLayout:layout,clock:()=>weekInstant,briefWeekReader:values=>savedWeek(values)});
  const read=[],click=id=>s.events.click({target:{closest:q=>q===id?{}:null}});
  s.client.briefBillWeek=async fields=>{
@@ -1047,15 +1048,19 @@ test('the detailed week opens a bill day through the original Brief and clears p
  click('#private-brief-week-bills');await turn();
  assert.match(s.root.innerHTML,/Open bill date 2026-11-10/);
  assert.deepEqual(read,[{anchor:data.day,range:'rolling',weekStart:1}]);
+ channel.onmessage({data:{type:'bills-updated'}});
+ assert.doesNotMatch(s.root.innerHTML,/2 unpaid/);
+ assert.match(s.root.innerHTML,/View bills for this week/);
+ click('#private-brief-week-bills');await turn();assert.equal(read.length,2);
  const original=s.client.brief;
  s.client.brief=async day=>({...await original(),day,selectedDate:true,currentRecords:true});
  clickBriefDay(s,'2026-11-10');for(let n=0;n<6;n++)await turn();
  assert.match(s.root.innerHTML,/name="brief-date"[^>]*value="2026-11-10"/);
  assert.doesNotMatch(s.root.innerHTML,/2 unpaid/);
- click('#private-brief-week-bills');await turn();assert.equal(read.length,2);
+ click('#private-brief-week-bills');await turn();assert.equal(read.length,3);
  click('#private-finance-privacy');await turn();
  assert.doesNotMatch(s.root.innerHTML,/2 unpaid|View bills for this week/);
- click('#private-brief-week-bills');await turn();assert.equal(read.length,2);
+ click('#private-brief-week-bills');await turn();assert.equal(read.length,3);
 });
 
 test('Recently Deleted ties review and approval to the displayed choice and its original deadline',async t=>{

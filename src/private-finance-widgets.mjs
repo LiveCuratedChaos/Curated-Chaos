@@ -28,13 +28,19 @@ function verify(result,w,now){
 }
 export function createFinanceWidgets({client,clock=Date.now,enabled,concealed,onChange}){
  const views=new Map();
- function reset(){for(const v of views.values())clearTimeout(v.timer);views.clear();}
+ function reset(type){
+  for(const [id,view] of views){
+   if(type&&view.type!==type)continue;
+   clearTimeout(view.timer);
+   views.delete(id);
+  }
+ }
  async function open(w){
   if(!w||!enabled(w.type)||concealed())return;
   const id=key(w),prior=views.get(id);
   if(prior?.busy)return;
   clearTimeout(prior?.timer);
-  const view={busy:true};views.set(id,view);onChange();
+  const view={busy:true,type:w.type};views.set(id,view);onChange();
   try{
    const result=await client.financeWidget(w.type,settings(w));
    if(views.get(id)!==view||concealed())return;
