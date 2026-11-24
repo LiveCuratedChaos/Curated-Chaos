@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R03 / R12** verified the removal and Undo audit trail with both PostgreSQL triggers installed. Tasks, notes, events and projects each retained the exact prior active and removed versions. An expired restore left the source and ledger intact, even with a stale application clock. All three database scenarios passed.
+
 - **R12** added Undo removal for a verified private task, note, event or project removal. An explicit Undo opens the ordinary restore review for that exact version. The latest action survives the acknowledgment refresh for up to five minutes. All 382 targeted checks passed, including duplicate note titles, a newer deletion, same-account tab isolation, sign-out and lost acknowledgments.
 
 - **R12** bound the restoration review to the selected Recently Deleted row and its original deadline. A delayed response, a different title or record type, a switched action, or an expired approval prevents any write. All 333 related checks passed, plus four final timer and approval checks.
@@ -46,14 +48,14 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Verification and blockers
 
-The latest full macOS check, through the private database restore-window guard, passed 3,493 of 3,517 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. The subsequent removed-shortcut archive drill passed in the 16-test repository suite. Sixteen failures directly reported a denied local listener and eight assertions received that denial. No failures were unclassified. Privacy, whitespace and launcher checks passed. The earlier default-transport run through School search passed 3,460 of 3,495 and reported 35 listener-related failures.
+The latest full macOS check through Undo passed 3,502 of 3,527 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Sixteen failures directly reported denied local listeners, eight assertions received the same denial, and one further failure is under investigation. Privacy, whitespace and launcher checks passed. The earlier full check through the private database restore-window guard passed 3,493 of 3,517 with all 24 failures attributed to listeners.
 
 Playwright 1.65.1 discovered 238 cases. Sixteen selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, selective earlier note text and Undo removal. All local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R03/R12 by verifying Undo removal with the actual PostgreSQL version-history and restore-window triggers together. Verify both audit entries, exact original record identity, duplicate-name isolation and rollback on refusal.
+2. Identify the additional failure in the full check through Undo. The aggregate check deliberately omits raw test output. The local diagnostic for the remaining suites writes just test filenames and line numbers to /tmp/cc-remaining-diagnostic.log. After resolving it, continue R12/R13 with versions of explicitly named saved searches.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

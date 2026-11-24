@@ -11,16 +11,16 @@
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3517,
-        "passed": 3493,
-        "failed": 24,
+        "total": 3527,
+        "passed": 3502,
+        "failed": 25,
         "cancelled": 0,
         "skipped": 0
       },
       "failureReasons": {
         "loopbackListenerDenied": 16,
         "assertionWithDeniedListener": 8,
-        "unclassified": 0
+        "unclassified": 1
       },
       "checks": {
         "tests": false,
@@ -35,7 +35,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "Includes due-bill originals and paging, Recently Deleted, saved shortcuts, School approvals and the prepared PostgreSQL restore-window guard. The new removed-shortcut archive drill ran separately."
+    "note": "Full gate through confirmed removal Undo. Twenty-four listener failures and one additional failure under investigation. The combined PostgreSQL Undo audit ran separately."
   },
   "result": {
     "platformExclusions": [],
@@ -873,6 +873,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "removalUndoAudit": {
+      "passed": 3,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Combined version and restore-window triggers for all four undoable types, exact snapshots including timestamps, duplicate-title isolation and zero audit changes for refused database restoration."
     },
     "confirmedRemovalUndo": {
       "passed": 382,
