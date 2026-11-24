@@ -16,9 +16,11 @@ Resume from `codex/verification-followup` in the private repository `LiveCurated
 
 ## Verification follow-up
 
-- **R01:** Offline verification reports allowlisted test filenames on failure. Six regression checks passed. A fictional subprocess failure confirmed the report omits test names, failure messages and absolute paths.
+- **R01:** The document Favorites checkpoint passed all 3,481 portable Node tests on Linux. The macOS-native Calendar transfer test was excluded. Offline verification reports allowlisted test filenames on failure. Six regression checks passed. A fictional subprocess failure confirmed the report omits test names, failure messages and absolute paths.
 - **R02:** The direct-TLS candidate remains local. The hosting decision pauses staging and deployment, so hosted acceptance requires an approved staging environment and ingress contract.
 - **R03:** A full isolated database snapshot retained a fictional encrypted document byte-for-byte. The restored engine denies an unrelated account and old revoked sessions, then opens the file through the original decryptor for a freshly authenticated owner. Hosted and separate-device recovery remain pending.
+- **R04:** All 10 fictional household policy and isolation tests passed. Route coverage and release invitation acceptance remain open.
+- **R12:** An explicit task-history action proposes earlier text and due date in the original current editor. The normal approval still governs changes. Scheduled recurring chores keep their series date. Browser verification is pending.
 - Chromium still aborts at its process-singleton socket before opening a page. A runner that launches the pinned browser is required for the pending desktop and phone assertions.
 
 ## November 24 Cloud verification
@@ -35,7 +37,7 @@ Playwright 1.65.1 discovered 230 cases. Six relevant cases are pending across de
 
 1. On a Node 24 runner that permits loopback and can launch the pinned Chromium build, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
 2. Verify the document Favorites workflow in a browser that can launch the fixture. Open the Document Library, manage a favorite, assign it to a named collection, then reopen the original from that collection. Continue the next ready checklist row independently of the browser blocker.
-3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
+3. Continue R13 search source coverage and record browser results once the pinned runner can launch. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
