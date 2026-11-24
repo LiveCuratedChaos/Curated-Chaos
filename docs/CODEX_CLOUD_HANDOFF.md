@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R36** Added a reversible invitation acceptance draft. It binds the hashed token to the intended signed-in account and current issuer, refuses expired or replayed tokens, and rejoins with empty section grants. The checkpoint passed eleven isolated household tests. Trusted issuance, delivery, app entry and real identity acceptance remain open.
+
 - **R36–R39** Prepared isolated SQL drafts for independent Household Approver grants, source-permission-bound comments, primary-guardian roster eligibility and atomic points redemption. All ten household tests passed. The drafts are unapplied outside isolated PostgreSQL. Invitations, dual consent and fresh authentication, managed child entry, verified transition, mention/file integration, reward funding and request controls, donations/refunds, balance visibility and app acceptance remain open.
 
 - **R40** An expired document favorite can no longer show its filename, even when the browser delays its timer. An expired document draft also stops blocking workspace navigation. All 20 library, content-search and encrypted-recovery checks passed.
