@@ -4,7 +4,7 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
-- **R16 / R17** Detailed week shows due and completed counts for saved routines on each exact date when Routines is enabled, including when task and event sections are hidden. Select the date to open its Daily Brief. All 355 focused checks passed.
+- **R16 / R17** Detailed week shows due and completed counts for saved routines on each exact date when Routines is enabled, including when task and event sections are hidden. Select the date to open its Daily Brief. All 356 focused checks passed, including a layout with Routines as its only visible week section.
 
 - **R16 / R17** added an optional Routines section to the Daily Brief. It shows saved recurring tasks due on the selected date, distinguishes completed occurrences, and opens the original task through the existing reader. Older layouts retain their order and start with Routines hidden. All 436 focused checks passed.
 

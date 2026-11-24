@@ -457,6 +457,18 @@ test('hidden and collapsed task/event sections govern week summaries and hidden-
  const hidden=await setup(t,{allowBriefLayout:true,allowBriefDates:true,initialBriefLayout:dateLayout('week',{hidden:['dueTasks','eventsToday']}),clock:()=>weekInstant,briefWeekReader:()=>{throw Error('Hidden records should not be requested');}});assert.equal(hidden.state.weekRequests.length,0);assert.match(hidden.root.innerHTML,/No seven-day records were loaded/);assert.doesNotMatch(hidden.root.innerHTML,/Fictional week|Fictional task &lt;script&gt;/);
  const collapsed=await setup(t,{allowBriefLayout:true,allowBriefDates:true,initialBriefLayout:dateLayout('week',{collapsed:['dueTasks'],hidden:['eventsToday']}),clock:()=>weekInstant,briefWeekReader:values=>savedWeek(values)});assert.equal(collapsed.state.weekRequests.length,1);assert.match(collapsed.root.innerHTML,/<details id="private-brief-week-dueTasks-2026-11-09" ><summary>Due or overdue tasks · 5/);assert.match(collapsed.root.innerHTML,/Fictional week task/);assert.doesNotMatch(collapsed.root.innerHTML,/Fictional week all-day|Fictional week continuing event|Fictional week unavailable schedule/);
 });
+test('Routines alone loads the Detailed week without showing hidden task or event titles',async t=>{
+ const layout=dateLayout('week',{hidden:['dueTasks','eventsToday'],collapsed:['routines']});
+ const s=await setup(t,{allowBriefLayout:true,allowBriefDates:true,allowRecurringChores:true,allowTaskCompletion:true,
+  initialBriefLayout:layout,clock:()=>weekInstant,briefWeekReader:values=>{
+   const result=savedWeek(values);
+   return {...result,days:result.days.map((day,index)=>({...day,routines:{due:index===0?2:0,complete:index===0?1:0}}))};
+  }});
+ assert.deepEqual(s.state.weekRequests,[{anchor:data.day,range:'rolling',weekStart:1,includeRoutines:true}]);
+ assert.match(s.root.innerHTML,/<details id="private-brief-week-routines-2026-11-09" ><summary>Routines · 3/);
+ assert.match(s.root.innerHTML,/2 due · 1 complete/);
+ assert.doesNotMatch(s.root.innerHTML,/Fictional week task|Fictional week all-day/);
+});
 test('date source is excluded without both layout/date flags and from typed workspaces',async t=>{
  const disabled=await setup(t,{allowBriefLayout:true,initialBriefLayout:dateLayout(),clock:()=>weekInstant});assert.equal(disabled.state.weekRequests.length,0);assert.doesNotMatch(disabled.root.innerHTML,/id="private-brief-week"/);
  const typed=await setup(t,{...taskSpaceOptions,allowBriefLayout:true,allowBriefDates:true,initialBriefLayout:dateLayout()});assert.equal(typed.state.weekRequests.length,0);assert.doesNotMatch(typed.root.innerHTML,/id="private-brief-week"|Customize Daily Brief/);
