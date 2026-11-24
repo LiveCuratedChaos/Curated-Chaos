@@ -35,8 +35,8 @@ export function parsePrivateSearchIntent(text,options={}){
     if(!allowSchoolRead||section!==undefined)fail();
     type='school';section='School';remaining=remaining.slice(schoolRecords[0].length).trim();break;
    }
-   const record=remaining.match(/^(tasks?|events?|notes?|projects?)\b\s*/i);
-   if(record){type=record[1].toLowerCase().replace(/s$/,'');remaining=remaining.slice(record[0].length).trim();break;}
+   const record=remaining.match(/^(?:calendar\s+(events?)|(tasks?|events?|notes?|projects?))\b\s*/i);
+   if(record){type=(record[1]??record[2]).toLowerCase().replace(/s$/,'');remaining=remaining.slice(record[0].length).trim();break;}
    const personal=remaining.match(/^personal\s+life\b\s*/i),word=remaining.match(/^([a-z]+)\b\s*/i);if(!word)fail();
    const lower=word[1].toLowerCase();
    if(personal||['home','work','school'].includes(lower)){if(section!==undefined)fail();section=personal?'Personal Life':({home:'Home',work:'Work',school:'School'}[lower]);remaining=remaining.slice((personal??word)[0].length);}

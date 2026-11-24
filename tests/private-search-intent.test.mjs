@@ -51,3 +51,9 @@ test('School record phrases propose the authorized program and course title filt
  assert.throws(()=>parse('school records'));assert.throws(()=>parse('school records',{allowSchoolRead:1}));
  assert.deepEqual(parse('school tasks').fields,fields({section:'School'}));
 });
+
+test('Calendar event wording uses the same protected event filters and date checks',()=>{
+ assert.deepEqual(parse('Find Calendar events this week').fields,parse('events this week').fields);
+ assert.deepEqual(parse('Calendar event about "Check-in"').fields,fields({type:'event',section:'Calendar',query:'Check-in'}));
+ for(const phrase of ['work calendar events','urgent calendar events','calendar events without a due date'])assert.throws(()=>parse(phrase));
+});
