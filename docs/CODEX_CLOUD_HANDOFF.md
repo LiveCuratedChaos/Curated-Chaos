@@ -90,17 +90,17 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 The November 24 full macOS check passed 3,533 of 3,557 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Of the 24 listener-related failures, 16 directly reported a binding denial and eight received the same denial inside an assertion. Privacy, whitespace and launcher checks passed. The subsequent overlapping-pay-period recovery and timestamp change passed 39 focused checks. Two obsolete School shortcut expectations had failed on the first run and passed after correction.
 
-Playwright 1.65.1 discovered 242 cases. The 22 selected desktop and phone-size cases are pending. This session cannot bind the fictional fixture to loopback, and macOS also denied launch of the pinned headless Chromium. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, historical note and task text, Undo, saved shortcut history and monthly budget navigation. Local acceptance used fictional records.
+Playwright 1.65.1 discovered 242 cases. The 24 selected desktop and phone-size cases are pending. This session cannot bind the fictional fixture to loopback, and macOS also denied launch of the pinned headless Chromium. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, historical note and task text, Undo, saved shortcut history and monthly budget navigation. Local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. This session cannot open a loopback listener, and a free hosted runner could not be verified. Use the pinned lockfile and matching Chromium. Record the results under R13, R18, R21 and R32 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. For R03, the separate-device restore still needs a verified private destination and authenticated sessions. For R19, verify the new event category action in the signed-in desktop and mobile browser workflows.
+2. For R03, the separate-device restore still needs a verified private destination and authenticated sessions. For R19, run the two prepared event category cases from the signed-in Calendar workflow on a runner that permits loopback. The browser fixture could not start on this Mac.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
-npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description|monthly budget navigation'
+npm run test:browser -- --grep 'Calendar day schedule preserves its month|calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description|monthly budget navigation'
 ```
 
 Earlier Calendar and Favorites contributions passed 432 focused tests. The previous full attempt passed 3,441 of 3,476. Historical logs under `/tmp` belong to the originating Mac. Linux omits the macOS-native Calendar transfer check.
