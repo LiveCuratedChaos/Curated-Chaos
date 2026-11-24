@@ -95,3 +95,27 @@ test('launcher scopes bills independently, serves panel and requires signed-in a
   assert.equal((await tab.fetcher('/auth/workspace/manual-bills/candidates',{method:'POST',body:'{}'})).status,404);
  }
 });
+
+test('expired bill views drop an in-flight review and let the user reopen bills',async t=>{
+ let now=Date.parse('2026-01-31T17:00:00Z'), resolveReview;
+ const expiresAt=now+300000;
+ const panel=createManualBillPanel({clock:()=>now,client:{
+  manualBillList:async()=>({bills:[],expiresAt:now+300000}),
+  manualBillReview:()=>new Promise(resolve=>{resolveReview=resolve;}),
+ }});
+ t.after(()=>panel.reset());
+ const click=action=>panel.click({target:{closest:()=>({dataset:{billAction:action}})}});
+ const turn=()=>new Promise(resolve=>setImmediate(resolve));
+ click('load');await turn();click('add');
+ for(const [name,value] of [['label','Fictional utilities'],['amount','90']]){
+  panel.input({target:{form:{id:'bill-edit'},name,value,type:'text'}});
+ }
+ panel.submit({target:{id:'bill-edit'},preventDefault(){}});
+ now=expiresAt;
+ assert.equal(panel.blocked(),false);
+ assert.match(panel.render(),/bill view expired/);
+ click('load');await turn();
+ resolveReview({bill:{...bill,frequency:'once',estimated:false},reviewId:'r'.repeat(43),expiresAt});await turn();
+ assert.match(panel.render(),/Add bill/);
+ assert.doesNotMatch(panel.render(),/Fictional utilities|Approve and save/);
+});

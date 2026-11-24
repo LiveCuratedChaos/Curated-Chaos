@@ -30,9 +30,11 @@ export function createManualBillPanel({client,clock=Date.now,canOpen=()=>true,on
  }
  reset();
  const fresh=()=>list?.expiresAt>clock();
+ function expire(){reset();notice='Your bill view expired.';}
+ function discardExpired(){if(list&&!fresh())expire();}
  async function request(operation,apply,error){
   const run=sequence;busy=true;notice='';onChange();
-  try{const result=await operation();if(sequence===run)apply(result);}
+  try{const result=await operation();if(sequence!==run)return;if(list&&!fresh()){expire();onChange();return;}apply(result);}
   catch{if(sequence===run)notice=error;}
   finally{if(sequence===run){busy=false;onChange();}}
  }
@@ -43,7 +45,7 @@ export function createManualBillPanel({client,clock=Date.now,canOpen=()=>true,on
       !Array.isArray(value.bills)||value.bills.length>100||new Set(value.bills.map(b=>b.billToken)).size!==value.bills.length||
       value.bills.some(b=>!keys(b,'billToken,label,version')||!token(b.billToken)||typeof b.label!=='string'||b.label.length>120||
        !Number.isInteger(b.version)||b.version<1))throw Error();
-   list=value;timer=setTimeout(()=>{reset();notice='Your bill view expired.';onChange();},Math.max(1,list.expiresAt-clock()));timer.unref?.();
+   list=value;timer=setTimeout(()=>{expire();onChange();},Math.max(1,list.expiresAt-clock()));timer.unref?.();
   },'Could not open bills.');
  }
  function read(){
@@ -107,11 +109,13 @@ export function createManualBillPanel({client,clock=Date.now,canOpen=()=>true,on
  async function save(){
   const run=sequence;busy=true;notice='';onChange();
   try{const result=await client.manualBillSave(review.reviewId);if(run!==sequence)return;
+   if(!fresh()){expire();onChange();return;}
    if(result?.saved!==true||!Number.isInteger(result.version)||result.version<1)throw Error();
    await load();
   }catch{if(run===sequence){reset();notice='Save could not be confirmed. Reopen bills to check the payment.';onChange();}}
  }
  function render(){
+  discardExpired();
   const heading='<h2>Bills</h2><p role="status">'+esc(busy?'Checking bills…':notice)+'</p>';
   let body;
   if(!fresh())body=button('load','Open bills');
@@ -143,8 +147,9 @@ export function createManualBillPanel({client,clock=Date.now,canOpen=()=>true,on
   }else body=list.bills.map(b=>button('select-'+b.billToken,b.label)).join('')+button('add','Add bill')+button('close','Close bills');
   return heading+'<fieldset '+(busy?'disabled':'')+'>'+body+'</fieldset>';
  }
- return {render,reset,blocked:()=>Boolean(busy||draft||review),input(event){
+ return {render,reset,blocked(){discardExpired();return Boolean(busy||draft||review);},input(event){
   const el=event.target;
+  discardExpired();
   if(el.form?.id==='bill-period'){
    if(!busy&&['from','to'].includes(el.name)&&range[el.name]!==el.value){range[el.name]=el.value;const redraw=Boolean(detail);detail=null;if(redraw)onChange();}
    return true;
@@ -158,11 +163,14 @@ export function createManualBillPanel({client,clock=Date.now,canOpen=()=>true,on
   const id=event.target.id;
   if(!['bill-period','bill-edit'].includes(id))return false;
   event.preventDefault();
+  discardExpired();
   if(!busy&&fresh()&&!review){if(id==='bill-period'&&selected&&!draft&&canOpen())void read();else if(id==='bill-edit'&&draft)void prepare();}
   return true;
  },click(event){
   const action=event.target.closest('[data-bill-action]')?.dataset.billAction;
-  if(!action)return false;if(busy)return true;
+  if(!action)return false;
+  discardExpired();
+  if(busy)return true;
   if(action==='load'){if(canOpen())void load();return true;}
   if(!fresh())return true;
   if(review){if(action==='approve')void save();if(action==='back'){review=null;onChange();}return true;}
