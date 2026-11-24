@@ -90,6 +90,12 @@ export function createPrivateWorkspaceRestoreRepository({projectRef,withConnecti
   const result=await db.query("with stats as materialized(select count(*) n,coalesce(sum(octet_length(to_jsonb(v)::text)),0) bytes from cc_private.record_versions v where owner_id=$1::uuid) select case when n<=20000 and bytes<=5242880 then coalesce((select jsonb_agg(to_jsonb(v) order by id) from cc_private.record_versions v where owner_id=$1::uuid),'[]'::jsonb) else null end as versions from stats",[owner]);
   if(!Array.isArray(result?.rows?.[0]?.versions))throw Error('Complete bounded retained history required.');await verify(db,owner);return{ready:true,versions:result.rows[0].versions};
  }
+ async function savedSearchHistoryReady(db,owner){
+  if(!allowRecordHistoryImport)return false;
+  await verify(db,owner);
+  const result=await db.query("select to_regprocedure('cc_private.named_search_version_source(jsonb)') is not null and exists(select 1 from pg_constraint where conrelid=to_regclass('cc_private.record_versions') and contype='c' and position('''saved_search''' in pg_get_constraintdef(oid))>0) as ready");
+  return result.rows?.[0]?.ready===true;
+ }
  async function importReady(db,owner,locked=false){if(!allowRecordHistoryImport)return false;await verify(db,owner);const installed=await db.query("select to_regprocedure('public.import_private_record_versions(uuid,jsonb)') is not null as installed");if(installed?.rows?.[0]?.installed!==true)return false;if(locked){const held=await db.query('select public.lock_private_record_versions_for_recovery() as held');if(held?.rows?.[0]?.held!==true)return false;}const result=await db.query('select public.cc_private_record_versions_ready() as ready');return result?.rows?.[0]?.ready===true;}
  async function schoolTombstonesReady(db,owner){if(!allowArchivedDeletedRestore)return false;await verify(db,owner);const installed=await db.query("select to_regprocedure('public.cc_private_school_tombstone_restore_ready()') is not null as installed");if(installed?.rows?.[0]?.installed!==true)return false;const result=await db.query('select public.cc_private_school_tombstone_restore_ready() ready');return result?.rows?.[0]?.ready===true;}
  return{
@@ -97,6 +103,7 @@ export function createPrivateWorkspaceRestoreRepository({projectRef,withConnecti
   ...(allowDocumentRestore?{readDocuments:(actor,owner,archived)=>withConnection(actor,db=>readDocuments(db,owner,archived))}:{}),
   canRestoreSchoolTombstones:(actor,owner)=>withConnection(actor,db=>schoolTombstonesReady(db,owner)),
   canRestoreArchivedDeleted:(actor,owner)=>allowArchivedDeletedRestore?withConnection(actor,async db=>{await verify(db,owner);return true;}):Promise.resolve(false),
+  canImportSavedSearchVersions:(actor,owner)=>withConnection(actor,db=>savedSearchHistoryReady(db,owner)),
   canImportRecordVersions:(actor,owner)=>withConnection(actor,db=>importReady(db,owner)),
   readRecordVersionsSnapshot:(actor,owner)=>withConnection(actor,db=>recordVersions(db,owner)),
   canRestoreAssessmentHistory:(actor,owner)=>withConnection(actor,db=>historyReady(db,owner)),
@@ -130,8 +137,9 @@ export function createPrivateWorkspaceRestoreRepository({projectRef,withConnecti
      }:{}),
      canRestoreSchoolTombstones:()=>{if(!live)throw Error('Recovery transaction ended.');return schoolTombstonesReady(db,owner);},
      canRestoreArchivedDeleted:async()=>{if(!live)throw Error('Recovery transaction ended.');if(!allowArchivedDeletedRestore)return false;await verify(db,owner);return true;},
+     canImportSavedSearchVersions:()=>{if(!live)throw Error('Recovery transaction ended.');return savedSearchHistoryReady(db,owner);},
      canImportRecordVersions:()=>{if(!live)throw Error('Recovery transaction ended.');return importReady(db,owner,true);},
-     async importRecordVersions(snapshotId,versions){if(!live||!uuid(snapshotId)||!Array.isArray(versions)||versions.length>20000)throw Error('Bounded reviewed history import required.');await verify(db,owner);if(!await importReady(db,owner,true))throw Error('History import protections unavailable.');const result=await db.query('select to_jsonb(v) as version from public.import_private_record_versions($1,$2) v',[snapshotId,JSON.stringify(versions)]);if(!Array.isArray(result?.rows)||result.rows.length!==versions.length)throw Error('History import acknowledgement unavailable.');return result.rows.map(r=>r.version);},
+     async importRecordVersions(snapshotId,versions){if(!live||!uuid(snapshotId)||!Array.isArray(versions)||versions.length>20000)throw Error('Bounded reviewed history import required.');await verify(db,owner);if(!await importReady(db,owner,true)||versions.some(entry=>entry.item_type==='saved_search')&&!await savedSearchHistoryReady(db,owner))throw Error('History import protections unavailable.');const result=await db.query('select to_jsonb(v) as version from public.import_private_record_versions($1,$2) v',[snapshotId,JSON.stringify(versions)]);if(!Array.isArray(result?.rows)||result.rows.length!==versions.length)throw Error('History import acknowledgement unavailable.');return result.rows.map(r=>r.version);},
      readRecordVersionsSnapshot:()=>{if(!live)throw Error('Recovery transaction ended.');return recordVersions(db,owner,true);},
      canRestoreAssessmentHistory:()=>{if(!live)throw Error('Recovery transaction ended.');return historyReady(db,owner);},
      canRestoreHierarchy:()=>{if(!live)throw Error('Recovery transaction ended.');return hierarchyReady(db,owner);},

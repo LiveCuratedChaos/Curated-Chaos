@@ -11,16 +11,16 @@
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3527,
-        "passed": 3502,
-        "failed": 25,
+        "total": 3530,
+        "passed": 3506,
+        "failed": 24,
         "cancelled": 0,
         "skipped": 0
       },
       "failureReasons": {
         "loopbackListenerDenied": 16,
         "assertionWithDeniedListener": 8,
-        "unclassified": 1
+        "unclassified": 0
       },
       "checks": {
         "tests": false,
@@ -35,7 +35,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "Full gate through confirmed removal Undo. Twenty-four listener failures and one additional failure. The latter did not repeat in the two-group diagnostic (2,694/2,718 with only listener denials, then 809/809). The combined PostgreSQL Undo audit ran separately."
+    "note": "Full gate through named shortcut history capture and encrypted recovery. All 24 failures are classified listener denials. The additional failure seen in the earlier Undo run did not recur."
   },
   "result": {
     "platformExclusions": [],
@@ -873,6 +873,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "namedShortcutVersionRecovery": {
+      "passed": 148,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Explicit named shortcut changes, supported School/Calendar/document/Work filters, recovered provenance, foreign owner refusal, results excluded, and refusal when destination lacks shortcut history support."
     },
     "offlineFailureLocations": {
       "passed": 7,

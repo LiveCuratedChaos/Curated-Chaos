@@ -1,3 +1,4 @@
+import {privateSavedSearchState} from './private-saved-searches.mjs';
 import {projectNoteIds} from '../src/private-project-note-fields.mjs';
 import {verifyArchivedDocuments,verifyArchivedReceiptLinks,MAX_WORKSPACE_FILE} from './private-document-archive.mjs';
 import {verifyRecordVersionRecovery} from './private-record-version-provenance.mjs';
@@ -33,11 +34,16 @@ export function validatePrivateRecordVersions(versions,records,ownerId,key){
  if(!Array.isArray(versions)||versions.length>20000)throw Error('Bounded private record history required.');
  const sources=new Map(records.map(row=>[row.id.toLowerCase(),row])),seen=new Set();
  return versions.map(entry=>{
-  if(!onlyKeys(entry,['id','owner_id','record_id','source_version','item_type','operation','captured_at','snapshot','recovery'])||Object.keys(entry).length!==(Object.hasOwn(entry,'recovery')?9:8)||!uuid(entry.id)||seen.has(entry.id.toLowerCase())||entry.owner_id!==ownerId||!uuid(entry.record_id)||!Number.isInteger(entry.source_version)||entry.source_version<1||!['task','note','event','project','school_fixture','dashboard_layout','list_template'].includes(entry.item_type)||!['UPDATE','DELETE'].includes(entry.operation)||!safeSavedAt(entry.captured_at))throw Error('Unverified private record history.');
+  if(!onlyKeys(entry,['id','owner_id','record_id','source_version','item_type','operation','captured_at','snapshot','recovery'])||Object.keys(entry).length!==(Object.hasOwn(entry,'recovery')?9:8)||!uuid(entry.id)||seen.has(entry.id.toLowerCase())||entry.owner_id!==ownerId||!uuid(entry.record_id)||!Number.isInteger(entry.source_version)||entry.source_version<1||!['task','note','event','project','school_fixture','dashboard_layout','list_template','saved_search'].includes(entry.item_type)||!['UPDATE','DELETE'].includes(entry.operation)||!safeSavedAt(entry.captured_at))throw Error('Unverified private record history.');
   verifyRecordVersionRecovery(entry.recovery??null);if(Object.hasOwn(entry,'recovery')&&entry.recovery===undefined)throw Error('Explicit recovery provenance required.');
   const source=sources.get(entry.record_id.toLowerCase());
   if(!source||source.item_type!==entry.item_type)throw Error('History requires its exact owned private source.');
   const snapshot=validatePrivateWorkspaceRows([entry.snapshot],ownerId,key)[0];
+  if(entry.item_type==='saved_search'){
+   privateSavedSearchState(source,ownerId);
+   privateSavedSearchState(snapshot,ownerId);
+   if(!onlyKeys(snapshot.payload,['fictional','source','schemaVersion','title','filters']))throw Error('Only named shortcut fields may enter search history.');
+  }
   if(snapshot.id.toLowerCase()!==entry.record_id.toLowerCase()||snapshot.item_type!==entry.item_type||snapshot.version!==entry.source_version)throw Error('History source identity or revision differs.');
   seen.add(entry.id.toLowerCase());return JSON.parse(JSON.stringify({...entry,snapshot}));
  });

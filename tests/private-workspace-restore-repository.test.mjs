@@ -9,7 +9,7 @@ import {sealPrivateWorkspace} from '../server/private-workspace-backup.mjs';
 import {privateWorkspaceRestoreDigest as digest} from '../server/private-workspace-restore-contract.mjs';
 const projectRef='fictionalrecovery',key=Buffer.alloc(32,4);
 const record=(patch={})=>({id:randomUUID(),owner_id:i.a,household_id:null,visibility:'private',section:'Personal Life',item_type:'note',origin:'PRIVATE_COOKIE_NOTE_CREATE',version:8,created_at:'2026-11-01T12:00:00.123456Z',updated_at:'2026-11-02T12:00:00.234567Z',deleted_at:null,payload:{fictional:true,title:'Fictional recovered note',body:'Exact\n<literal>',source:'M0C_DEV_LOGIN_TEST'},...patch});
-async function setup(t,{allowArchivedDeletedRestore=false}={}){const db=await createIsolatedDevelopmentDatabase();t.after(()=>db.close());const repository=createPrivateWorkspaceRestoreRepository({projectRef,allowArchivedDeletedRestore,verifyTarget:async(connection,ref)=>connection===db&&ref===projectRef,withConnection:async(who,callback)=>{await actor(db,who.owner,who.session);return callback(db);}}),who={owner:i.a,session:i.sa};const executor=createPrivateWorkspaceRestoreExecutor({repository,projectRef,key,allowArchivedDeletedRestore,resolveActor:async a=>({ownerId:a.owner,sessionBinding:a.session,expiresAt:Date.now()+600000}),authorizeWrite:async()=>true});t.after(()=>executor.dispose());return{db,repository,executor,who};}
+async function setup(t,{allowArchivedDeletedRestore=false,allowRecordHistoryImport=false}={}){const db=await createIsolatedDevelopmentDatabase();t.after(()=>db.close());const repository=createPrivateWorkspaceRestoreRepository({projectRef,allowArchivedDeletedRestore,allowRecordHistoryVerification:allowRecordHistoryImport,allowRecordHistoryImport,verifyTarget:async(connection,ref)=>connection===db&&ref===projectRef,withConnection:async(who,callback)=>{await actor(db,who.owner,who.session);return callback(db);}}),who={owner:i.a,session:i.sa};const executor=createPrivateWorkspaceRestoreExecutor({repository,projectRef,key,allowArchivedDeletedRestore,allowRecordHistoryImport,resolveActor:async a=>({ownerId:a.owner,sessionBinding:a.session,expiresAt:Date.now()+600000}),authorizeWrite:async()=>true});t.after(()=>executor.dispose());return{db,repository,executor,who};}
 const seal=rows=>sealPrivateWorkspace({projectRef,ownerId:i.a,key,rows}).bytes;
 test('atomic authenticated SQL restore preserves original microseconds, contents and revisions without touching existing records',async t=>{
  const s=await setup(t),rows=[record(),record({item_type:'task',origin:'PRIVATE_COOKIE_TASK_CREATE',section:'Home',payload:{fictional:true,title:'Fictional recovered undated task',day:null,done:false,source:'M0D_DEV_BRIEF_TEST',priority:'Normal',description:'Preserve task text',subtasks:[{id:randomUUID(),title:'Preserve step',done:true}]}}),record({item_type:'project',section:'Work',origin:'PRIVATE_COOKIE_PROJECT',payload:{fictional:true,schemaVersion:1,title:'Fictional recovered project',description:'Preserve project text',status:'On hold',separateRecurring:true}})];
@@ -268,6 +268,19 @@ test('encrypted recovery reopens the same School program and course from their o
  }
 });
 
+function shortcutService(t,db){
+ const query=async(sql,args)=>(await db.query(sql,args)).rows.map(value=>value.row);
+ const fail=()=>{throw Error('Unexpected shortcut mutation');};
+ const service=createPrivateSavedSearches({allowSchool:true,api:{
+  listPrivateSavedSearches:(_token,owner,removed)=>query("select to_jsonb(r) row from public.cc_records r where owner_id=$1 and item_type='saved_search' and (deleted_at is not null)=$2",[owner,removed]),
+  getPrivateSavedSearch:(_token,id,owner)=>query("select to_jsonb(r) row from public.cc_records r where owner_id=$1 and id=$2 and item_type='saved_search'",[owner,id]),
+  setPrivateSavedSearchDeletedAt:(_token,selected,owner,date)=>query('update public.cc_records r set deleted_at=$1 where id=$2 and owner_id=$3 and version=$4 and deleted_at is not distinct from $5 returning to_jsonb(r) row',[date,selected.id,owner,selected.version,selected.deleted_at]),
+  addPrivateSavedSearch:fail,
+  updatePrivateSavedSearch:(_token,selected,owner,payload)=>query("update public.cc_records r set payload=$1 where owner_id=$2 and id=$3 and item_type='saved_search' and version=$4 and deleted_at is null returning to_jsonb(r) row",[JSON.stringify(payload),owner,selected.id,selected.version])
+ }});
+ t.after(()=>service.dispose());return service;
+}
+
 test('encrypted recovery keeps removed shortcuts out of active search until their own restore is approved',async t=>{
  const s=await setup(t,{allowArchivedDeletedRestore:true}),day=86400000;
  await administrator(s.db);
@@ -284,15 +297,7 @@ test('encrypted recovery keeps removed shortcuts out of active search until thei
  assert.equal((await s.executor.execute(s.who,{reviewId:review.reviewId,approved:true})).restoredDeleted,1);
  const imported=(await s.repository.readPrivateRows(s.who,i.a)).filter(r=>r.item_type==='saved_search');
  assert.equal(digest(imported),digest([shortcuts[0]]));
- const query=async(sql,args)=>(await s.db.query(sql,args)).rows.map(value=>value.row);
- const actor={ownerId:i.a,accessToken:'fictional'},fail=()=>{throw Error('Unexpected shortcut mutation');};
- const service=createPrivateSavedSearches({allowSchool:true,api:{
-  listPrivateSavedSearches:(_token,owner,removed)=>query("select to_jsonb(r) row from public.cc_records r where owner_id=$1 and item_type='saved_search' and (deleted_at is not null)=$2",[owner,removed]),
-  getPrivateSavedSearch:(_token,id,owner)=>query("select to_jsonb(r) row from public.cc_records r where owner_id=$1 and id=$2 and item_type='saved_search'",[owner,id]),
-  setPrivateSavedSearchDeletedAt:(_token,selected,owner,date)=>query('update public.cc_records r set deleted_at=$1 where id=$2 and owner_id=$3 and version=$4 and deleted_at=$5 returning to_jsonb(r) row',[date,selected.id,owner,selected.version,selected.deleted_at]),
-  addPrivateSavedSearch:fail,updatePrivateSavedSearch:fail
- }});
- t.after(()=>service.dispose());
+ const actor={ownerId:i.a,accessToken:'fictional'},service=shortcutService(t,s.db);
  const list=removed=>service.list('fixture',actor,Date.now()+300000,{removed});
  assert.equal((await list(false)).matchCount,0);
  const removed=await list(true);
@@ -309,4 +314,81 @@ test('encrypted recovery keeps removed shortcuts out of active search until thei
  const again=await s.executor.prepare(s.who,{bytes:archive});
  assert.equal(again.canRestore,false);
  assert.equal((await list(true)).matchCount,0);
+});
+
+test('named shortcut history survives encrypted recovery without storing search runs or results',async t=>{
+ const source=await setup(t,{allowRecordHistoryImport:true}),destination=await setup(t,{allowRecordHistoryImport:true});
+ const sql=await readFile(new URL('../supabase/drafts/private_record_versions.sql',import.meta.url),'utf8');
+ for(const s of [source,destination]){await administrator(s.db);await s.db.exec(sql);await actor(s.db,i.a,i.sa);}
+ const viewer={ownerId:i.a,accessToken:'fictional'},service=shortcutService(t,source.db);
+ const filters={type:'school-course',section:'School',query:'leadership',status:'all',dateFrom:'',dateTo:'',priority:'all',dateStatus:'all'};
+ const shortcut=record({item_type:'saved_search',origin:'PRIVATE_COOKIE_SAVED_SEARCH',payload:{source:'PRIVATE_SAVED_SEARCH_V1',schemaVersion:1,fictional:true,title:'Course reading',filters}});
+ const insert=row=>source.db.query('insert into public.cc_records select * from jsonb_populate_record(null::public.cc_records,$1)',[JSON.stringify(row)]);
+ await insert(shortcut);
+ const list=removed=>service.list('fixture',viewer,Date.now()+300000,{removed});
+ const history=async s=>(await s.repository.readRecordVersionsSnapshot(s.who,i.a)).versions;
+ service.offer('fixture',i.a,{...filters,query:'unsaved query'},Date.now()+300000);
+ const active=await list(false);await service.load('fixture',viewer,active.records[0].savedSearchToken);
+ assert.deepEqual(await history(source),[]);
+ for(const action of ['rename','remove','restore']){
+  const page=await list(action==='restore');
+  const review=await service.prepare('fixture',viewer,{action,savedSearchToken:page.records[0].savedSearchToken,...(action==='rename'?{name:'Study plan'}:{})});
+  const claim=service.claim('fixture',i.a,review.reviewId);
+  assert.equal(await service.authorize(claim,viewer),true);
+  await service.save(claim,viewer);
+ }
+ const versions=await history(source);
+ assert.equal(versions.length,3);
+ const ordered=versions.toSorted((a,b)=>a.source_version-b.source_version);
+ assert.deepEqual(ordered.map(entry=>entry.snapshot.payload.title),['Course reading','Study plan','Study plan']);
+ assert.deepEqual(ordered.map(entry=>entry.snapshot.deleted_at!==null),[false,false,true]);
+ assert.ok(versions.every(entry=>entry.record_id===shortcut.id&&entry.recovery===null));
+ assert.doesNotMatch(JSON.stringify(versions),/unsaved query/);
+ const rows=(await source.repository.readPrivateRows(source.who,i.a)).filter(row=>row.id===shortcut.id);
+ const sealHistory=history=>sealPrivateWorkspace({projectRef,ownerId:i.a,key,rows,recordVersions:history}).bytes;
+ const bytes=sealHistory(versions);
+ const cap=destination.repository.canImportSavedSearchVersions;
+ destination.repository.canImportSavedSearchVersions=undefined;
+ const unsupported=await destination.executor.prepare(destination.who,{bytes});
+ assert.equal(unsupported.canRestore,false);
+ assert.equal(unsupported.recordVersionBlockedCount,3);
+ assert.equal(unsupported.reviewId,undefined);
+ destination.repository.canImportSavedSearchVersions=cap;
+ const review=await destination.executor.prepare(destination.who,{bytes});
+ assert.equal(review.canRestore,true);assert.equal(review.recordVersionImportCount,3);
+ assert.equal((await destination.executor.execute(destination.who,{reviewId:review.reviewId,approved:true})).recoveredHistory,3);
+ const recovered=await history(destination);
+ for(const entry of versions){
+  const result=recovered.find(v=>v.id===entry.id);
+  assert.ok(result.recovery.snapshotId);
+  assert.equal(digest([result.snapshot]),digest([entry.snapshot]));
+ }
+ assert.equal((await destination.executor.prepare(destination.who,{bytes})).insertCount,0);
+ for(const extra of [{results:['Unrelated text']},{filters:{...filters,results:['Unrelated text']}}]){
+  const bad=structuredClone(versions);Object.assign(bad[0].snapshot.payload,extra);
+  assert.throws(()=>sealHistory(bad));
+  assert.equal((await source.db.query('select cc_private.named_search_version_source($1) ok',[JSON.stringify(bad[0].snapshot)])).rows[0].ok,false);
+  bad[0].id=randomUUID();
+  await source.db.exec('begin');
+  try{
+   await source.db.exec('lock table public.cc_records in share row exclusive mode nowait');
+   await assert.rejects(source.db.query('select * from public.import_private_record_versions($1,$2)',[randomUUID(),JSON.stringify([bad[0]])]),/Named saved-search history required/);
+  }finally{await source.db.exec('rollback');}
+ }
+ const malformed=record({...shortcut,id:randomUUID(),payload:{...shortcut.payload,results:['Unrelated text']}});
+ await insert(malformed);
+ await source.db.query("update public.cc_records set payload=jsonb_set(payload,'{title}',to_jsonb('Changed legacy shortcut'::text)) where id=$1",[malformed.id]);
+ assert.equal((await history(source)).length,3);
+ for(const supported of [
+  {type:'document-text',query:'fictional text'},
+  {type:'document-library',collection:'images',query:''},
+  {...filters,type:'event',section:'Calendar',eventKind:'timed',eventSource:'manual',eventCategory:'all'},
+  {...filters,type:'task',section:'Work'},
+  {...filters,type:'school-program'}
+ ]){
+  const checked={...shortcut,payload:{...shortcut.payload,filters:supported}};
+  assert.equal((await source.db.query('select cc_private.named_search_version_source($1) ok',[JSON.stringify(checked)])).rows[0].ok,true);
+ }
+ await actor(destination.db,i.b,i.sb);
+ assert.equal((await destination.db.query('select id from cc_private.record_versions where record_id=$1',[shortcut.id])).rows.length,0);
 });

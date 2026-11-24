@@ -8,7 +8,7 @@ create table cc_private.record_versions(
  owner_id uuid not null,
  record_id uuid not null,
  source_version integer not null check(source_version>0),
- item_type text not null check(item_type in('task','note','event','project','school_fixture','dashboard_layout','list_template')),
+ item_type text not null check(item_type in('task','note','event','project','school_fixture','dashboard_layout','list_template','saved_search')),
  operation text not null check(operation in('UPDATE','DELETE')),
  captured_at timestamptz not null default statement_timestamp(),
  snapshot jsonb not null check(jsonb_typeof(snapshot)='object'),
@@ -21,10 +21,41 @@ create policy cc_private_record_versions_read on cc_private.record_versions for 
 );
 revoke all on cc_private.record_versions from public,anon,authenticated;
 grant select on cc_private.record_versions to authenticated;
+-- Version only an explicitly named shortcut. Search executions and returned records have no ledger source.
+create function cc_private.named_search_version_source(snapshot jsonb)
+returns boolean language plpgsql immutable set search_path='' as $$
+declare p jsonb := snapshot->'payload'; f jsonb := p->'filters'; allowed text[];
+begin
+ if snapshot->>'item_type' is distinct from 'saved_search' or snapshot->>'section' is distinct from 'Personal Life'
+    or snapshot->>'origin' is distinct from 'PRIVATE_COOKIE_SAVED_SEARCH' or jsonb_typeof(p) is distinct from 'object'
+    or jsonb_typeof(f) is distinct from 'object' then return false; end if;
+ if p-array['fictional','source','schemaVersion','title','filters'] <> '{}'::jsonb
+    or p->'fictional' is distinct from 'true'::jsonb or p->'schemaVersion' is distinct from '1'::jsonb
+    or p->>'source' is distinct from 'PRIVATE_SAVED_SEARCH_V1' or jsonb_typeof(p->'title') is distinct from 'string'
+    or length(p->>'title') not between 1 and 80 or btrim(p->>'title') <> p->>'title'
+    or p->>'title' ~ '[[:cntrl:]]' then return false; end if;
+ case f->>'type'
+  when 'document-text' then allowed := array['type','query'];
+  when 'document-library' then allowed := array['type','query','collection'];
+  else
+   if not coalesce(f->>'type' in ('all','task','note','event','project','school','school-course','school-program'),false) then return false; end if;
+   allowed := array['type','query','section','status','priority','dateFrom','dateTo','dateStatus'];
+   if f ?| array['eventKind','eventSource','eventCategory'] then
+    if f->>'type' <> 'event' then return false; end if;
+    allowed := allowed || array['eventKind','eventSource','eventCategory'];
+   end if;
+ end case;
+ return (f ?& allowed) and (f-allowed='{}'::jsonb) and not exists (
+  select 1 from jsonb_each(f) x where jsonb_typeof(x.value)<>'string'
+   or length(x.value#>>'{}')>150 or x.value#>>'{}' ~ '[[:cntrl:]]'
+ );
+end$$;
+revoke all on function cc_private.named_search_version_source(jsonb) from public,anon;
+grant execute on function cc_private.named_search_version_source(jsonb) to authenticated;
 create function cc_private.capture_record_version() returns trigger language plpgsql security definer set search_path='' as $$
 declare previous jsonb;
 begin
- if old.visibility='private' and old.household_id is null and old.item_type in('task','note','event','project','school_fixture','dashboard_layout','list_template') then
+ if old.visibility='private' and old.household_id is null and old.item_type in('task','note','event','project','school_fixture','dashboard_layout','list_template','saved_search') and (old.item_type<>'saved_search' or cc_private.named_search_version_source(to_jsonb(old))) then
  previous:=to_jsonb(old)||jsonb_build_object('created_at',to_char(old.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),'updated_at',to_char(old.updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),'deleted_at',case when old.deleted_at is null then null else to_char(old.deleted_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') end);
  insert into cc_private.record_versions(owner_id,record_id,source_version,item_type,operation,snapshot) values(old.owner_id,old.id,old.version,old.item_type,tg_op,previous);
  end if;
@@ -39,7 +70,7 @@ create trigger cc_immutable_private_record_version before update or delete on cc
 create function public.list_private_record_versions(p_record_id uuid,p_offset integer default 0) returns jsonb language plpgsql set search_path='' as $$
 declare total integer;versions jsonb;
 begin
- if auth.uid() is null or not cc_private.development_session_active() or p_offset is null or p_offset<0 or p_offset>999950 or p_offset%50<>0 or not exists(select 1 from public.cc_records where id=p_record_id and owner_id=auth.uid() and visibility='private' and household_id is null and item_type in('task','note','event','project','school_fixture','dashboard_layout','list_template')) then raise exception 'Current owned source required';end if;
+ if auth.uid() is null or not cc_private.development_session_active() or p_offset is null or p_offset<0 or p_offset>999950 or p_offset%50<>0 or not exists(select 1 from public.cc_records where id=p_record_id and owner_id=auth.uid() and visibility='private' and household_id is null and item_type in('task','note','event','project','school_fixture','dashboard_layout','list_template','saved_search')) then raise exception 'Current owned source required';end if;
  select count(*) into total from cc_private.record_versions where owner_id=auth.uid() and record_id=p_record_id;
  if total>1000000 or (p_offset>0 and p_offset>=total) then raise exception 'Bounded current history page required';end if;
  select coalesce(jsonb_agg(case when v.recovery is null then to_jsonb(v)-'recovery' else (to_jsonb(v)-'recovery')||jsonb_build_object('recovered',true,'recovered_at',v.recovery->>'restoredAt') end order by v.captured_at desc,v.id desc),'[]'::jsonb) into versions from(select id,source_version,item_type,operation,captured_at,recovery from cc_private.record_versions where owner_id=auth.uid() and record_id=p_record_id order by captured_at desc,id desc offset p_offset limit 50) v;
@@ -83,8 +114,8 @@ begin
  if p_versions is null or jsonb_typeof(p_versions)<>'array' or jsonb_array_length(p_versions)>20000 or octet_length(p_versions::text)>5242880 then raise exception 'Complete bounded recovered history required';end if;
  for entry in select x.value from jsonb_array_elements(p_versions) x loop
   if jsonb_typeof(entry)<>'object' or not(entry ?& array['id','owner_id','record_id','source_version','item_type','operation','captured_at','snapshot']) or exists(select 1 from jsonb_object_keys(entry) k where k not in('id','owner_id','record_id','source_version','item_type','operation','captured_at','snapshot','recovery')) then raise exception 'Verified recovered history required';end if;
-  if jsonb_typeof(entry->'id')<>'string' or (entry->>'id')!~*'^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' or jsonb_typeof(entry->'owner_id')<>'string' or (entry->>'owner_id')::uuid<>auth.uid() or jsonb_typeof(entry->'record_id')<>'string' or jsonb_typeof(entry->'source_version')<>'number' or (entry->>'source_version')!~'^[1-9][0-9]{0,9}$' or (entry->>'source_version')::bigint>2147483647 or jsonb_typeof(entry->'item_type')<>'string' or entry->>'item_type' not in('task','note','event','project','school_fixture','dashboard_layout','list_template') or jsonb_typeof(entry->'operation')<>'string' or entry->>'operation' not in('UPDATE','DELETE') or jsonb_typeof(entry->'captured_at')<>'string' or (entry->>'captured_at')!~'^[0-9]{4}-[0-9]{2}-[0-9]{2}T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]{1,6})?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$' then raise exception 'Owned recovered history metadata required';end if;
-  if not exists(select 1 from public.cc_records r where r.id=(entry->>'record_id')::uuid and r.owner_id=auth.uid() and r.household_id is null and r.visibility='private' and r.item_type=entry->>'item_type') or exists(select 1 from cc_private.record_versions where id=(entry->>'id')::uuid) then raise exception 'History conflicts with its current owned source';end if;
+  if jsonb_typeof(entry->'id')<>'string' or (entry->>'id')!~*'^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' or jsonb_typeof(entry->'owner_id')<>'string' or (entry->>'owner_id')::uuid<>auth.uid() or jsonb_typeof(entry->'record_id')<>'string' or jsonb_typeof(entry->'source_version')<>'number' or (entry->>'source_version')!~'^[1-9][0-9]{0,9}$' or (entry->>'source_version')::bigint>2147483647 or jsonb_typeof(entry->'item_type')<>'string' or entry->>'item_type' not in('task','note','event','project','school_fixture','dashboard_layout','list_template','saved_search') or jsonb_typeof(entry->'operation')<>'string' or entry->>'operation' not in('UPDATE','DELETE') or jsonb_typeof(entry->'captured_at')<>'string' or (entry->>'captured_at')!~'^[0-9]{4}-[0-9]{2}-[0-9]{2}T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]{1,6})?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$' then raise exception 'Owned recovered history metadata required';end if;
+  if not exists(select 1 from public.cc_records r where r.id=(entry->>'record_id')::uuid and r.owner_id=auth.uid() and r.household_id is null and r.visibility='private' and r.item_type=entry->>'item_type' and (r.item_type<>'saved_search' or cc_private.named_search_version_source(to_jsonb(r)))) or exists(select 1 from cc_private.record_versions where id=(entry->>'id')::uuid) then raise exception 'History conflicts with its current owned source';end if;
   snap:=entry->'snapshot';
   if jsonb_typeof(snap)<>'object' or (select count(*) from jsonb_object_keys(snap))<>12 or not(snap ?& array['id','owner_id','household_id','visibility','section','item_type','origin','payload','version','deleted_at','created_at','updated_at']) or (snap->>'id') is distinct from (entry->>'record_id') or (snap->>'owner_id') is distinct from (entry->>'owner_id') or (snap->'household_id') is distinct from 'null'::jsonb or (snap->>'visibility') is distinct from 'private' or (snap->>'item_type') is distinct from (entry->>'item_type') or (snap->'version') is distinct from (entry->'source_version') or jsonb_typeof(snap->'section')<>'string' or snap->>'section' not in('Home','Calendar','Personal Life','Work','School','Finances') or jsonb_typeof(snap->'origin')<>'string' or char_length(snap->>'origin') not between 1 and 500 or jsonb_typeof(snap->'payload')<>'object' or octet_length((snap->'payload')::text)>1048576 then raise exception 'Exact complete private history snapshot required';end if;
   foreach field in array array['created_at','updated_at','deleted_at'] loop
@@ -92,6 +123,7 @@ begin
    if jsonb_typeof(snap->field)<>'string' or snap->>field!~'^[0-9]{4}-[0-9]{2}-[0-9]{2}T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]{1,6})?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$' then raise exception 'Exact snapshot timestamps required';end if;
    perform (snap->>field)::timestamptz;
   end loop;
+  if entry->>'item_type'='saved_search' and not cc_private.named_search_version_source(snap) then raise exception 'Named saved-search history required';end if;
   previous:=coalesce(entry->'recovery','null'::jsonb);
   provenance:=jsonb_build_object('version',1,'snapshotId',p_snapshot_id::text,'restoredAt',to_char(statement_timestamp() at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),'previous',previous);
   if not cc_private.record_version_recovery_valid(provenance) then raise exception 'Bounded exact recovery provenance required';end if;
@@ -105,7 +137,7 @@ grant execute on function public.import_private_record_versions(uuid,jsonb) to a
 set local search_path='';
 -- Bind the new ledger to its reviewed body, grants, policies and enabled triggers.
 do $install$declare expected text;policy_hash text;begin
- select string_agg(format('(%L,%L,%L,%L,%L)',format('%I.%I(%s)',n.nspname,p.proname,pg_catalog.oidvectortypes(p.proargtypes)),md5(p.prosrc),p.prosecdef,pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE'),p.provolatile),',') into expected from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.oid in('cc_private.capture_record_version()'::regprocedure,'cc_private.immutable_record_version()'::regprocedure,'public.list_private_record_versions(uuid,integer)'::regprocedure,'public.get_private_record_version(uuid,uuid)'::regprocedure,'public.export_private_record_versions(uuid)'::regprocedure,'public.lock_private_record_versions_for_recovery()'::regprocedure,'cc_private.record_version_recovery_valid(jsonb,integer)'::regprocedure,'public.import_private_record_versions(uuid,jsonb)'::regprocedure);
+ select string_agg(format('(%L,%L,%L,%L,%L)',format('%I.%I(%s)',n.nspname,p.proname,pg_catalog.oidvectortypes(p.proargtypes)),md5(p.prosrc),p.prosecdef,pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE'),p.provolatile),',') into expected from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.oid in('cc_private.named_search_version_source(jsonb)'::regprocedure,'cc_private.capture_record_version()'::regprocedure,'cc_private.immutable_record_version()'::regprocedure,'public.list_private_record_versions(uuid,integer)'::regprocedure,'public.get_private_record_version(uuid,uuid)'::regprocedure,'public.export_private_record_versions(uuid)'::regprocedure,'public.lock_private_record_versions_for_recovery()'::regprocedure,'cc_private.record_version_recovery_valid(jsonb,integer)'::regprocedure,'public.import_private_record_versions(uuid,jsonb)'::regprocedure);
  select md5(pg_get_expr(polqual,polrelid)) into policy_hash from pg_policy where polrelid='cc_private.record_versions'::regclass and polname='cc_private_record_versions_read';
  execute format($ready$create function public.cc_private_record_versions_ready() returns boolean language sql stable set search_path='' as $body$
  select auth.uid() is not null and cc_private.development_session_active()

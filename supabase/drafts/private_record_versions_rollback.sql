@@ -14,6 +14,7 @@ drop function public.get_private_record_version(uuid,uuid);
 drop trigger cc_capture_private_record_version on public.cc_records;
 drop trigger cc_immutable_private_record_version on cc_private.record_versions;
 drop function cc_private.capture_record_version();
+drop function cc_private.named_search_version_source(jsonb);
 drop function cc_private.immutable_record_version();
 drop table cc_private.record_versions;
 commit;
