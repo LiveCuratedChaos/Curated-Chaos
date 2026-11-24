@@ -245,8 +245,8 @@ export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=fals
    button('text-review-'+row.suggestion,'Review '+suggestionLabel[row.field].toLowerCase())+'</li>').join('')+'</ul>':'<p>No supported filing suggestions for this document.</p>');
  }
  function render(){
-  if(favoritesOnly&&!view&&!busy&&!status)return '';
-  let html=(view?.favorite?'<h2 id="private-favorite-document-title" tabindex="-1">'+e(view.documents[0].fields.name)+'</h2>':'<h2>Document Library</h2>')+'<p role="status">'+e(busy?'Checking documents…':status)+'</p>';
+  if(favoritesOnly&&!fresh()&&!busy&&!status)return '';
+  let html=(fresh()&&view.favorite?'<h2 id="private-favorite-document-title" tabindex="-1">'+e(view.documents[0].fields.name)+'</h2>':'<h2>Document Library</h2>')+'<p role="status">'+e(busy?'Checking documents…':status)+'</p>';
   if(!fresh())return html+(favoritesOnly?'':button('open','Open my documents',busy));
   html+='<fieldset '+(busy?'disabled':'')+'>';
   if(onNameSearch&&!reading&&!draft&&!duplicate&&!review&&(scan||view.criteria))html+=button('name-search','Name this document search',busy||!canOpen());
@@ -270,7 +270,7 @@ export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=fals
    (view.offset||view.hasPrevious?button('previous','Previous documents'):'')+(view.hasMore?button('next','Next documents'):'');
   return html+button('close','Close document library')+'</fieldset>'+(scan&&busy?button('content-stop','Stop content search'):'');
  }
- return {render,reset,openFavorite,openContentSearch,openSavedSearch,blocked:()=>Boolean(draft||review||busy),input(event){
+ return {render,reset,openFavorite,openContentSearch,openSavedSearch,blocked:()=>busy||fresh()&&Boolean(draft||review),input(event){
   const field=event.target.dataset?.documentField;if(!field)return false;
   if(!draft&&!reading&&!scan&&!busy&&field==='contentQuery'){contentQuery=event.target.value;return true;}
   if(reading&&!busy&&field==='textQuery'){readQuery=event.target.value;return true;}

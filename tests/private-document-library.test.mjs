@@ -170,3 +170,15 @@ test('a reviewed document favorite follows the renamed original in collections a
  assert.equal((await a.favoriteDocumentsList(0,collection)).count,0);
  assert.equal((await a.documentList(0)).documents[0].name,changes.name);
 });
+
+test('an expired document favorite hides its name before a suspended timer can run',async t=>{
+ let now=1000;
+ const choice='a'.repeat(43);
+ const panel=createDocumentPanel({client:{openFavoriteDocument:async()=>({fields,expiresAt:2000})},
+  clock:()=>now,allowFavorites:true,favoritesOnly:true});
+ t.after(()=>panel.reset());
+ await panel.openFavorite(choice,{title:fields.name,documentReadToken:choice},2000);
+ assert.match(panel.render(),/Example receipt\.pdf/);
+ now=2000;
+ assert.equal(panel.render(),'');
+});
