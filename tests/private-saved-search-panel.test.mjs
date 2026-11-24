@@ -18,3 +18,25 @@ test('reset prevents late private lists or saves from restoring cleared UI',asyn
 test('failed or forged selected filters never run a different query',async t=>{const x=setup(t);await x.create();await x.show();x.client.loadSavedSearch=async()=>({name:x.s.row.name,filters:{...filters,query:'different'}});x.button('run');await turn();assert.equal(x.s.runs.length,0);assert.match(x.panel.render(),/Saved search changed/);});
 test('a conflicting workspace draft blocks opening or starting saved-search controls',t=>{const x=setup(t);x.offer();x.s.allowed=false;x.click('#private-saved-search-new');x.click('#private-saved-searches-open');assert.equal(x.s.reads,0);assert.equal(x.panel.blocked(),false);assert.doesNotMatch(x.panel.render(),/private-saved-search-name-form/);});
 test('offline during a pending save keeps navigation guarded until the single response settles',async t=>{const x=setup(t);x.offer();x.click('#private-saved-search-new');x.input('Pending draft');x.submit();await turn();let release;x.client.saveSavedSearch=()=>new Promise(r=>release=r);x.click('#private-saved-search-approve');x.panel.offline();assert.equal(x.panel.blocked(),true);x.click('#private-saved-searches-open');assert.equal(x.s.reads,0);release({saved:true,action:'create'});await turn();assert.match(x.panel.render(),/Pending draft/);assert.match(x.panel.render(),/offline/);assert.equal(x.panel.blocked(),true);});
+test('a delayed timer or long-lived response cannot keep a removed shortcut or its approval available',async t=>{
+ for(const stage of ['list','review']){
+  const x=setup(t),boundary=x.s.clock+10000;
+  x.s.row={name:'Fictional removed shortcut',removed:true};
+  const read=x.client.savedSearches;
+  x.client.savedSearches=async values=>{
+   const value=await read(values);
+   if(value.records.length)value.records[0].deletedAt=new Date(boundary-90*86400000).toISOString();
+   return value;
+  };
+  await x.show();x.click('#private-saved-search-mode');await turn();
+  assert.match(x.panel.render(),/Fictional removed shortcut/);
+  x.s.clock=boundary;
+  if(stage==='review'){x.button('restore');await turn();assert.match(x.panel.render(),/Approve shortcut restoration/);}
+  x.s.clock++;
+  if(stage==='review')x.click('#private-saved-search-approve');else x.button('restore');
+  assert.doesNotMatch(x.panel.render(),/Fictional removed shortcut|Approve shortcut restoration/);
+  assert.match(x.panel.render(),/expired/);
+  assert.equal(x.s.reviews,stage==='review'?1:0);
+  assert.equal(x.s.writes,0);
+ }
+});

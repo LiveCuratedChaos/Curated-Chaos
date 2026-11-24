@@ -874,6 +874,12 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "removedSavedSearchDeadline": {
+      "passed": 61,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Removed shortcut pagination, exact-boundary eligibility, expiry while a tab is suspended and refusal of stale approval."
+    },
     "recentlyDeletedDeadline": {
       "passed": 185,
       "failed": 0,

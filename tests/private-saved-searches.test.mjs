@@ -29,3 +29,30 @@ test('lists are bounded, paginated and reject wrong namespace/duplicates without
 test('equivalent PostgreSQL timestamps allow restoration without replacing filters',async t=>{const x=setup(t);await x.create();x.s.row.deleted_at='2026-11-10T14:00:00+00:00';const view=await x.reviewAction('restore');x.s.row.deleted_at='2026-11-10T14:00:00.000Z';await x.save(view);assert.equal(x.s.row.deleted_at,null);});
 test('review readiness remains false before selection, after claim and after disposal',async t=>{const x=setup(t);x.offer();assert.equal(x.service.current('a',undefined),false);const view=await x.reviewCreate();assert.equal(x.service.current('a',view.reviewId),true);x.service.claim('a',owner,view.reviewId);assert.equal(x.service.current('a',view.reviewId),false);x.service.dispose();assert.equal(x.service.current('a',view.reviewId),false);});
 test('changed compare-and-swap target after preflight cannot overwrite or retry',async t=>{const x=setup(t);await x.create();const view=await x.reviewAction('rename','New name'),claim=x.service.claim('a',owner,view.reviewId);assert.equal(await x.service.authorize(claim,x.actor),true);x.s.row.version++;x.s.row.payload.title='Concurrent user edit';await assert.rejects(x.service.save(claim,x.actor));await assert.rejects(x.service.save(claim,x.actor));assert.equal(x.s.writes,1);assert.equal(x.s.row.payload.title,'Concurrent user edit');});
+test('an off-page removed shortcut bounds the count, tokens, review and final approval',async t=>{
+ const x=setup(t);
+ await x.create();
+ const remaining=new Date(x.s.clock).toISOString(),boundary=x.s.clock+1;
+ x.s.row.deleted_at=remaining;
+ x.api.listPrivateSavedSearches=async()=>Array.from({length:51},(_,n)=>({
+  ...structuredClone(x.s.row),
+  id:n===0?id:n.toString(16).padStart(8,'0')+'-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  deleted_at:n===50?new Date(boundary-90*86400000).toISOString():remaining,
+  payload:{...x.s.row.payload,title:n===0?x.s.row.payload.title:'Z shortcut '+String(n).padStart(2,'0')}
+ }));
+ const list=await x.list(true),token=list.records[0].savedSearchToken;
+ assert.equal(list.matchCount,51);
+ assert.equal(list.records.length,50);
+ assert.equal(list.expiresAt,boundary+1);
+ x.s.clock=boundary;
+ const review=await x.service.prepare('a',x.actor,{action:'restore',savedSearchToken:token});
+ assert.equal(review.expiresAt,boundary+1);
+ const claim=x.service.claim('a',owner,review.reviewId);
+ assert.equal(await x.service.authorize(claim,x.actor),true);
+ x.s.clock++;
+ assert.equal(x.service.currentView('a',list.viewId),false);
+ assert.equal(x.service.hasAction('a',token),false);
+ await assert.rejects(x.service.save(claim,x.actor));
+ assert.equal(x.s.writes,1);
+ assert.equal((await x.list(true)).matchCount,50);
+});

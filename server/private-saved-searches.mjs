@@ -11,7 +11,7 @@ const uuid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[8
 const plain=v=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.getPrototypeOf(v)===Object.prototype;
 const equal=(a,b)=>stableStringify(a)===stableStringify(b);
 const token=()=>randomBytes(32).toString('base64url');
-const retention=90*86400000;
+import {PRIVATE_RECOVERY_DAYS, privateRecoveryDeadline, withinPrivateRecoveryWindow} from '../src/private-record-retention.mjs';
 function stamp(v){if(typeof v!=='string'||!/^\d{4}-\d\d-\d\dT/.test(v)||!Number.isFinite(Date.parse(v)))throw Error('Invalid saved-search timestamp.');return Date.parse(v);}
 function sameStamp(a,b){return a===null?b===null:b!==null&&stamp(a)===stamp(b);}
 export function savedSearchName(name){if(typeof name!=='string'||!name.trim()||name.trim().length>80||/[\u0000-\u001f\u007f]/.test(name))throw Error('Enter a search name up to 80 characters.');return name.trim();}
@@ -37,7 +37,7 @@ export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUI
  function clear(id){clearTimeout(contexts.get(id)?.timer);contexts.delete(id);}
  function alive(s){return !disposed&&contexts.get(s.contextId)===s&&s.expiresAt>now();}
  function begin(contextId,ownerId,expiresAt){if(disposed||typeof contextId!=='string'||!contextId||!uuid(ownerId)||!Number.isFinite(expiresAt)||expiresAt<=now())throw Error('Saved-search context unavailable.');clear(contextId);const s={contextId,ownerId,expiresAt:Math.min(expiresAt,now()+300000),actions:new Map(),review:null,viewId:token()};contexts.set(contextId,s);s.timer=setTimeout(()=>clear(contextId),Math.max(1,s.expiresAt-now()));s.timer.unref?.();return s;}
- function eligible(row){if(row.deleted_at!==null&&(stamp(row.deleted_at)>now()||stamp(row.deleted_at)<now()-retention))throw Error('The 90-day recovery period has ended.');}
+ function eligible(row){if(row.deleted_at!==null&&!withinPrivateRecoveryWindow(row.deleted_at,now()))throw Error('The 90-day recovery period has ended.');}
  function selected(contextId,actor,key){const s=contexts.get(contextId),row=s?.actions.get(key);if(!s||!alive(s)||s.ownerId!==actor.ownerId||!row)throw Error('Fetch saved searches again.');return{s,row};}
  async function get(actor,id){const rows=await api.getPrivateSavedSearch(actor.accessToken,id,actor.ownerId);if(!Array.isArray(rows)||rows.length!==1)throw Error('Saved search unavailable.');const row=privateSavedSearchState(rows[0],actor.ownerId);if(row.id!==id)throw Error('Saved search identity changed.');return row;}
  function offer(contextId,ownerId,values,expiresAt){const filters=savedSearchFilters(values);if(isDocumentShortcut(filters)&&!allowDocuments)throw Error('Document search scope required.');if(isSchoolSearchType(filters.type)&&!allowSchool)throw Error('School search scope required.');const s=begin(contextId,ownerId,expiresAt);s.offer={key:token(),filters};return{saveSearchToken:s.offer.key,saveSearchExpiresAt:s.expiresAt};}
@@ -46,8 +46,10 @@ export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUI
   const s=begin(contextId,actor.ownerId,expiresAt),rows=await api.listPrivateSavedSearches(actor.accessToken,actor.ownerId,removed);
   if(!alive(s)||!Array.isArray(rows)||rows.length>2000||new Set(rows.map(r=>r?.id)).size!==rows.length)throw Error('Saved-search list unverified.');
   const checked=rows.map(r=>privateSavedSearchState(r,actor.ownerId));if(checked.some(r=>(r.deleted_at!==null)!==removed))throw Error('Saved-search list scope changed.');
-  const items=checked.filter(r=>allowDocuments||!isDocumentShortcut(r.payload.filters)).filter(r=>!removed||stamp(r.deleted_at)<=now()&&stamp(r.deleted_at)>=now()-retention).sort((a,b)=>a.payload.title.localeCompare(b.payload.title)||a.id.localeCompare(b.id));
-  return{viewId:s.viewId,removed,offset,limit:50,matchCount:items.length,retentionDays:90,expiresAt:s.expiresAt,records:items.slice(offset,offset+50).map(row=>{const key=token();s.actions.set(key,row);return{name:row.payload.title,filters:structuredClone(row.payload.filters),...(removed?{deletedAt:new Date(stamp(row.deleted_at)).toISOString()}:{}),savedSearchToken:key};})};
+  const asOf=now();
+  const items=checked.filter(r=>allowDocuments||!isDocumentShortcut(r.payload.filters)).filter(r=>!removed||withinPrivateRecoveryWindow(r.deleted_at,asOf)).sort((a,b)=>a.payload.title.localeCompare(b.payload.title)||a.id.localeCompare(b.id));
+  if(removed)s.expiresAt=Math.min(s.expiresAt,...items.map(row=>privateRecoveryDeadline(row.deleted_at)));
+  return{viewId:s.viewId,removed,offset,limit:50,matchCount:items.length,retentionDays:PRIVATE_RECOVERY_DAYS,expiresAt:s.expiresAt,records:items.slice(offset,offset+50).map(row=>{const key=token();s.actions.set(key,row);return{name:row.payload.title,filters:structuredClone(row.payload.filters),...(removed?{deletedAt:new Date(stamp(row.deleted_at)).toISOString()}:{}),savedSearchToken:key};})};
  }
  async function load(contextId,actor,key){const{s,row}=selected(contextId,actor,key);if(row.deleted_at!==null)throw Error('Restore this saved search before running it.');const current=await get(actor,row.id);if(!alive(s)||!sameSelection(current,row)||current.deleted_at!==null)throw Error('Saved search changed. Fetch again.');if(isDocumentShortcut(current.payload.filters)&&!allowDocuments)throw Error('Document search scope required.');if(isSchoolSearchType(current.payload.filters.type)&&!allowSchool)throw Error('School search scope required.');return{name:current.payload.title,filters:structuredClone(current.payload.filters)};}
  async function prepare(contextId,actor,values){
@@ -61,9 +63,10 @@ export function createPrivateSavedSearches({api,now=Date.now,idFactory=randomUUI
   return{reviewId:review.reviewId,action:review.action,name:payload.title,filters:structuredClone(payload.filters),expiresAt:s.expiresAt};
  }
  function claim(contextId,ownerId,reviewId){const s=contexts.get(contextId),r=s?.review;if(!s||!alive(s)||s.ownerId!==ownerId||!r||r.reviewId!==reviewId||r.claimed)throw Error('Saved-search review ended.');if(r.action!=='create')eligible(r.record);r.claimed=true;return{state:s,review:r};}
- async function authorize({state:s,review:r},actor){r.authorized=false;if(!alive(s)||s.review!==r||!r.claimed||r.started||actor.ownerId!==s.ownerId)return false;
+ async function authorize({state:s,review:r},actor){r.authorized=false;if(contexts.get(s.contextId)!==s||s.review!==r||!r.claimed||r.started||actor.ownerId!==s.ownerId)return false;
+  if(r.action!=='create')eligible(r.record);if(!alive(s))return false;
   if(r.action==='create'){const rows=await api.getPrivateSavedSearch(actor.accessToken,r.record.id,actor.ownerId);r.authorized=Array.isArray(rows)&&rows.length===0;}
-  else{eligible(r.record);r.authorized=same(await get(actor,r.record.id),r.record);}
+  else{r.authorized=same(await get(actor,r.record.id),r.record);}
   r.authorized=Boolean(r.authorized&&alive(s)&&s.review===r);return r.authorized;
  }
  async function save({state:s,review:r},actor){
