@@ -55,7 +55,7 @@ test('the selected date lists only saved scheduled occurrences with their origin
  const args={rows,ownerId:owner,now,selectedDay:'2026-11-10'};
  assert.equal(privateWorkspaceBrief(args).routines,undefined);
  const result=privateWorkspaceBrief({...args,includeRoutines:true,taskReadAction:task=>({taskReadToken:task===complete?'b'.repeat(43):'a'.repeat(43)})});
- assert.deepEqual(result.routines,{count:2,rows:[
+ assert.deepEqual(result.routines,{count:2,completed:1,rows:[
   {title:complete.payload.title,section:'Home',done:true,taskReadToken:'b'.repeat(43)},
   {title:incomplete.payload.title,section:'Home',done:false,taskReadToken:'a'.repeat(43)}
  ]});

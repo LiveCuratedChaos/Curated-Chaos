@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R16 / R17** Detailed week shows due and completed counts for saved routines on each exact date when Routines is enabled, including when task and event sections are hidden. Select the date to open its Daily Brief. All 355 focused checks passed.
+
 - **R16 / R17** added an optional Routines section to the Daily Brief. It shows saved recurring tasks due on the selected date, distinguishes completed occurrences, and opens the original task through the existing reader. Older layouts retain their order and start with Routines hidden. All 436 focused checks passed.
 
 - **R16 / R17 / R18** after a bill save settles, the Daily Brief and Bills widgets drop their old results in the current tab and other open workspace tabs. This includes an uncertain save, since the write may have reached storage. The tab notice carries no bill names or amounts. All 329 related checks passed, including a late Bills response after invalidation and preservation of an open Budget widget.

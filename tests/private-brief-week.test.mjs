@@ -19,3 +19,16 @@ test('foreign/deleted/shared/duplicate inventories and unsupported query fields 
 test('malformed, extended, stale or mismatched summaries never become displayable facts',()=>{
  for(const patch of [{providerRead:true},{currentRecords:false},{expiresAt:now+300001},{checkedAt:new Date(now+1).toISOString()},{sourceRecords:0,omittedRecords:1},{payload:{private:'unexpected'}}])assert.throws(()=>verifyPrivateBriefWeek({...build(),...patch},{anchor:values.anchor,dateView:values,now}));const changed=build();changed.days[0].day='2026-11-18';assert.throws(()=>verifyPrivateBriefWeek(changed,{anchor:values.anchor,dateView:values,now}));const badCount=build();badCount.days[0].dueTasksCount=1;assert.throws(()=>verifyPrivateBriefWeek(badCount,{anchor:values.anchor,dateView:values,now}));
 });
+
+test('optional routine counts use saved occurrences on each exact date',()=>{
+ const recurrence={anchorDay:'2026-11-17',frequency:'daily',interval:1};
+ const rows=[row(1,'task',{title:'Fictional routine',day:'2026-11-17',done:true,recurrence}),
+  row(2,'task',{title:'Fictional routine',day:'2026-11-18',done:false,recurrence})];
+ const view=build(rows,{includeRoutines:true});
+ assert.deepEqual(view.days.slice(0,3).map(day=>day.routines),[{due:0,complete:1},{due:1,complete:0},{due:0,complete:0}]);
+ assert.equal(build(rows).days[0].routines,undefined);
+ const options={anchor:values.anchor,dateView:values,now,includeRoutines:true};
+ const invalid=structuredClone(view);invalid.days[0].routines.complete=3;
+ assert.throws(()=>verifyPrivateBriefWeek(invalid,options));
+ assert.throws(()=>verifyPrivateBriefWeek(view,{...options,includeRoutines:false}));
+});
