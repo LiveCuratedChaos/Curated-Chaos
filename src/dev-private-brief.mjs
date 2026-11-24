@@ -627,9 +627,10 @@ dayNoticeVisible=Boolean(user&&data&&!notesWorkspace&&dayChanged());let content=
    const hasCategory=fields.has('category'),hasDate=fields.has('date');
    const category=fields.get('category');
    let day=fields.get('date')?.toLowerCase();
-   if(day==='today'||day==='tomorrow'){
+   if(['yesterday','today','tomorrow'].includes(day)){
     const today=newYorkTaskDay(clock());
-    day=day==='today'?today:new Date(Date.parse(today+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+    const offset={yesterday:-1,today:0,tomorrow:1}[day];
+    day=new Date(Date.parse(today+'T00:00:00Z')+offset*86400000).toISOString().slice(0,10);
    }
    if(!title||!markers.length||fields.size!==markers.length||
       hasCategory&&(!category||category.length>48||/[\u0000-\u001f\u007f]/.test(category))||

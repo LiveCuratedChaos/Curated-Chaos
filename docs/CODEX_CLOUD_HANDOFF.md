@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R19** A new Calendar event can interpret yesterday in New York from its title and preview the resulting editable date. Ordinary event approval still applies. All 338 related checks passed. Browser and physical device acceptance remain pending.
+
 - **R18** Curation verifies that task and note totals agree with their complete area counts, including upcoming and priority task sources. Calendar remains an all-area source. All 359 related checks passed.
 
 - **R16 / R17** The selected Daily Brief shows verified due and completed routine totals. Outstanding routines appear before completed ones, so completed occurrences cannot hide a due item within the 20-row display limit. All 379 related checks passed.
