@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R19** added explicit event title category interpretation in the new event editor. A trailing category phrase fills the editable Calendar category and leaves the date and time fields intact. The existing review and approval still apply. All 323 focused checks passed.
+
 - **R19** Quick Add recognizes explicit category phrases for Home, Personal Life, Work and School as existing task areas. The parsed choice appears in the original reviewed editor. Unknown or duplicate phrases are rejected, and ordinary title text is preserved. All 322 focused checks passed.
 
 - **R03 / R32 / R33** recovered two overlapping pay periods across a year boundary. Browsing their original dates reopened distinct expenses recorded on the same day. A reviewed expense updated only its selected period, and replaying the older encrypted archive preserved that change. The budget cursor also normalizes supported timestamp offsets while retaining PostgreSQL microseconds. All 39 related checks passed.
@@ -93,7 +95,7 @@ Playwright 1.65.1 discovered 242 cases. The 22 selected desktop and phone-size c
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. This session cannot open a loopback listener, and a free hosted runner could not be verified. Use the pinned lockfile and matching Chromium. Record the results under R13, R18, R21 and R32 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. For R03, the separate-device restore still needs a verified private destination and authenticated sessions. For R19, review local category parsing for the existing event editor and its supported event categories.
+2. For R03, the separate-device restore still needs a verified private destination and authenticated sessions. For R19, verify the new event category action in the signed-in desktop and mobile browser workflows.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

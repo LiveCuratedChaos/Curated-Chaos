@@ -1153,3 +1153,24 @@ test('the Tasks page searches current records with the earlier shortcut dates on
  for(const [field,value] of Object.entries(earlier))assert.equal(queries[0][field],value);
  assert.doesNotMatch(s.root.innerHTML,/Run search with earlier filters/);
 });
+
+test('event title category interpretation updates the editable draft before its separate review',async t=>{
+ const options={...calendarOptions,calendarWorkspace:false,curationWorkspace:true,canvasPage:'work',allowWidgetPages:true,allowWidgetLayouts:true,allowEventCreate:true,allowSmartTaskEntry:true,allowTaskCreate:true,allowTaskPriority:true,allowUndatedTasks:true};
+ const s=await setup(t,options);
+ const click=selector=>s.events.click({target:{closest:q=>q===selector?{}:null}});
+ let proposed;
+ s.client.reviewNewEvent=async fields=>{proposed=fields;return{...fields,section:'Calendar',reviewId:'r'.repeat(43),expiresAt:options.clock()+300000};};
+ click('#private-work-shift-add');
+ s.events.input({target:{name:'create-title',value:'Team meeting category: Work category: School'}});
+ click('#private-interpret-event-category');
+ assert.match(s.root.innerHTML,/Use one category phrase/);
+ assert.match(s.root.innerHTML,/value="Work Shift"/);
+ s.events.input({target:{name:'create-title',value:'Team meeting category: Work'}});
+ click('#private-interpret-event-category');
+ assert.match(s.root.innerHTML,/name="create-title"[^>]*value="Team meeting"/);
+ assert.match(s.root.innerHTML,/name="create-calendarCategory"[^>]*value="Work"/);
+ assert.equal(proposed,undefined);
+ await s.events.submit({target:{id:'private-task-create-form'},preventDefault(){}});
+ assert.equal(proposed.title,'Team meeting');
+ assert.equal(proposed.calendarCategory,'Work');
+});
