@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R36–R39** Prepared isolated SQL drafts for independent Household Approver grants, source-permission-bound comments, primary-guardian roster eligibility and atomic points redemption. All ten household tests passed. The drafts are unapplied outside isolated PostgreSQL. Invitations, dual consent and fresh authentication, managed child entry, verified transition, mention/file integration, reward funding and request controls, donations/refunds, balance visibility and app acceptance remain open.
+
 - **R40** An expired document favorite can no longer show its filename, even when the browser delays its timer. An expired document draft also stops blocking workspace navigation. All 20 library, content-search and encrypted-recovery checks passed.
 
 - **R35** Prepared a reversible, read-only Household Hub SQL draft. The active household picker and selected counts use the existing row policies, omit private and removed records, and stop returning data after departure or session revocation. All six isolated checks passed. The draft still needs a guarded app route and Household Hub UI.

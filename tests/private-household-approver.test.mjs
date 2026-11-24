@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createIsolatedDevelopmentDatabase,identities as i,actor,administrator,visibleLabels} from './fixtures/isolated-development-database.mjs';
+
+test('a separate approver grant never adds record access and is retired on departure',async t=>{
+ const db=await createIsolatedDevelopmentDatabase();
+ t.after(()=>db.close());
+ const sql=name=>readFile(new URL('../supabase/drafts/'+name+'.sql',import.meta.url),'utf8');
+ await db.exec(await sql('private_household_approver'));
+ const allowed=async home=>(await db.query('select cc_private.can_approve_household_rewards($1) as allowed',[home])).rows[0].allowed;
+ await actor(db,i.b,i.sb);
+ assert.equal(await allowed(i.home),false);
+ const before=await visibleLabels(db);
+ await assert.rejects(db.query('insert into cc_private.household_approvers values($1,$2)',[i.home,i.b]),/permission denied/);
+ await administrator(db);
+ await db.query('insert into cc_private.household_approvers values($1,$2)',[i.home,i.b]);
+ await actor(db,i.b,i.sb);
+ assert.equal(await allowed(i.home),true);
+ assert.equal(await allowed(i.other),false);
+ assert.deepEqual(await visibleLabels(db),before);
+ await actor(db,i.b,i.sa);
+ assert.equal(await allowed(i.home),false);
+ await administrator(db);
+ await db.query("update public.cc_household_memberships set status='removed' where household_id=$1 and user_id=$2",[i.home,i.b]);
+ await db.query("update public.cc_household_memberships set status='active',read_sections='{}',write_sections='{}' where household_id=$1 and user_id=$2",[i.home,i.b]);
+ await actor(db,i.b,i.sb);
+ assert.equal(await allowed(i.home),false);
+ assert.deepEqual(await visibleLabels(db),['private-b']);
+ await administrator(db);
+ await db.exec(await sql('private_household_approver_rollback'));
+ assert.equal((await db.query('select count(*) as total from public.cc_household_memberships')).rows[0].total,3);
+});
