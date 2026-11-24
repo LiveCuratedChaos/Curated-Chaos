@@ -910,11 +910,16 @@ test('Daily Brief bills show a reviewed schedule for the day and honor finance c
  await manager.getByRole('button',{name:'Review bill',exact:true}).click();
  await manager.getByRole('button',{name:'Approve and save',exact:true}).click();
  await page.getByRole('button',{name:'Customize Daily Brief',exact:true}).click();
+ await page.getByLabel('Date view',{exact:true}).selectOption('week');
  await page.getByLabel('Bills due',{exact:true}).selectOption('expanded');
  await page.getByRole('button',{name:'Review Brief layout',exact:true}).click();
  await page.getByRole('button',{name:'Approve Brief layout',exact:true}).click();
  const section=page.locator('[data-private-brief-section="bills"]');
  await expect(section).not.toContainText('Fictional internet for the Brief');
+ await section.getByRole('button',{name:'View bills for this week',exact:true}).click();
+ const weekly=section.getByRole('region',{name:'Weekly bills'});
+ await expect(weekly).toContainText('1 unpaid · 0 paid');
+ await expect(weekly).not.toContainText('Fictional internet for the Brief');
  await section.getByRole('button',{name:'View bills due'}).click();
  await expect(section).toContainText('Fictional internet for the Brief · Due');
  await section.getByRole('button',{name:'Open schedule for Fictional internet for the Brief'}).click();

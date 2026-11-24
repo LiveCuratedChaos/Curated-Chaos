@@ -874,6 +874,13 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "detailedWeekBills": {
+      "date": "2026-11-24",
+      "node": "24.22.3",
+      "passed": 334,
+      "failed": 0,
+      "scope": "Paid and unpaid weekly counts, recurring dates, pending payment approval, financial concealment and navigation through the original Daily Brief. Desktop and phone-size browser execution awaits a listener."
+    },
     "namedShortcutRemovalUndo": {
       "date": "2026-11-24",
       "scope": "Confirmed removal offers an expiring same-tab selection for a separate restore review. Duplicate names, subsequent deletion, delayed click, loss of acknowledgment and concealment are covered.",

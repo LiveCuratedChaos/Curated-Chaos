@@ -13,7 +13,7 @@ import {availableStudyWindows} from './private-study-availability.mjs';
 import {createDocumentLibrary} from './private-document-library.mjs';
 import {DOCUMENT_LIMIT} from '../src/private-document-fields.mjs';
 import {providerReadFailure} from './provider-read-error.mjs';
-import {readFinanceWidget,readBriefBills,createBriefBillSources} from './private-finance-widget.mjs';
+import {readFinanceWidget,readBriefBills,readBriefBillWeek,createBriefBillSources} from './private-finance-widget.mjs';
 import {createHoldingReview} from './private-holding-review.mjs';
 import {createTransactionCategoryReview} from './private-transaction-category-review.mjs';
 import {createManualBillReview} from './private-manual-bill-review.mjs';
@@ -315,7 +315,7 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
    brokerageSource.begin&&brokerageSource.finish&&/^\/auth\/workspace\/brokerage\/(begin|finish)$/.test(path));
   const holdingAction=holdings&&/^\/auth\/workspace\/manual-holdings\/(list|read|review|save|cancel)$/.test(path)||Boolean(holdings&&allowWidgetLayouts&&path==='/auth/workspace/manual-holdings/widget');
   const categoryAction=categories&&(/^\/auth\/workspace\/transaction-categories\/(open|read|review|save|cancel)$/.test(path)||allowManualBudgets&&path==='/auth/workspace/transaction-categories/expenses')||Boolean(categories&&documents&&['/auth/workspace/transaction-categories/receipts','/auth/workspace/transaction-categories/receipt-download'].includes(path));
-  const billAction=bills&&(/^\/auth\/workspace\/manual-bills\/(list|read|review|save|cancel)$/.test(path)||allowSavedTransactionsRead&&path==='/auth/workspace/manual-bills/candidates')||Boolean(bills&&allowWidgetLayouts&&path==='/auth/workspace/manual-bills/widget')||Boolean(briefBillSources&&['/auth/workspace/manual-bills/brief-day','/auth/workspace/manual-bills/brief-read'].includes(path));
+  const billAction=bills&&(/^\/auth\/workspace\/manual-bills\/(list|read|review|save|cancel)$/.test(path)||allowSavedTransactionsRead&&path==='/auth/workspace/manual-bills/candidates')||Boolean(bills&&allowWidgetLayouts&&path==='/auth/workspace/manual-bills/widget')||Boolean(briefBillSources&&(['/auth/workspace/manual-bills/brief-day','/auth/workspace/manual-bills/brief-read'].includes(path)||allowBriefDates&&path==='/auth/workspace/manual-bills/brief-week'));
   const incomeAction=income&&/^\/auth\/workspace\/manual-income\/(list|read|review|save|cancel)$/.test(path);
   const manualBudgetAction=manualBudgets&&(/^\/auth\/workspace\/manual-budgets\/(open|review|save|cancel)$/.test(path)||income&&path==='/auth/workspace/manual-budgets/cash-flow')||Boolean(manualBudgets&&allowWidgetLayouts&&path==='/auth/workspace/manual-budgets/widget')||Boolean(manualBudgets&&documents&&['/auth/workspace/manual-budgets/receipts','/auth/workspace/manual-budgets/receipt-download'].includes(path));
   const manualAccountAction = manualFinance && /^\/auth\/workspace\/manual-accounts\/(list|review|save|cancel)$/.test(path);
@@ -484,7 +484,7 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
    const current=()=>live(c) && c.sequence===sequence;
    let attempted=false, marker;
    try {
-    const fields={receipts:categoryAction?['transactionToken','offset']:['index','offset'],'receipt-download':categoryAction?['transactionToken']:['index'],widget:['showAmounts','showPercentages','limit'],'brief-day':['day','includeSources','offset','viewToken'],'brief-read':['billReadToken'],expenses:['transactionToken','period','offset'],list:[],'cash-flow':[],candidates:['billToken','dueDay','offset'],read:holdingAction?['holdingToken']:categoryAction?['transactionToken']:[billAction?'billToken':'sourceToken','from','to'],open:categoryAction?['offset']:['period','periodStart','periodEnd'],review:holdingAction?['holdingToken','settings','activity','index']:categoryAction?['transactionToken','categories','expenseToken',...(documents?['receiptChoice']:[])]:billAction?['bill','billToken','dueDay','paidDay','amountMinor','transactionToken']:incomeAction?['sourceToken','schedule','payment']:manualBudgetAction?['budget','carryFrom','expense','index',...(documents?['receiptChoice']:[])]:['account','accountToken'],save:['approved','reviewId'],cancel:[]};
+    const fields={receipts:categoryAction?['transactionToken','offset']:['index','offset'],'receipt-download':categoryAction?['transactionToken']:['index'],widget:['showAmounts','showPercentages','limit'],'brief-week':['anchor','range','weekStart'],'brief-day':['day','includeSources','offset','viewToken'],'brief-read':['billReadToken'],expenses:['transactionToken','period','offset'],list:[],'cash-flow':[],candidates:['billToken','dueDay','offset'],read:holdingAction?['holdingToken']:categoryAction?['transactionToken']:[billAction?'billToken':'sourceToken','from','to'],open:categoryAction?['offset']:['period','periodStart','periodEnd'],review:holdingAction?['holdingToken','settings','activity','index']:categoryAction?['transactionToken','categories','expenseToken',...(documents?['receiptChoice']:[])]:billAction?['bill','billToken','dueDay','paidDay','amountMinor','transactionToken']:incomeAction?['sourceToken','schedule','payment']:manualBudgetAction?['budget','carryFrom','expense','index',...(documents?['receiptChoice']:[])]:['account','accountToken'],save:['approved','reviewId'],cancel:[]};
     const values=await body(req,fields[action],(manualBudgetAction||incomeAction)&&action==='review'?65536:4096);
     if (!current() || c.recordChanging) throw Error();
     let result;
@@ -509,6 +509,7 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
       if (!current()) throw Error();
       if(action==='receipts')return finance.receipts(c.id,actor,values);
       if(action==='receipt-download')return finance.receiptDownload(c.id,actor,values);
+      if(action==='brief-week')return readBriefBillWeek({api,actor,fields:privateBriefWeekFields(values),now:now(),expiresAt:c.expiresAt});
       if(action==='brief-day'){
        if(Object.hasOwn(values,'includeSources')&&typeof values.includeSources!=='boolean')throw Error();
        const paged=Object.hasOwn(values,'offset')||Object.hasOwn(values,'viewToken');

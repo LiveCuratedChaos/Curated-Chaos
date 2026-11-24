@@ -63,3 +63,27 @@ test('bill page controls keep the selected view and reject an unrelated response
  changed=true;await panel.open(-1);
  assert.match(panel.render(day),/Could not open/);assert.doesNotMatch(panel.render(day),/Last bill|Bill 1 ·/);
 });
+
+test('week counts load on request, disappear on concealment and reject changed or extra day data',async t=>{
+ let ctx={day,week:{range:'rolling',weekStart:1},expiresAt:now+3000},reply,reads=0,clock=now;
+ const days=Array.from({length:7},(_,i)=>({day:'2026-11-'+(18+i),paid:i===1?1:0,unpaid:i===1?2:0}));
+ const good={currentDay:'2026-11-19',days,expiresAt:now+1000};
+ const panel=createBriefBills({context:()=>ctx,clock:()=>clock,onChange(){},client:{briefBillWeek:async fields=>{
+  assert.deepEqual(fields,{anchor:day,range:'rolling',weekStart:1});reads++;
+  return new Promise(resolve=>reply=resolve);
+ }}});
+ t.after(()=>panel.reset());
+ assert.match(panel.renderWeek(),/View bills for this week/);assert.equal(reads,0);
+ const pending=panel.openWeek();await panel.openWeek();assert.equal(reads,1);
+ reply(good);await pending;
+ assert.match(panel.renderWeek(),/data-private-brief-day="2026-11-19".*2 unpaid · 1 paid/);
+ clock=now+1000;assert.doesNotMatch(panel.renderWeek(),/2 unpaid/);clock=now;
+ for(const rows of [[...days].reverse(),[...days.slice(0,6)],days.map(r=>({...r,amount:5})),days.map(r=>({...r,paid:101}))]){
+  const loading=panel.openWeek();reply({...good,days:rows});await loading;
+  assert.match(panel.renderWeek(),/Could not load/);assert.doesNotMatch(panel.renderWeek(),/2 unpaid/);
+ }
+ const changed=panel.openWeek();ctx.week={range:'calendar',weekStart:0};reply(good);await changed;
+ assert.doesNotMatch(panel.renderWeek(),/2 unpaid/);
+ ctx.week={range:'rolling',weekStart:1};
+ const hidden=panel.openWeek();ctx=null;reply(good);await hidden;assert.equal(panel.renderWeek(),'');
+});

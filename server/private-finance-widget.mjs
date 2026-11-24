@@ -1,4 +1,5 @@
 import {randomBytes} from 'node:crypto';
+import {briefDateRange} from '../src/private-brief-dates.mjs';
 import {validDay} from '../src/dev-brief-model.mjs';
 import {newYorkTaskDay} from '../src/private-smart-task.mjs';
 import {calculateManualBudget} from '../src/private-finance-manual.mjs';
@@ -29,6 +30,19 @@ async function scheduledBills(api,{accessToken,ownerId},from,to,today){
   for(const occurrence of due)occurrences.push({row,occurrence});
  }
  return occurrences;
+}
+export async function readBriefBillWeek({api,actor,fields,now,expiresAt}){
+ const range=briefDateRange(fields.anchor,fields);
+ const currentDay=newYorkTaskDay(now);
+ const days=range.days.map(day=>({day,paid:0,unpaid:0}));
+ const byDay=new Map(days.map(entry=>[entry.day,entry]));
+ const occurrences=await scheduledBills(api,actor,range.from,range.to,currentDay);
+ for(const {occurrence} of occurrences){
+  const entry=byDay.get(occurrence.dueDay);
+  if(occurrence.status==='Paid')entry.paid++;
+  else entry.unpaid++;
+ }
+ return {currentDay,days,expiresAt:Math.min(expiresAt,now+300000)};
 }
 export async function readBriefBills({api,actor,day,now,expiresAt,sourceFor=null,offset=0,checkInventory=null}){
  if(typeof day!=='string'||!validDay(day))throw Error('Choose a valid Brief date.');

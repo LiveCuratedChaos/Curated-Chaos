@@ -2,8 +2,9 @@
 
 Resume from `codex/private-workflow-checkpoints` in the private repository `LiveCuratedChaos/Curated-Chaos`. Its immediate base is `codex/school-favorites-review` at `d4df3d077097338647db5f2c64190b7de91d2a44`. The original Mac development checkout is on `codex/browser-checks`.
 
-## November 24 search and recovery
+## November 24 development
 
+- **R16 / R17** added on-demand paid and unpaid counts in the Detailed week’s Bills section, using the configured rolling or calendar week. Opening a date uses its original Daily Brief. The summary omits bill names and amounts and clears when financial details are hidden. All 334 related checks passed.
 - **R12 / R13** added Undo for a confirmed saved-search removal. It selects the exact removed revision in the same tab and opens an ordinary restore review. A newer removal, a lost acknowledgment or an expired selection cannot be used. All 29 panel and HTTP checks passed.
 - **R01 / R13** corrected two stale School tests. With School access disabled, active and removed shortcut counts omit School shortcuts, and an earlier selection cannot run. All 22 School search checks passed.
 
@@ -74,7 +75,7 @@ Playwright 1.65.1 discovered 238 cases. Eighteen selected desktop and phone-size
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R16/R17 with paid and unpaid bill counts in the detailed Brief week, using the configured date range and original daily schedule.
+2. Continue R03/R12 by verifying Undo on a recovered named shortcut with the encrypted archive, version history and database restore-window guard together.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

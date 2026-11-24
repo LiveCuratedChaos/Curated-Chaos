@@ -1009,6 +1009,31 @@ test('Daily Brief bills are hidden by default and load only for the selected day
  click('#private-brief-bills-open');await turn();assert.deepEqual(days,[day]);
 });
 
+test('the detailed week opens a bill day through the original Brief and clears payment counts on concealment',async t=>{
+ const layout=dateLayout();layout.sections.find(section=>section.id==='bills').display='expanded';
+ const s=await setup(t,{allowBriefLayout:true,allowBriefDates:true,allowManualFinance:true,allowManualBills:true,
+  initialBriefLayout:layout,clock:()=>weekInstant,briefWeekReader:values=>savedWeek(values)});
+ const read=[],click=id=>s.events.click({target:{closest:q=>q===id?{}:null}});
+ s.client.briefBillWeek=async fields=>{
+  read.push(fields);
+  const days=briefDateRange(fields.anchor,fields).days.map((day,i)=>({day,paid:0,unpaid:i===1?2:0}));
+  return {days,currentDay:'2026-11-09',expiresAt:weekInstant+5000};
+ };
+ assert.match(s.root.innerHTML,/View bills for this week/);assert.equal(read.length,0);
+ click('#private-brief-week-bills');await turn();
+ assert.match(s.root.innerHTML,/Open bill date 2026-11-10/);
+ assert.deepEqual(read,[{anchor:data.day,range:'rolling',weekStart:1}]);
+ const original=s.client.brief;
+ s.client.brief=async day=>({...await original(),day,selectedDate:true,currentRecords:true});
+ clickBriefDay(s,'2026-11-10');for(let n=0;n<6;n++)await turn();
+ assert.match(s.root.innerHTML,/name="brief-date"[^>]*value="2026-11-10"/);
+ assert.doesNotMatch(s.root.innerHTML,/2 unpaid/);
+ click('#private-brief-week-bills');await turn();assert.equal(read.length,2);
+ click('#private-finance-privacy');await turn();
+ assert.doesNotMatch(s.root.innerHTML,/2 unpaid|View bills for this week/);
+ click('#private-brief-week-bills');await turn();assert.equal(read.length,2);
+});
+
 test('Recently Deleted ties review and approval to the displayed choice and its original deadline',async t=>{
  for(const stage of ['title','type','action','late reply','suspended approval','suspended list','missing selection']){
   let now=1,reads=0,writes=0;

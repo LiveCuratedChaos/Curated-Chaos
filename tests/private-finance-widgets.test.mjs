@@ -152,3 +152,38 @@ test('eleven bills page within one dated view and refuse changed inventory',asyn
  await assert.rejects(tab.client.briefBillsPage(today,10,first.viewToken));
  await assert.rejects(tab.client.briefBillSource(back.rows[0].billReadToken));
 });
+
+test('the detailed week counts recurring, unpaid and confirmed bills on their due dates',async t=>{
+ const features={allowBriefLayout:true,allowBriefDates:true,allowManualFinance:true,allowManualBills:true};
+ const tab=privateWorkspaceFixture(t,features).tab();await tab.login();
+ for(const bill of [
+  {label:'Phone plan',frequency:'monthly',dueDay:'2025-12-20'},
+  {label:'Storage',frequency:'once',dueDay:'2026-01-20'},
+  {label:'Membership',frequency:'weekly',dueDay:'2026-01-18'}
+ ]){
+  await tab.client.manualBillList();
+  const review=await tab.client.manualBillReview({bill:{...bill,amountMinor:4399,estimated:false,interval:1,endDay:''}});
+  await tab.client.manualBillSave(review.reviewId);
+ }
+ const phone=(await tab.client.manualBillList()).bills.find(b=>b.label==='Phone plan');
+ await tab.client.manualBillRead({billToken:phone.billToken,from:'2026-01-20',to:'2026-01-20'});
+ const payment=await tab.client.manualBillReview({billToken:phone.billToken,dueDay:'2026-01-20',paidDay:'2026-01-19',amountMinor:4399});
+ const fields={anchor:'2026-01-18',range:'rolling',weekStart:1};
+ const before=await tab.client.briefBillWeek(fields);
+ assert.deepEqual(before.days[2],{day:'2026-01-20',paid:0,unpaid:2});
+ await tab.client.manualBillSave(payment.reviewId);
+ const result=await tab.client.briefBillWeek(fields);
+ assert.equal(result.days.length,7);
+ assert.deepEqual(result.days.filter(row=>row.paid+row.unpaid),[
+  {day:'2026-01-18',paid:0,unpaid:1},{day:'2026-01-20',paid:1,unpaid:1}
+ ]);
+ assert.doesNotMatch(JSON.stringify(result),/Phone|Storage|Membership|4399|amount|owner_id|Token/);
+ const calendar=await tab.client.briefBillWeek({...fields,range:'calendar'});
+ assert.equal(calendar.days[0].day,'2026-01-12');
+ assert.deepEqual(calendar.days.filter(r=>r.paid+r.unpaid),[{day:'2026-01-18',paid:0,unpaid:1}]);
+ const edge=await tab.client.briefBillWeek({...fields,anchor:'2100-12-31'});assert.equal(edge.days.length,1);
+ await assert.rejects(tab.client.briefBillWeek({...fields,weekStart:7}));
+ await tab.client.signOut();await assert.rejects(tab.client.briefBillWeek(fields));
+ const off=privateWorkspaceFixture(t,{...features,allowBriefDates:false}).tab();await off.login();
+ await assert.rejects(off.client.briefBillWeek(fields));
+});
