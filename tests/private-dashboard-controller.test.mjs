@@ -1025,3 +1025,28 @@ test('Calendar keeps view controls available for open date ranges and switches t
  assert.match(s.root.innerHTML,/data-private-calendar-view="agenda" aria-pressed="true"/);
  assert.match(s.root.innerHTML,/Agenda · Any date/);
 });
+
+test('a saved email subject opens an editable event draft with no inferred date or time',async t=>{
+ const now=Date.parse('2026-11-12T18:00:00Z'),s=await setup(t,{allowSavedMailRead:true,allowEventCreate:true,clock:()=>now});
+ const mail={innerHTML:'',contains:()=>false};
+ s.root.querySelector=selector=>selector==='#private-saved-mail-panel'?mail:null;
+ let reads=0;
+ s.client.readSavedMail=async()=>{
+  reads++;
+  return {source:'Saved Gmail copies',readOnly:true,snapshot:true,providerRead:false,bodyRead:false,limit:5,offset:0,
+   hasMore:false,browseLimitReached:false,checkedAt:new Date(now).toISOString(),expiresAt:now+300000,
+   records:[{subject:'Fictional appointment tomorrow',sender:'Fictional sender',receivedAt:'2026-11-06T15:00:00Z',savedAt:'2026-11-07T18:00:00Z'}]};
+ };
+ s.client.reviewNewEvent=assert.fail;
+ s.client.createEvent=assert.fail;
+ clickIntent(s,'#private-mail-load');
+ for(let i=0;i<4;i++)await turn();
+ const token=/data-private-mail-event="([^"]+)"/.exec(mail.innerHTML)?.[1];
+ assert.ok(token);
+ s.events.click({target:{closest:selector=>selector==='[data-private-mail-event]'?{dataset:{privateMailEvent:token}}:null}});
+ assert.equal(reads,1);
+ assert.match(s.root.innerHTML,/Email subject copied/);
+ assert.match(s.root.innerHTML,/name="create-title"[^>]*value="Fictional appointment tomorrow"/);
+ assert.match(s.root.innerHTML,/name="create-day"[^>]*value=""/);
+ assert.match(s.root.innerHTML,/name="create-time"[^>]*value=""/);
+});
