@@ -15,10 +15,12 @@ const decimal=value=>dollars(value).replace(/[$,]/g,'');
 const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const samePeriod=(a,b)=>a.period===b.period&&a.periodStart===b.periodStart&&a.periodEnd===b.periodEnd;
 const keys=(value,expected)=>value&&Object.keys(value).sort().join(',')===expected;
-function monthRange(day){
+function monthRange(day,offset=0){
  const date=new Date(day+'T00:00:00Z');
  if(!Number.isFinite(date.getTime()))throw Error('Choose a month.');
- date.setUTCDate(1);const periodStart=date.toISOString().slice(0,10);
+ date.setUTCMonth(date.getUTCMonth()+offset,1);
+ if(date.getUTCFullYear()<0||date.getUTCFullYear()>9999)throw Error('Choose a supported month.');
+ const periodStart=date.toISOString().slice(0,10);
  date.setUTCMonth(date.getUTCMonth()+1,0);
  return {period:'month',periodStart,periodEnd:date.toISOString().slice(0,10)};
 }
@@ -185,6 +187,12 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
   if(!fresh())return heading+'<form id="budget-period">'+group('<legend>Choose a budget period</legend><label>Period<select name="period"><option value="month">Monthly</option><option value="pay_period" '+(period.period==='pay_period'?'selected':'')+'>Pay period</option></select></label>'+
    field(period.period==='month'?'Month containing':'Start date','periodStart',period.periodStart,'date')+(period.period==='pay_period'?field('End date','periodEnd',period.periodEnd,'date'):'')+'<button>Open budget</button>'+button('transactions','Open transaction history'))+'</form>';
   let html='<p>'+esc(period.periodStart)+' through '+esc(period.periodEnd)+'</p>';
+  let periodControls='';
+  if(period.period==='month'){
+   if(period.periodStart!=='0000-01-01')periodControls+=button('previous-month','Previous month');
+   if(period.periodStart!=='9999-12-01')periodControls+=button('next-month','Next month');
+  }
+  periodControls+=button('close','Choose another period');
   if(transactionsOnly){
    if(review){
     const expense=review.budget.transactions[expenseIndex??review.budget.transactions.length-1];
@@ -195,7 +203,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
    if(draft)return heading+'<form id="budget-edit">'+group('<legend>'+(expenseIndex===null?'New expense':'Edit expense')+'</legend>'+expenseForm(draft.expenses[0],0,false)+
     '<button>Review transaction</button>'+button('discard','Cancel edit'))+'</form>';
    return heading+group(html+transactionRows(view.budget?.transactions??[],shown,true,allowDocuments)+button('amounts',shown?'Hide amounts':'Show amounts')+
-    button('new-transaction','Add transaction')+button('close','Choose another period'));
+    button('new-transaction','Add transaction')+periodControls);
   }
   if(planner&&!review){
    let body='<legend>Budget proposals</legend>'+html;
@@ -231,7 +239,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
      '<dt>Received minus planned income</dt><dd>'+amount(cash.incomeVarianceMinor)+'</dd><dt>Net cash flow after recorded expenses</dt><dd>'+amount(cash.manualNetCashFlowMinor)+'</dd></dl>';
    }
   }
-  return heading+group(html+button('close','Choose another period'));
+  return heading+group(html+periodControls);
  }
  return {render,reset,blocked:()=>Boolean(draft||review||planner||busy),input(event){
   const el=event.target,form=el.form?.id;
@@ -314,6 +322,13 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
    }
    else {const m=/^remove-(category|expense)-(\d+)$/.exec(action);if(m)(m[1]==='category'?draft.categories:draft.expenses).splice(Number(m[2]),1);}
   }else if(canOpen()){
+   if(action==='previous-month'||action==='next-month'){
+    if(period.period==='month'){
+     try{void open(monthRange(period.periodStart,action==='previous-month'?-1:1),transactionsOnly);}
+     catch{notice='Choose a supported month.';onChange();}
+    }
+    return true;
+   }
    if(transactionsOnly&&(action==='new-transaction'||/^transaction-\d+$/.test(action))){
     expenseIndex=action==='new-transaction'?null:Number(action.slice(12));
     const expenses=view.budget?.transactions??[];

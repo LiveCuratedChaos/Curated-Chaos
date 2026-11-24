@@ -157,3 +157,43 @@ test('transaction history reviews one expense, preserves legacy rows and allocat
  const competing=await other.client.manualBudgetReview({index:0,expense:{category:'Travel',amountMinor:3100,day:'2026-11-15'}});
  await other.client.manualBudgetSave(competing.reviewId);await assert.rejects(tab.client.manualBudgetSave(change.reviewId));
 });
+
+test('monthly navigation opens the adjacent budget or transaction list, hides amounts and keeps pending edits',async t=>{
+ const tab=privateWorkspaceFixture(t,enabled).tab();await tab.login();
+ await tab.client.manualBudgetOpen(november);
+ const seed=await tab.client.manualBudgetReview({budget:sample});await tab.client.manualBudgetSave(seed.reviewId);
+ const reads=[];
+ const client={...tab.client,manualBudgetOpen:async selection=>{
+  reads.push({...selection});
+  return tab.client.manualBudgetOpen(selection);
+ }};
+ const panel=createManualBudgetPanel({client});t.after(()=>panel.reset());
+ const tick=()=>new Promise(resolve=>setImmediate(resolve));
+ const click=async action=>{panel.click({target:{closest:()=>({dataset:{budgetAction:action}})}});await tick();};
+ const input=(form,name,value)=>panel.input({target:{form:{id:form},name,value,type:'text'}});
+ const submit=async id=>{panel.submit({target:{id},preventDefault(){}});await tick();};
+ input('budget-period','periodStart','2026-12-31');await submit('budget-period');
+ assert.deepEqual(reads.at(-1),december);
+ await click('next-month');assert.deepEqual(reads.at(-1),{period:'month',periodStart:'2027-01-01',periodEnd:'2027-01-31'});
+ await click('previous-month');await click('previous-month');assert.deepEqual(reads.at(-1),november);
+ assert.match(panel.render(),/Manual budget/);assert.match(panel.render(),/Hidden/);await click('amounts');assert.match(panel.render(),/\$57\.50/);
+ await click('edit');input('budget-edit','income','201.00');
+ const count=reads.length;
+ assert.doesNotMatch(panel.render(),/Previous month|Next month/);await click('next-month');assert.equal(reads.length,count);
+ await submit('budget-edit');assert.match(panel.render(),/Approve budget save/);
+ await click('previous-month');assert.equal(reads.length,count);assert.match(panel.render(),/201\.00/);
+ await click('back');await click('discard');await click('next-month');
+ assert.match(panel.render(),/No saved budget/);assert.doesNotMatch(panel.render(),/57\.50|201\.00/);
+ await click('previous-month');assert.match(panel.render(),/Show amounts/);assert.doesNotMatch(panel.render(),/57\.50/);
+ assert.deepEqual((await tab.client.manualBudgetOpen(november)).budget,sample);
+
+ await click('close');input('budget-period','periodStart','2028-03-31');await click('transactions');await click('previous-month');
+ assert.deepEqual(reads.at(-1),{period:'month',periodStart:'2028-02-01',periodEnd:'2028-02-29'});
+ assert.match(panel.render(),/Manual transactions/);assert.match(panel.render(),/No recorded transactions/);
+ await click('next-month');assert.equal(reads.at(-1).periodEnd,'2028-03-31');
+ await click('new-transaction');const historyReads=reads.length;await click('next-month');assert.equal(reads.length,historyReads);
+ await click('discard');await click('close');
+ input('budget-period','period','pay_period');input('budget-period','periodStart','2028-03-03');input('budget-period','periodEnd','2028-03-16');
+ await click('transactions');assert.doesNotMatch(panel.render(),/Previous month|Next month/);
+ const payReads=reads.length;await click('previous-month');assert.equal(reads.length,payReads);
+});

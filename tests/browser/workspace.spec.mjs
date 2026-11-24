@@ -964,3 +964,32 @@ test('Undo removal returns the chosen note through a separate restoration approv
  await expect(note.getByRole('button',{name:'Open note',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'Undo removal',exact:true})).toHaveCount(0);
 });
+
+test('monthly budget navigation preserves the selected view and conceals amounts on return',async({page})=>{
+ await page.goto('/dev-finances.html');
+ const panel=page.locator('#private-manual-budget');
+ const button=name=>panel.getByRole('button',{name,exact:true});
+ await panel.getByLabel('Month containing').fill('2028-02-18');
+ await button('Open budget').click();
+ await button('Create budget').click();
+ await panel.getByLabel('Planned income').fill('450.00');
+ await button('Review budget').click();
+ await expect(button('Next month')).toHaveCount(0);
+ await button('Approve budget save').click();
+ await button('Show amounts').click();
+ await expect(panel).toContainText('$450.00');
+ await button('Next month').click();
+ await expect(panel).toContainText('2028-03-01 through 2028-03-31');
+ await expect(panel).toContainText('No saved budget for this period.');
+ await button('Previous month').click();
+ await expect(panel).toContainText('2028-02-01 through 2028-02-29');
+ await expect(button('Show amounts')).toBeVisible();
+ await expect(panel).not.toContainText('$450.00');
+ await button('Choose another period').click();
+ await panel.getByLabel('Month containing').fill('2027-12-27');
+ await button('Open transaction history').click();
+ await button('Next month').click();
+ await expect(panel.getByRole('heading',{name:'Manual transactions'})).toBeVisible();
+ await expect(panel).toContainText('2028-01-01 through 2028-01-31');
+ await expect(button('Add transaction')).toBeVisible();
+});

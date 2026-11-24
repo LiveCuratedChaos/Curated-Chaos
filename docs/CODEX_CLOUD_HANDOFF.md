@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R32 / R33** added Previous month and Next month to the monthly budget and transaction history. Moving to another month hides amounts and keeps the current view type. Pay periods keep their exact chosen dates. The 331 related checks passed, including leap February, year boundaries and active edits or approvals. Desktop and phone-size browser cases are prepared.
+
 - **R03 / R32 / R33** recovered a reconciled monthly budget into a second database. Its split expense counted once at the original manual amount, the posted debit retained its difference, and the budget widget reopened with the original totals. An immediate replay wrote zero rows. After a later expense, the old archive could not overwrite the newer budget. All 42 related checks passed.
 
 - **R03 / R16 / R33** verified that an encrypted backup restores a recurring bill and its confirmed payment. The weekly counts and original daily schedule reopened correctly. Replaying the backup preserved a later payment. A bank-matched payment required the same saved transaction and amount at the destination. All 38 related checks passed, followed by the expanded bank-match check.
@@ -76,19 +78,19 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Verification and blockers
 
-The November 24 full macOS check passed 3,524 of 3,548 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Of the 24 listener-related failures, 16 directly reported a binding denial and eight received the same denial inside an assertion. Privacy, whitespace and launcher checks passed. Two obsolete School shortcut expectations had failed on the first run and passed after correction.
+The November 24 full macOS check passed 3,527 of 3,551 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Of the 24 listener-related failures, 16 directly reported a binding denial and eight received the same denial inside an assertion. Privacy, whitespace and launcher checks passed. Two obsolete School shortcut expectations had failed on the first run and passed after correction.
 
-Playwright 1.65.1 discovered 240 cases. Twenty selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, selective earlier note text, Undo removal named shortcut history and selective task descriptions. All local acceptance used fictional records.
+Playwright 1.65.1 discovered 242 cases. The 22 selected desktop and phone-size cases are pending. This session cannot bind the fictional fixture to loopback, and macOS also denied launch of the pinned headless Chromium. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, historical note and task text, Undo, saved shortcut history and monthly budget navigation. Local acceptance used fictional records.
 
 ## Where to resume
 
-1. On a Node 24 runner that permits loopback listeners, run the two commands below. This session cannot open a loopback listener, and a free hosted runner could not be verified. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R32 with previous and next month navigation in the manual budget and its transaction history. Preserve open edits and approvals, hide amounts when a new month opens, and test leap-year and year-end transitions.
+1. On a Node 24 runner that permits loopback listeners, run the two commands below. This session cannot open a loopback listener, and a free hosted runner could not be verified. Use the pinned lockfile and matching Chromium. Record the results under R13, R18, R21 and R32 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
+2. Continue R32 with a year lookup for saved monthly budgets. List only months with existing records, then open the selected original budget or transaction history.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
-npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description'
+npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description|monthly budget navigation'
 ```
 
 Earlier Calendar and Favorites contributions passed 432 focused tests. The previous full attempt passed 3,441 of 3,476. Historical logs under `/tmp` belong to the originating Mac. Linux omits the macOS-native Calendar transfer check.

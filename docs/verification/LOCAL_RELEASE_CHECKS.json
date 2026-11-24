@@ -11,8 +11,8 @@
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3548,
-        "passed": 3524,
+        "total": 3551,
+        "passed": 3527,
         "failed": 24,
         "cancelled": 0,
         "skipped": 0
@@ -35,7 +35,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "Full gate through selective earlier task fields, encrypted shortcut Undo and detailed weekly bills. Every remaining failure requires a loopback listener."
+    "note": "Full gate through monthly budget navigation and the encrypted bill and reconciled-budget recovery drills. Every remaining failure requires a loopback listener."
   },
   "result": {
     "platformExclusions": [],
@@ -61,12 +61,12 @@
     }
   },
   "browser": {
-    "preparedCases": 240,
+    "preparedCases": 242,
     "freshExecutionVerified": false,
-    "selectedCases": 20,
+    "selectedCases": 22,
     "selectedCasesExecuted": 0,
-    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description'",
-    "reason": "The fictional fixture could not bind 127.0.0.1:5316 in the managed Mac session."
+    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description|monthly budget navigation'",
+    "reason": "The fictional fixture could not bind 127.0.0.1:5316. A separate launch of the installed pinned headless Chromium was denied by macOS."
   },
   "releaseComplete": false,
   "productionChanged": false,
@@ -874,6 +874,13 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "monthlyBudgetNavigation": {
+      "date": "2026-11-24",
+      "node": "24.22.3",
+      "passed": 331,
+      "failed": 0,
+      "scope": "Monthly budget and transaction navigation, leap and year boundaries, hiding amounts on reopening, preserving edit and review selections, and exact custom pay periods."
+    },
     "recoveredReconciledMonthlyBudget": {
       "date": "2026-11-24",
       "node": "24.22.3",
@@ -1090,7 +1097,7 @@
     "failed": 0,
     "scope": "Canonical shared task/project progress and links, manual status independence, deduplicated hierarchy, recovery/archive boundaries and protected original details. Reuses existing project engine for Personal Life goals."
   },
-  "nextAction": "Finish the reviewed natural-language date-range search for tasks and events.",
+  "nextAction": "List saved monthly budgets for a selected year and reopen the chosen original budget or transaction history.",
   "pendingDecisions": [],
   "resolvedHomeCleaningRollover": {
     "requirement": "R31 Home cleaning rollover semantics",
