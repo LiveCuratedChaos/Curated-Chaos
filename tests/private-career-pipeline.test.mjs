@@ -108,3 +108,26 @@ test('goals on the network ask only for the Work goal role, skills and certifica
  const [row]=await api.listPrivateProjects('fixture',owner,{careerGoals:true});assert.equal(qp.get('payload->career->>kind'),'eq.goal');assert.equal(qp.get('section'),'eq.Work');
  assert.doesNotMatch(qp.get('select'),/Compensation|description|employer|stage|\*/);assert.deepEqual(row.goal,{role:'Analyst',skills:['Writing'],certifications:[]});
 });
+
+test('expired Work pipeline clears application metadata and drops a pending original-editor handoff',async t=>{
+ const {createCareerPipelinePanel}=await import('../src/private-career-pipeline-panel.mjs');
+ const {a}=await setup(t);
+ await add(a,fields('Fictional application','Fictional employer','Applied'));
+ const page=await a.careerPipeline(filters);
+ let now=page.expiresAt-30000,finish;
+ const panel=createCareerPipelinePanel({clock:()=>now,canUse:()=>true,onChange:()=>{},onEdit:assert.fail,client:{
+  careerPipeline:async()=>page,projectsRead:()=>new Promise(resolve=>{finish=resolve;})
+ }});
+ t.after(()=>panel.reset());
+ const click=action=>panel.click({target:{closest:()=>({dataset:{careerPipeline:action}})}});
+ click('open');await new Promise(resolve=>setImmediate(resolve));
+ assert.match(panel.render(),/Fictional employer/);
+ click('edit-'+page.applications[0].projectToken);
+ assert.equal(typeof finish,'function');
+ now=page.expiresAt;
+ assert.doesNotMatch(panel.render(),/Fictional employer/);
+ assert.match(panel.render(),/Application details expired/);
+ finish(await a.projectsRead(page.applications[0].projectToken));
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.doesNotMatch(panel.render(),/Fictional employer/);
+});

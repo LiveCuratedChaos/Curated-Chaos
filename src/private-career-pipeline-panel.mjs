@@ -56,6 +56,12 @@ function renderGoals(view,query,busy){
 export function createCareerPipelinePanel({client,clock,canUse,onEdit,onCreate,onChange}){
  let profile=false,seq=0,opened=false,busy=false,view=null,query='',stage='',error='',notice='',timer;
  function reset(){clearTimeout(timer);seq++;profile=opened=busy=false;view=null;query=stage=error=notice='';}
+ function expire(){
+  if(!view||view.expiresAt>clock())return false;
+  clearTimeout(timer);seq++;busy=false;view=null;
+  error=profile?'Career goals expired. Refresh the profile.':'Application details expired. Refresh the pipeline.';
+  return true;
+ }
  async function load(offset=0,message=''){
   if(busy||!canUse())return;
   const n=++seq;clearTimeout(timer);busy=opened=true;view=null;error='';notice=message;onChange();
@@ -63,7 +69,7 @@ export function createCareerPipelinePanel({client,clock,canUse,onEdit,onCreate,o
    const filters=profile?goalFilters({query,offset}):pipelineFilters({query,stage,offset});
    const result=profile?await client.careerProfile(filters):await client.careerPipeline(filters);
    if(seq!==n||!canUse())return;view=verify(result,filters,clock(),profile);query=filters.query;
-   timer=setTimeout(()=>{if(n!==seq)return;view=null;error=profile?'Career goals expired. Refresh the profile.':'Application details expired. Refresh the pipeline.';onChange();},Math.max(1,view.expiresAt-clock()));timer.unref?.();
+   timer=setTimeout(()=>{if(n===seq&&expire())onChange();},Math.max(1,view.expiresAt-clock()));timer.unref?.();
   }catch{if(n===seq)error=profile?'Career goals could not be verified. Refresh the profile.':'Applications could not be verified. Refresh the pipeline.';}
   finally{if(n===seq){busy=false;onChange();}}
  }
@@ -84,6 +90,7 @@ export function createCareerPipelinePanel({client,clock,canUse,onEdit,onCreate,o
   finally{if(n===seq){busy=false;onChange();}}
  }
  function render(){
+  expire();
   if(!opened)return btn('open','View job application pipeline',false)+btn('profile','View career goals and skills',false);
   let html='<section class="panel"><h2>'+(profile?'Career goals and skills':'Job application pipeline')+'</h2>'+
    (error?'<p role="alert">'+e(error)+'</p>':'')+(notice?'<p role="status">'+e(notice)+'</p>':'');
@@ -116,7 +123,7 @@ export function createCareerPipelinePanel({client,clock,canUse,onEdit,onCreate,o
  },submit(event){if(event.target?.id!=='private-career-filters')return false;event.preventDefault();void load();return true;},
  click(event){
   const action=event.target?.closest?.('[data-career-pipeline]')?.dataset?.careerPipeline;
-  if(!action)return false;if(busy||!canUse())return true;
+  if(!action)return false;if(expire())onChange();if(busy||!canUse())return true;
   if(action==='open'||action==='profile'){reset();profile=action==='profile';void load();}
   else if(action==='refresh')void load();
   else if(action==='new'&&view&&view.expiresAt>clock()){const expiry=view.expiresAt;clearTimeout(timer);view=null;opened=false;onCreate(expiry,profile?'goal':'application');}
