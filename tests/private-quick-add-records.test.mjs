@@ -30,6 +30,7 @@ test('saved routine starts with one occurrence and only approved completion crea
  const [first]=byTitle(brief,title);
  const original=brief.routines.rows.find(row=>row.title===title);
  assert.equal(original.done,false);
+ assert.equal(original.taskReadToken,first.taskReadToken);
  assert.equal((await tab.client.readTask(original.taskReadToken)).title,title);
  const next=nextTaskOccurrence({schedule,currentDueDay:day,completedOn:day}).day;
  const completion=await tab.client.reviewCompletion(first.completionToken);assert.equal(completion.nextDay,next);assert.deepEqual(completion.schedule,schedule);
