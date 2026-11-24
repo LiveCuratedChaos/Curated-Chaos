@@ -6,3 +6,17 @@ test('missing summaries, skipped tests and blocked content scans fail closed',as
 test('an unavailable command is reported safely rather than preventing other local checks',async()=>{const report=await runOfflineChecks({runCommand:async check=>{if(check.name==='whitespace')throw Error('PRIVATE_PROCESS_ERROR');return ok[check.name];}});assert.equal(report.localChecksPassed,false);assert.equal(report.checks.whitespace,false);assert.equal(report.checks.tests,true);assert.doesNotMatch(JSON.stringify(report),/PRIVATE_PROCESS_ERROR/);});
 
 test('Linux explicitly excludes only native macOS transfer tests; macOS includes them and unexpected skips still fail',async()=>{for(const platform of ['linux','darwin']){let selected;const report=await runOfflineChecks({platform,runCommand:async check=>{if(check.name==='tests')selected=check.args;return ok[check.name];}});assert.equal(selected.some(path=>path.endsWith('/mac-calendar-native-transfer.test.mjs')),platform==='darwin');assert.deepEqual(report.platformExclusions,platform==='darwin'?[]:['mac-calendar-native-transfer.test.mjs']);assert.equal(report.localChecksPassed,true);}});
+
+test('the offline reporter separates denied local listeners from ordinary failures without exposing their details',async()=>{
+ const {default:report}=await import('../tools/offline-test-reporter.mjs');
+ const failure=(code,syscall,address)=>({type:'test:fail',data:{name:'PRIVATE_TEST_NAME',details:{error:{code:'ERR_TEST_FAILURE',cause:{code,syscall,address,message:'PRIVATE_VALUE'}}}}});
+ const diagnose=(message,file)=>({type:'test:diagnostic',data:{nesting:0,message,file}});
+ const events=[failure('EPERM','listen','127.0.0.1'),failure('EACCES','listen','::1'),failure('EPERM','open','127.0.0.1'),failure('EADDRINUSE','listen','127.0.0.1'),failure('EPERM','listen','0.0.0.0'),
+  {type:'test:fail',data:{details:{error:{code:'ERR_TEST_FAILURE',cause:{code:'ERR_ASSERTION',actual:{message:'listen EPERM: operation not permitted 127.0.0.1'}}}}}},
+  diagnose('PRIVATE_DIAGNOSTIC'),diagnose('fail 0','private-test.mjs'),...['tests 6','pass 0','fail 6','cancelled 0','skipped 0'].map(m=>diagnose(m))];
+ let stdout='';for await(const line of report(events))stdout+=line;
+ assert.doesNotMatch(stdout,/PRIVATE|private-test|127\.0\.0\.1|fail 0/);
+ const result=await runOfflineChecks({runCommand:async gate=>gate.name==='tests'?{code:1,stdout}:ok[gate.name]});
+ assert.deepEqual(result.failureReasons,{loopbackListenerDenied:2,assertionWithDeniedListener:1,unclassified:3});
+ assert.equal(result.localChecksPassed,false);assert.equal(result.automatedTests.failed,6);
+});

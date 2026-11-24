@@ -11,11 +11,15 @@
       "platformExclusions": [],
       "localChecksPassed": false,
       "automatedTests": {
-        "total": 3482,
-        "passed": 3447,
+        "total": 3485,
+        "passed": 3450,
         "failed": 35,
         "cancelled": 0,
         "skipped": 0
+      },
+      "failureReasons": {
+        "loopbackListenerDenied": 27,
+        "unclassified": 8
       },
       "checks": {
         "tests": false,
@@ -30,7 +34,7 @@
         "binarySourcesSkipped": 10
       }
     },
-    "note": "The diagnostic TAP output identified listen EPERM in every one of the 35 failed tests."
+    "note": "First reporter run after Document Favorites. The targeted session-guard rerun classified all eight previously unclassified failures as assertions that received a denied loopback listener."
   },
   "result": {
     "platformExclusions": [],
@@ -818,6 +822,14 @@
       "node": "24.22.3",
       "command": "node --test --test-concurrency=3 tests/private-document-*.test.mjs tests/private-favorites.test.mjs tests/private-school-library.test.mjs tests/private-workspace-restore-repository.test.mjs tests/private-workspace-client.test.mjs tests/private-workspace-static.test.mjs tests/private-dashboard-controller.test.mjs",
       "scope": "Document originals, reviewed collections, widget, expiry, inaccessible documents and encrypted restoration."
+    },
+    "offlineFailureReasons": {
+      "reporterTestsPassed": 6,
+      "sessionGuardTests": 68,
+      "sessionGuardPassed": 48,
+      "directLoopbackDenied": 12,
+      "assertionsWithDeniedListener": 8,
+      "unclassified": 0
     }
   },
   "widgetSourceAssociations": {
@@ -885,7 +897,7 @@
     "failed": 0,
     "scope": "Canonical shared task/project progress and links, manual status independence, deduplicated hierarchy, recovery/archive boundaries and protected original details. Reuses existing project engine for Personal Life goals."
   },
-  "nextAction": "Add private loopback failure counts to the standard offline report and continue independent R13 search and recovery work.",
+  "nextAction": "Finish the reviewed natural-language date-range search for tasks and events.",
   "pendingDecisions": [],
   "resolvedHomeCleaningRollover": {
     "requirement": "R31 Home cleaning rollover semantics",

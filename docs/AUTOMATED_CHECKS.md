@@ -15,6 +15,8 @@ Playwright1.65.1 is pinned in package.json and package-lock.json. The suite runs
 
 The test server is exclusively fictional, in memory, bound to127.0.0.1:5316. That port cannot be used by the real development-account factory. Each test resets this isolated fixture only, preserving sign-in rate protections in the actual app. Config/API dependency guards reject real config/API construction. Test startup refuses an occupied server instead of reusing it. It does not open the actual workspace, access credentials/providers/backups, or write a database.
 
+The offline report includes `failureReasons` when the test runner reports failures. It counts direct loopback listener denials, assertions whose actual error was a loopback listener denial, and unclassified failures. The gate still fails for each of them. The report emits counts only, so collecting this information takes one test run.
+
 ## GitHub workflow
 
 .github/workflows/checks.yml defines separate Tests and privacy and Browser workflows jobs on push, pull_request and manual dispatch. Uses Ubuntu24.04, Node24, fixed verified commit SHAs for checkout v6 and setup-node v7, read-only repository permissions, no persisted checkout credential, no application secrets, no deployment and15-minute job timeouts. Installs zsh for Mac launcher syntax verification. Dependencies use locked npm ci with lifecycle scripts disabled. Browser job installs Chromium and runs the same fictional tests. No screenshot/archive upload configured. Key-recovery files and browser reports are ignored; the privacy scanner now rejects tracked .cckeyrecovery files too.
