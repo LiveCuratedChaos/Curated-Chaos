@@ -4,6 +4,10 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R22 / R23 / R24** The Google Connections preview now gives outcome-specific recovery feedback for Calendar and Gmail using fixed app text. Unrecognized outcomes use the existing generic fallback. All 75 related checks passed. Actual provider reconnect and refresh remain unverified.
+
+- **R01** The latest cumulative Node 26 Mac working-tree run passed 3,573 of 3,577 tests. All four failures were denied socket listeners, and the other three gates passed. Subsequent Calendar and Connections checkpoints passed their targeted suites.
+
 - **R21** Verified that identical Calendar titles and times remain distinct original selections across manual and saved sources. Each source filter reopened the matching event’s own details. All 62 related checks passed. Desktop and phone Playwright acceptance still require a runner with loopback access and compatible Chromium.
 
 - **R20** Signed-in appearance acceptance now covers the reviewed transition from an explicit item accent to Theme default and then to Use section color. The other task with the same title retains section inheritance throughout. All 13 related checks passed.

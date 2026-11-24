@@ -46,11 +46,26 @@ function checkCurrent(expected){
  if(closed||expected!==generation)throw Error('Page session ended.');
  if(sessionExpiresAt!==null&&sessionExpiresAt<=Date.now()){clearPrivateView();throw Error('Page session expired.');}
 }
+const previewFailureMessages=Object.freeze({
+ 'reconnect-required':'Google authorization expired. Reconnect Google before previewing again.',
+ 'access-denied':'Google denied access. Check the read-only permission for this connection.',
+ 'selection-changed':'This selection changed. Reload the current saved selection before previewing.',
+ 'session-ended':'Your app session ended. Sign in before previewing again.',
+ 'incomplete-read':'The preview read was incomplete. No partial snapshot was accepted.',
+ 'source-unavailable':'The Google source is unavailable. Check the connection before trying again.'
+});
 async function request(path,options={}){
  const expected=generation;checkCurrent(expected);
  const r=await fetch(path,{...options,cache:'no-store'});checkCurrent(expected);
  const data=await r.json();checkCurrent(expected);
- if(!r.ok)throw Error(data.error||'Connection unavailable.');return data;
+ if(!r.ok){
+  const previewMessage=path==='/auth/google/preview'&&typeof data?.outcome==='string'&&Object.hasOwn(previewFailureMessages,data.outcome)
+   ?previewFailureMessages[data.outcome]:null;
+  const failure=Error(data?.error||'Connection unavailable.');
+  if(previewMessage)failure.previewMessage=previewMessage;
+  throw failure;
+ }
+ return data;
 }
 window.addEventListener('pagehide',()=>{closed=true;clearPrivateView();sessionChannel?.close();status.textContent='Private connections page closed.';});
 async function show(){
@@ -150,7 +165,7 @@ controls.addEventListener('click',async event=>{
    try{const data=await request('/auth/google/preview',{method:'POST',headers:{'Content-Type':'application/json','X-CC-CSRF':csrf},body:JSON.stringify({connectionId:button.dataset.preview,selectionId:button.dataset.selection,confirmed:true})});
     const rows=data.result.messages||data.result.events||[];
     target.innerHTML='<p>Read at '+e(data.readAt)+'. This is a snapshot, not a live feed.</p><p>'+rows.length+' '+(rows.length===1?'item':'items')+' in this preview. Nothing saved to the app database.</p>'+(rows.length?'<form class="import-review" data-preview-id="'+e(data.previewId)+'"><p>Select up to 250 items to review. Nothing is selected automatically. Review expires after five minutes and does not save items.</p><ul>'+rows.map(r=>'<li><label><input type="checkbox" name="item" value="'+e(r.key)+'"> '+e(r.subject||r.title)+' · '+e(r.sender||r.start||r.startDate||'')+'</label></li>').join('')+'</ul><button class="btn" type="submit">Review selected items</button><p role="status" class="review-result"></p></form>':'<p>No items to review in this window.</p>');
-   }catch{target.textContent='Preview unavailable. Reload and check your sign-in or reconnect Google. No partial result was accepted.';}return;
+   }catch(error){target.textContent=error?.previewMessage??'Preview unavailable. Reload and check your sign-in or reconnect Google. No partial result was accepted.';}return;
   }
   if(button.dataset.provider){const result=await request('/auth/google/begin',{method:'POST',headers:{'Content-Type':'application/json','X-CC-CSRF':csrf},body:JSON.stringify({provider:button.dataset.provider})});location.assign(result.authorizationUrl);}
  }catch{status.textContent='Connection did not complete. Sign in again or retry.';}finally{busy=false;button.disabled=false;}

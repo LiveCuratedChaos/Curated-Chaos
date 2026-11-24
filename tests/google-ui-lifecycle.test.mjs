@@ -94,3 +94,24 @@ test('saved-source search includes Mac calendar labels and filters and escapes t
 test('failed saved-source reload clears the previous in-memory inventory',async()=>{
  const h=harness(async path=>path==='/auth/google/status'?response(state):{ok:false,json:async()=>({error:'Fictional failed read'})});await vm.runInContext('boot',h.context);vm.runInContext("savedSourceItems=[{title:'PRIVATE OLD FIXTURE'}]",h.context);const target={innerHTML:'',textContent:''},button={dataset:{saved:'true'},disabled:false,closest:()=>null,parentElement:{querySelector:()=>target}};await h.events.click({target:{closest:()=>button}});assert.equal(vm.runInContext('savedSourceItems.length',h.context),0);assert.match(target.textContent,/unavailable/);
 });
+
+
+test('Google preview failures use allowed recovery messages and never display provider error text',async()=>{
+ const messages=[
+  ['reconnect-required',/Reconnect Google/],['access-denied',/denied access/],
+  ['selection-changed',/Reload the current saved selection/],['session-ended',/Sign in before previewing/],
+  ['incomplete-read',/No partial snapshot/],['source-unavailable',/Check the connection/],
+  ['__proto__',/Preview unavailable/]
+ ];
+ for(const [outcome,expected] of messages){
+  const h=harness(async path=>path==='/auth/google/status'?response(state)
+   :{ok:false,json:async()=>({outcome,error:'PRIVATE_PROVIDER_ERROR'})});
+  await vm.runInContext('boot',h.context);
+  const target={innerHTML:'',textContent:''};
+  const button={dataset:{preview:'fixture-connection',selection:'fixture-selection'},closest:()=>null,parentElement:{querySelector:()=>target}};
+  await h.events.click({target:{closest:()=>button}});
+  assert.match(target.textContent,expected);
+  assert.doesNotMatch(target.textContent,/PRIVATE_PROVIDER_ERROR/);
+  assert.equal(target.innerHTML,'');
+ }
+});

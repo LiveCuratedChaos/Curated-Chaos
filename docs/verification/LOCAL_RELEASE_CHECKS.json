@@ -1190,5 +1190,40 @@
     },
     "log": "/tmp/cc-favorites-finished-offline.log",
     "note": "The final summary was recovered on reconnect. A diagnostic run identified local listener permission errors in all 35 failures."
+  },
+  "releaseWorktreeAttempt": {
+    "date": "2026-11-24",
+    "platform": "darwin",
+    "node": "26.13.0",
+    "command": "CC_TEST_HTTP_TRANSPORT=handler npm run check:offline",
+    "result": {
+      "platformExclusions": [],
+      "localChecksPassed": false,
+      "automatedTests": {
+        "total": 3577,
+        "passed": 3573,
+        "failed": 4,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "failureReasons": {
+        "loopbackListenerDenied": 4,
+        "assertionWithDeniedListener": 0,
+        "unclassified": 0
+      },
+      "checks": {
+        "tests": false,
+        "privacy": true,
+        "whitespace": true,
+        "launcher": true
+      },
+      "privacy": {
+        "unprotectedPaths": 0,
+        "trackedPrivateFiles": 0,
+        "checkedIgnoreRules": 11,
+        "binarySourcesSkipped": 32
+      }
+    },
+    "note": "Four real socket tests could not bind to loopback. This was the Mac working tree, before later Calendar and Google Connections focused checks."
   }
 }
