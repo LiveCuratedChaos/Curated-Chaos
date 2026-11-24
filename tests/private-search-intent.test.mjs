@@ -51,3 +51,13 @@ test('School record phrases propose the authorized program and course title filt
  assert.throws(()=>parse('school records'));assert.throws(()=>parse('school records',{allowSchoolRead:1}));
  assert.deepEqual(parse('school tasks').fields,fields({section:'School'}));
 });
+
+test('inclusive task and event ranges preview exact dates and retain quoted title text',()=>{
+ const range={dateFrom:'2026-11-17',dateTo:'2026-11-18'};
+ assert.deepEqual(parse('open work tasks due between today and tomorrow').fields,fields({section:'Work',status:'open',...range}));
+ assert.deepEqual(parse('events about "today and tomorrow" from 2026-11-17 through tomorrow').fields,fields({type:'event',section:'Calendar',query:'today and tomorrow',...range}));
+ assert.deepEqual(parse('tasks about payroll from today to 2026-11-18').fields,fields({query:'payroll',...range}));
+ assert.equal(parse('events between 2028-02-29 and 2028-02-29').fields.dateTo,'2028-02-29');
+ for(const phrase of ['tasks from tomorrow through yesterday','events between 2026-02-29 and today','tasks from this week to next week','overdue tasks from today to tomorrow','notes from today to tomorrow','tasks due between today or tomorrow','tasks between today and tomorrow without a due date'])assert.throws(()=>parse(phrase));
+ assert.throws(()=>parse('tasks between today and tomorrow',{allowDates:false}));
+});

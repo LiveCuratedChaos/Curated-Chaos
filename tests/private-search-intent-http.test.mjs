@@ -40,3 +40,15 @@ test('compiled filters cannot widen disabled server date or project permissions'
 test('compiled searches retain private owner boundaries and suppress invalid sources',async t=>{
  const s=await setup(t);for(const changed of [{owner_id:other},{visibility:'household',household_id:other}]){s.state.rows=[{...task(1),...changed}];const result=await s.call('search',compile('open work tasks due 2026-11-17'));assert.equal(result.status,409);assert.doesNotMatch(result.text,/Fictional|PRIVATE_|11111111/);}assert.equal(s.state.writes,0);
 });
+
+test('interpreted date ranges include overlapping saved events and exclude events outside the endpoints',async t=>{
+ const s=await setup(t),{parsePrivateSearchIntent}=await import('../src/private-search-intent.mjs');
+ const multi=row(9);Object.assign(multi.payload,{day:'2026-11-16',end_day:'2026-11-18',end_time:'12:00'});
+ const before=row(10),after=row(11);before.payload.day='2026-11-16';after.payload.day='2026-11-19';
+ s.state.rows=[multi,before,after,row(12)];
+ const proposed=parsePrivateSearchIntent('events between today and tomorrow',{now,allowDates:true}).fields;
+ assert.equal(s.state.reads,0);
+ const result=await s.call('search',proposed);
+ assert.equal(result.status,200);assert.equal(result.data.dateFrom,'2026-11-17');assert.equal(result.data.dateTo,'2026-11-18');
+ assert.deepEqual(result.data.results.map(match=>match.title).sort(),[multi.payload.title,row(12).payload.title].sort());
+});

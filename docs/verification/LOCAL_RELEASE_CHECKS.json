@@ -830,6 +830,12 @@
       "directLoopbackDenied": 12,
       "assertionsWithDeniedListener": 8,
       "unclassified": 0
+    },
+    "interpretedDateRanges": {
+      "passed": 424,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Inclusive task/event ranges, overlapping events, New York date boundaries, explicit saved-search approval and rerun with fixed dates."
     }
   },
   "widgetSourceAssociations": {

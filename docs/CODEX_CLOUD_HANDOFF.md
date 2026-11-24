@@ -1,8 +1,10 @@
 # Curated Chaos development handoff
 
-Resume from `codex/private-workflow-checkpoints` in the private repository `LiveCuratedChaos/Curated-Chaos`. This review branch builds on `codex/cloud-handoff-20261123` at `b88f7dd0b9351310bfa0fcea89351502b955e72e`. The local handoff snapshot and that GitHub commit had the same file tree. The original Mac development checkout is on `codex/browser-checks`.
+Resume from `codex/private-workflow-checkpoints` in the private repository `LiveCuratedChaos/Curated-Chaos`. Its immediate base is `codex/school-favorites-review` at `d4df3d077097338647db5f2c64190b7de91d2a44`. The original Mac development checkout is on `codex/browser-checks`.
 
 ## Completed November 23
+
+- **R13** now interprets inclusive task and event date ranges. The preview displays both dates and saved searches retain them when reopened on a later day. All 424 related checks passed.
 
 - **R01:** The offline gate reports counts for denied local listeners, assertions that received a listener denial, and unclassified failures. Six runner tests passed. A targeted run of 68 session guard tests classified 12 direct denials and eight wrapped denials. These still count as failed tests.
 
@@ -21,7 +23,7 @@ Playwright 1.65.1 discovered 232 cases. Eight relevant cases are pending across 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Next finish the reviewed natural-language date-range search for tasks and events, then continue with the next ready release workflow.
+2. Continue R12 by offering a reviewed earlier due date for an eligible manual task. Preserve current checklist, completion, recurrence and project links. Verify the normal editor and its approval before advancing the checklist.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
