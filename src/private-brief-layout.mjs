@@ -9,24 +9,26 @@ export const BRIEF_SECTIONS=Object.freeze([
  {id:'notes',label:'Notes'},
  {id:'projects',label:'Projects'},
  {id:'school',label:'School'},
- {id:'bills',label:'Bills due'}
+ {id:'bills',label:'Bills due'},
+ {id:'routines',label:'Routines'}
 ].map(section=>Object.freeze(section)));
 const defaultDateView=()=>({mode:'single',range:'rolling',weekStart:0});
 const defaultNarrative=()=>({length:'standard',detail:'overview',tone:'elegant-warm'});
-export function defaultBriefLayout(){return{schemaVersion:5,sections:BRIEF_SECTIONS.map(({id})=>({id,display:['school','bills'].includes(id)?'hidden':id==='completedTasks'?'collapsed':'expanded'})),dateView:defaultDateView(),narrative:defaultNarrative()};}
+export function defaultBriefLayout(){return{schemaVersion:6,sections:BRIEF_SECTIONS.map(({id})=>({id,display:['school','bills','routines'].includes(id)?'hidden':id==='completedTasks'?'collapsed':'expanded'})),dateView:defaultDateView(),narrative:defaultNarrative()};}
 export function validateBriefLayout(value){
  const fail=()=>{throw Error('Supported Brief section layout required.');};
- if(!value||typeof value!=='object'||Array.isArray(value)||![1,2,3,4,5].includes(value.schemaVersion)||Object.keys(value).sort().join(',')!==({1:'schemaVersion,sections',2:'dateView,schemaVersion,sections',3:'dateView,narrative,schemaVersion,sections',4:'dateView,narrative,schemaVersion,sections',5:'dateView,narrative,schemaVersion,sections'}[value.schemaVersion])||!Array.isArray(value.sections)||value.sections.length!==(value.schemaVersion<4?8:value.schemaVersion===4?9:10))fail();
+ if(!value||typeof value!=='object'||Array.isArray(value)||![1,2,3,4,5,6].includes(value.schemaVersion)||Object.keys(value).sort().join(',')!==({1:'schemaVersion,sections',2:'dateView,schemaVersion,sections',3:'dateView,narrative,schemaVersion,sections',4:'dateView,narrative,schemaVersion,sections',5:'dateView,narrative,schemaVersion,sections',6:'dateView,narrative,schemaVersion,sections'}[value.schemaVersion])||!Array.isArray(value.sections)||value.sections.length!==(value.schemaVersion<4?8:value.schemaVersion===4?9:value.schemaVersion===5?10:11))fail();
  const seen=new Set(),sections=[];
  for(const section of value.sections){
-  if(!section||typeof section!=='object'||Array.isArray(section)||Object.keys(section).sort().join(',')!=='display,id'||!BRIEF_SECTIONS.some(({id})=>id===section.id&&(id!=='school'||value.schemaVersion>=4)&&(id!=='bills'||value.schemaVersion>=5))||seen.has(section.id)||!['expanded','collapsed','hidden'].includes(section.display))fail();
+  if(!section||typeof section!=='object'||Array.isArray(section)||Object.keys(section).sort().join(',')!=='display,id'||!BRIEF_SECTIONS.some(({id})=>id===section.id&&(id!=='school'||value.schemaVersion>=4)&&(id!=='bills'||value.schemaVersion>=5)&&(id!=='routines'||value.schemaVersion>=6))||seen.has(section.id)||!['expanded','collapsed','hidden'].includes(section.display))fail();
   seen.add(section.id);sections.push({id:section.id,display:section.display});
  }
  if(value.schemaVersion<4)sections.push({id:'school',display:'hidden'});
  if(value.schemaVersion<5)sections.push({id:'bills',display:'hidden'});
+ if(value.schemaVersion<6)sections.push({id:'routines',display:'hidden'});
  const dates=value.schemaVersion===1?defaultDateView():value.dateView;
  if(!dates||typeof dates!=='object'||Array.isArray(dates)||Object.keys(dates).sort().join(',')!=='mode,range,weekStart'||!['single','strip','week'].includes(dates.mode)||!['rolling','calendar'].includes(dates.range)||!Number.isInteger(dates.weekStart)||dates.weekStart<0||dates.weekStart>6)fail();
  const narrative=value.schemaVersion<3?defaultNarrative():value.narrative;
  if(!narrative||typeof narrative!=='object'||Array.isArray(narrative)||Object.keys(narrative).sort().join(',')!=='detail,length,tone'||!['short','standard','detailed'].includes(narrative.length)||!['overview','titles'].includes(narrative.detail)||!['elegant-warm','professional','gentle'].includes(narrative.tone))fail();
- return{schemaVersion:5,sections,dateView:{mode:dates.mode,range:dates.range,weekStart:dates.weekStart},narrative:{length:narrative.length,detail:narrative.detail,tone:narrative.tone}};
+ return{schemaVersion:6,sections,dateView:{mode:dates.mode,range:dates.range,weekStart:dates.weekStart},narrative:{length:narrative.length,detail:narrative.detail,tone:narrative.tone}};
 }

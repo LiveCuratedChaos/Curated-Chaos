@@ -4,7 +4,7 @@ import {taskPriority} from '../src/task-priorities.mjs';
 import {randomBytes} from 'node:crypto';
 import {createPrivateRecordVersionReader} from './private-record-version-reader.mjs';
 import {normalizeCloudRecords} from '../src/dev-brief-model.mjs';
-export function createPrivateTaskReader({api,now=Date.now,allowWidgetViews=false,allowPriority=false,allowUndated=false,allowHomeCleaning=false,allowHomeGroceries=false,allowHomeDeliveries=false,allowRecordHistory=false}){
+export function createPrivateTaskReader({api,now=Date.now,allowWidgetViews=false,allowRoutineViews=false,allowPriority=false,allowUndated=false,allowHomeCleaning=false,allowHomeGroceries=false,allowHomeDeliveries=false,allowRecordHistory=false}){
  if(typeof allowRecordHistory!=='boolean')throw Error('Explicit selected task history scope required.');
  if(typeof allowUndated!=='boolean'||typeof allowHomeCleaning!=='boolean'||typeof allowHomeGroceries!=='boolean'||typeof allowHomeDeliveries!=='boolean')throw Error('Explicit undated read scope required.');if(typeof allowPriority!=='boolean')throw Error('Explicit task priority scope required.');
  const states=new Map();let disposed=false;
@@ -12,8 +12,9 @@ export function createPrivateTaskReader({api,now=Date.now,allowWidgetViews=false
  if(typeof allowWidgetViews!=='boolean')throw Error('Explicit bounded widget action scope required.');
  function clear(id){history?.clear(id);clearTimeout(states.get(id)?.timer);states.delete(id);}
  function current(id,token){const state=states.get(id);return Boolean(!disposed&&state&&state.expiresAt>now()&&state.actions.has(token));}
- function begin(contextId,ownerId,expiresAt,maxActions=allowWidgetViews?210:allowUndated?80:60){
-  if(!Number.isInteger(maxActions)||maxActions<1||maxActions>(allowWidgetViews?210:allowUndated?80:60))throw Error('Bounded task view required.');
+ const actionLimit=(allowWidgetViews?210:allowUndated?80:60)+(allowRoutineViews?20:0);
+ function begin(contextId,ownerId,expiresAt,maxActions=actionLimit){
+  if(!Number.isInteger(maxActions)||maxActions<1||maxActions>actionLimit)throw Error('Bounded task view required.');
   clear(contextId);if(disposed)throw Error('Task reader closed.');
   const state={ownerId,expiresAt:Math.min(expiresAt,now()+300000),actions:new Map()};states.set(contextId,state);
   state.timer=setTimeout(()=>clear(contextId),Math.max(1,state.expiresAt-now()));state.timer.unref?.();

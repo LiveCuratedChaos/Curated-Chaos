@@ -46,3 +46,18 @@ test('explicit widget source scope adds only original permitted section metadata
 });
 
 test('Home delivery status is projected only with its explicit private Brief scope',()=>{const source=row('task',99);source.payload={...source.payload,title:'Package arrival',day:'2026-11-24',homeDelivery:{status:'shipped',orderDay:'2026-11-20',expectedDay:'2026-11-24',returnByDay:'',carrier:'UPS',trackingReference:'123',refundNote:''}};const hidden=privateWorkspaceBrief({rows:[source],ownerId:owner,now,selectedDay:'2026-11-21'});assert.equal(hidden.dueTasks.length,0);const shown=privateWorkspaceBrief({rows:[source],ownerId:owner,now,selectedDay:'2026-11-21',includeHomeDeliveries:true});assert.equal(shown.upcomingTasks[0].homeDelivery.status,'shipped');assert.equal(shown.upcomingTasks[0].homeDelivery.carrier,'UPS');});
+
+test('the selected date lists only saved scheduled occurrences with their original task actions',()=>{
+ const occurrence=(id,title,day,done)=>{const task=row('task',id);return {...task,payload:{...task.payload,title,day,done,recurrence:{anchorDay:'2026-11-09',frequency:'daily',interval:1}}};};
+ const incomplete=occurrence(7,'Fictional morning routine','2026-11-10',false);
+ const complete=occurrence(8,'Fictional evening routine','2026-11-10',true);
+ const rows=[incomplete,complete,occurrence(9,'Earlier routine','2026-11-09',false),row('task',10)];
+ const args={rows,ownerId:owner,now,selectedDay:'2026-11-10'};
+ assert.equal(privateWorkspaceBrief(args).routines,undefined);
+ const result=privateWorkspaceBrief({...args,includeRoutines:true,taskReadAction:task=>({taskReadToken:task===complete?'b'.repeat(43):'a'.repeat(43)})});
+ assert.deepEqual(result.routines,{count:2,rows:[
+  {title:complete.payload.title,section:'Home',done:true,taskReadToken:'b'.repeat(43)},
+  {title:incomplete.payload.title,section:'Home',done:false,taskReadToken:'a'.repeat(43)}
+ ]});
+ assert.equal(privateWorkspaceBrief({...args,includeRoutines:true,selectedDay:'2026-11-11'}).routines.count,0);
+});

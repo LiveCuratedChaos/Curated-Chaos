@@ -1196,3 +1196,21 @@ test('event title category interpretation updates the editable draft before its 
  assert.equal(proposed.calendarCategory,'Work');
  assert.equal(proposed.day,'2026-11-11');
 });
+
+test('the optional Routines section renders saved completion status and opens the original task',async t=>{
+ const layout=defaultBriefLayout();layout.sections.find(section=>section.id==='routines').display='expanded';
+ const token='r'.repeat(43),title='Fictional morning stretch';
+ const s=await setup(t,{allowBriefLayout:true,allowRecurringChores:true,allowTaskCompletion:true,allowTaskRead:true,
+  initialBriefLayout:layout,briefReader:async()=>({...data,routines:{count:2,rows:[
+   {title,section:'Personal Life',done:false,taskReadToken:token},
+   {title:'Fictional evening stretch',section:'Personal Life',done:true}
+  ]}})});
+ assert.match(s.root.innerHTML,/data-private-brief-section="routines"/);
+ assert.match(s.root.innerHTML,/Fictional morning stretch.*Personal Life · Due/);
+ assert.match(s.root.innerHTML,/Fictional evening stretch.*Personal Life · Complete/);
+ let requested;
+ s.client.readTask=async value=>{requested=value;return{title,section:'Personal Life',day:data.day,done:false,readOnly:true,expiresAt:1000000};};
+ s.events.click({target:{closest:q=>q==='[data-private-task-open]'?{dataset:{privateTaskOpen:token}}:null}});
+ await turn();
+ assert.equal(requested,token);
+});

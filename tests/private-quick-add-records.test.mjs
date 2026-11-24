@@ -22,18 +22,25 @@ test('grocery Quick Add creates an undated Home item with or without quantity an
  }
 });
 test('saved routine starts with one occurrence and only approved completion creates the next scheduled task',async t=>{
- const app=privateWorkspaceFixture(t,scopes),tab=app.tab(),observer=app.tab();await tab.login();await observer.login();
+ const app=privateWorkspaceFixture(t,{...scopes,allowTaskRead:true,allowBriefLayout:true,allowBriefDates:true}),tab=app.tab(),observer=app.tab();await tab.login();await observer.login();
  const day=newYorkTaskDay(Date.now()),title='Fixture stretch',schedule={anchorDay:day,frequency:'daily',interval:2};
  const review=await tab.client.reviewNewTask({title,day,section:'Personal Life',schedule});assert.deepEqual(review.schedule,schedule);
  assert.equal(byTitle(await observer.client.brief(),title).length,0);await tab.client.createTask(review.reviewId);
- const [first]=byTitle(await tab.client.brief(),title);
+ const brief=await tab.client.brief();
+ const [first]=byTitle(brief,title);
+ const original=brief.routines.rows.find(row=>row.title===title);
+ assert.equal(original.done,false);
+ assert.equal((await tab.client.readTask(original.taskReadToken)).title,title);
  const next=nextTaskOccurrence({schedule,currentDueDay:day,completedOn:day}).day;
  const completion=await tab.client.reviewCompletion(first.completionToken);assert.equal(completion.nextDay,next);assert.deepEqual(completion.schedule,schedule);
  assert.deepEqual(byTitle(await tab.client.brief(),title).map(x=>x.day),[day]);
  const latest=(await tab.client.brief()).dueTasks.find(row=>row.title===title);
  const again=await tab.client.reviewCompletion(latest.completionToken);await tab.client.approveCompletion(again.reviewId);
  await assert.rejects(tab.client.approveCompletion(again.reviewId));
- assert.deepEqual(byTitle(await tab.client.brief(),title).map(row=>row.day).sort(),[day,next]);
+ const after=await tab.client.brief();
+ assert.deepEqual(byTitle(after,title).map(row=>row.day).sort(),[day,next]);
+ assert.equal(after.routines.rows.find(row=>row.title===title).done,true);
+ assert.equal((await tab.client.brief(next)).routines.rows.find(row=>row.title===title).done,false);
 });
 test('a routine must use the enabled scope, exact first date and a schedule with a future occurrence',async t=>{
  const day='2028-02-29',schedule={anchorDay:day,frequency:'yearly',interval:1},fields={section:'School',day,title:'Fixture annual date'};
