@@ -46,21 +46,33 @@ function coreFact(id,number,date){
 export function generateBriefNarrative(brief,layout,options={}){
  try{
   if(!options||typeof options!=='object'||Array.isArray(options))fail();const now=options.now===undefined?Date.now():options.now;
-  const preferences=validateBriefLayout(layout),fresh=checkedCore(brief,now),facts=[];
+  const preferences=validateBriefLayout(layout),fresh=checkedCore(brief,now),facts=[];let optionalUnavailable=false;
   for(const section of preferences.sections){
    if(section.display!=='expanded'||section.id==='undatedTasks'&&!fresh.undated)continue;
-   if(section.id==='school'){
-    const school=brief.schoolOverview;if(school==null||school.available===false&&Object.keys(school).length===1)continue;verifyPrivateSchoolOverview(school,{now});const completed=school.courses.filter(course=>course.status==='Completed').length;facts.push({text:`${school.programs.length} saved ${noun(school.programs.length,'program')} and ${school.courses.length} saved ${noun(school.courses.length,'course')} are currently shown; ${completed} ${noun(completed,'course')} ${is(completed)} currently marked complete.`,titles:school.courses.map(course=>course.title),expiresAt:school.expiresAt});
-   }else if(section.id==='projects'){
-    if(brief.projectOverview==null)continue;
-    const projects=verifyPrivateProjectOverview(brief.projectOverview,{now});if(!projects.available)continue;
-    facts.push({text:`${projects.totalCount} ${noun(projects.totalCount,'project')} ${is(projects.totalCount)} currently saved: ${projects.openCount} open and ${projects.completedCount} marked complete.`,titles:projects.projects.map(row=>row.title),expiresAt:projects.expiresAt});
-   }else facts.push({text:coreFact(section.id,brief.counts[section.id],brief.day),titles:brief[section.id].map(row=>row.title)});
+   if(section.id!=='school'&&section.id!=='projects'){
+    facts.push({text:coreFact(section.id,brief.counts[section.id],brief.day),titles:brief[section.id].map(row=>row.title)});
+    continue;
+   }
+   try{
+    if(section.id==='school'){
+     const school=brief.schoolOverview;
+     if(school==null||school.available===false&&Object.keys(school).length===1)continue;
+     verifyPrivateSchoolOverview(school,{now});
+     const completed=school.courses.filter(course=>course.status==='Completed').length;
+     facts.push({text:`${school.programs.length} saved ${noun(school.programs.length,'program')} and ${school.courses.length} saved ${noun(school.courses.length,'course')} are currently shown; ${completed} ${noun(completed,'course')} ${is(completed)} currently marked complete.`,titles:school.courses.map(course=>course.title),expiresAt:school.expiresAt});
+    }else{
+     if(brief.projectOverview==null)continue;
+     const projects=verifyPrivateProjectOverview(brief.projectOverview,{now});if(!projects.available)continue;
+     facts.push({text:`${projects.totalCount} ${noun(projects.totalCount,'project')} ${is(projects.totalCount)} currently saved: ${projects.openCount} open and ${projects.completedCount} marked complete.`,titles:projects.projects.map(row=>row.title),expiresAt:projects.expiresAt});
+    }
+   }catch{optionalUnavailable=true;}
   }
+  if(!facts.length&&optionalUnavailable)fail();
   const settings=preferences.narrative,limits={short:2,standard:4,detailed:9},titlesPerSection={short:1,standard:2,detailed:3},shown=facts.slice(0,limits[settings.length]);
   const introductions={'elegant-warm':`A glimpse of your current saved records for ${brief.day}.`,professional:`Current saved-record summary for ${brief.day}.`,gentle:`Here is a look at your current saved records for ${brief.day}.`};
   const paragraphs=[introductions[settings.tone]+' This reflects current supported records, not a historical snapshot.'];
   for(const fact of shown){let paragraph=fact.text;if(settings.detail==='titles'&&fact.titles.length)paragraph+=' Shown titles: '+fact.titles.slice(0,titlesPerSection[settings.length]).map(value=>'“'+value+'”').join('; ')+'.';paragraphs.push(paragraph);}
+  if(optionalUnavailable)paragraphs.push('A selected section could not be verified. Fetch latest to include it.');
   if(facts.length>shown.length)paragraphs.push('Additional expanded sections are shown below.');
   if(!facts.length)paragraphs.push('No expanded sections with verified saved-record information are selected for this summary.');
   return{available:true,checkedAt:fresh.checkedAt,expiresAt:Math.min(fresh.expiresAt,...shown.filter(fact=>fact.expiresAt!==undefined).map(fact=>fact.expiresAt)),paragraphs};

@@ -64,3 +64,15 @@ test('expanded School narrative uses complete verified course counts and bounded
 test('hidden or collapsed School facts cannot affect source expiry or narrative content',()=>{for(const display of ['hidden','collapsed']){const preferences=layout({length:'detailed',detail:'titles'});preferences.sections.find(s=>s.id==='school').display=display;const result=generateBriefNarrative({...fixture(),schoolOverview:{private:'DO_NOT_READ'}},preferences,{now});assert.equal(result.available,true);assert.equal(result.expiresAt,now+300000);assert.doesNotMatch(text(result),/School|program|course|DO_NOT_READ/);}});
 test('School unavailability is not presented as zero and malformed/stale or forged progress fails closed',()=>{for(const schoolOverview of [null,{available:false}]){const result=generateBriefNarrative({...fixture(),schoolOverview},only('school'),{now});assert.equal(result.available,true);assert.doesNotMatch(text(result),/0 saved|0 course/);}for(const change of [s=>s.expiresAt=now,s=>s.programs[0].done=2,s=>s.courses[0].notes='PRIVATE_BODY',s=>s.programs[0].percentage=100,s=>s.providerRead=true]){const source=school();change(source);assert.deepEqual(generateBriefNarrative({...fixture(),schoolOverview:source},only('school'),{now}),{available:false});}});
 test('short narrative excludes later School facts and their expiry even when the School section is expanded',()=>{const preferences=layout({length:'short',detail:'titles'});preferences.sections.find(s=>s.id==='school').display='expanded';const result=generateBriefNarrative({...fixture(),schoolOverview:school()},preferences,{now});assert.equal(result.expiresAt,now+300000);assert.doesNotMatch(text(result),/Saved course|saved program|marked complete/);assert.match(text(result),/Additional expanded sections/);});
+
+test('stale or invalid optional sources leave verified core facts visible',()=>{
+ const staleProjects={...projects(),expiresAt:now};
+ const badSchool={programs:[],courses:[{title:'Unverified course'}],expiresAt:now+5000};
+ const result=generateBriefNarrative({...fixture(),projectOverview:staleProjects,schoolOverview:badSchool},
+  only('dueTasks','projects','school'),{now});
+ assert.equal(result.available,true);
+ assert.match(text(result),/3 open tasks due/);
+ assert.match(text(result),/A selected section could not be verified/);
+ assert.doesNotMatch(text(result),/Open project|Unverified course|0 saved courses/);
+ assert.equal(result.expiresAt,now+300000);
+});
