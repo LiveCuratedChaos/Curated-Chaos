@@ -268,10 +268,13 @@ test('encrypted recovery reopens the same School program and course from their o
  }
 });
 
-function shortcutService(t,db){
+function shortcutService(t,db,{allowHistory=false}={}){
  const query=async(sql,args)=>(await db.query(sql,args)).rows.map(value=>value.row);
  const fail=()=>{throw Error('Unexpected shortcut mutation');};
- const service=createPrivateSavedSearches({allowSchool:true,api:{
+ const service=createPrivateSavedSearches({allowSchool:true,allowHistory,api:{
+  isPrivateSavedSearchVersionsReady:async()=>(await db.query('select public.cc_private_saved_search_versions_ready() ready')).rows[0].ready,
+  listPrivateRecordVersions:async(_token,id,offset)=>(await db.query('select public.list_private_record_versions($1,$2) page',[id,offset])).rows[0].page,
+  getPrivateRecordVersion:(_token,id,version)=>query('select to_jsonb(v) row from public.get_private_record_version($1,$2) v',[id,version]),
   listPrivateSavedSearches:(_token,owner,removed)=>query("select to_jsonb(r) row from public.cc_records r where owner_id=$1 and item_type='saved_search' and (deleted_at is not null)=$2",[owner,removed]),
   getPrivateSavedSearch:(_token,id,owner)=>query("select to_jsonb(r) row from public.cc_records r where owner_id=$1 and id=$2 and item_type='saved_search'",[owner,id]),
   setPrivateSavedSearchDeletedAt:(_token,selected,owner,date)=>query('update public.cc_records r set deleted_at=$1 where id=$2 and owner_id=$3 and version=$4 and deleted_at is not distinct from $5 returning to_jsonb(r) row',[date,selected.id,owner,selected.version,selected.deleted_at]),
@@ -364,6 +367,33 @@ test('named shortcut history survives encrypted recovery without storing search 
   assert.equal(digest([result.snapshot]),digest([entry.snapshot]));
  }
  assert.equal((await destination.executor.prepare(destination.who,{bytes})).insertCount,0);
+ const restored=shortcutService(t,destination.db,{allowHistory:true});
+ const listRestored=()=>restored.list('recovered',viewer,Date.now()+300000,{removed:false});
+ const current=(await listRestored()).records[0];
+ const page=await restored.listVersions('recovered',viewer,current.savedSearchToken,0);
+ assert.equal(page.available,true);assert.equal(page.matchCount,3);
+ const first=page.versions.find(entry=>entry.version===shortcut.version);
+ assert.ok(first,'the recovered shortcut exposes its original revision');
+ const before=await restored.readVersion('recovered',viewer,first.historyReadToken);
+ assert.deepEqual(before.record,{name:'Course reading',filters});
+ assert.equal(Date.parse(before.capturedAt),Date.parse(ordered[0].captured_at));
+ assert.equal(Date.parse(before.recoveredAt),Date.parse(recovered.find(v=>v.id===ordered[0].id).recovery.restoredAt));
+ await assert.rejects(restored.readVersion('recovered',viewer,first.historyReadToken));
+ const rename=await restored.prepare('recovered',viewer,{action:'rename',name:before.record.name,savedSearchToken:current.savedSearchToken});
+ assert.equal((await history(destination)).length,3);
+ const claim=restored.claim('recovered',i.a,rename.reviewId);
+ assert.equal(await restored.authorize(claim,viewer),true);
+ assert.deepEqual(await restored.save(claim,viewer),{saved:true,action:'rename'});
+ const after=(await listRestored()).records[0];
+ assert.deepEqual(await restored.load('recovered',viewer,after.savedSearchToken),before.record);
+ const changedHistory=await history(destination);
+ assert.equal(changedHistory.length,4);
+ const native=changedHistory.find(v=>v.recovery===null);
+ assert.equal(native.snapshot.payload.title,'Study plan');assert.deepEqual(native.snapshot.payload.filters,filters);
+ const byVersion=(left,right)=>left.source_version-right.source_version;
+ assert.deepEqual(changedHistory.filter(v=>v.recovery).sort(byVersion),recovered.toSorted(byVersion));
+ const replay=await destination.executor.prepare(destination.who,{bytes});
+ assert.equal(replay.canRestore,false);assert.equal(replay.reviewId,undefined);
  for(const extra of [{results:['Unrelated text']},{filters:{...filters,results:['Unrelated text']}}]){
   const bad=structuredClone(versions);Object.assign(bad[0].snapshot.payload,extra);
   assert.throws(()=>sealHistory(bad));

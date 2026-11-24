@@ -1,5 +1,5 @@
 {
-  "userDate": "2026-11-23",
+  "userDate": "2026-11-24",
   "timezone": "America/New_York",
   "command": "npm run check:offline",
   "latestAttempt": {
@@ -873,6 +873,13 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "signedInRecoveredShortcutHistory": {
+      "date": "2026-11-24",
+      "node": "24.22.3",
+      "passed": 92,
+      "failed": 0,
+      "scope": "Saved-search services, signed-in history and isolated PostgreSQL recovery. Reviewed rename appended a native entry and preserved all imported entries. Archive replay offered no write."
     },
     "reviewEarlierShortcutName": {
       "passed": 381,

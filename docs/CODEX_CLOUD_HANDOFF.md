@@ -2,6 +2,10 @@
 
 Resume from `codex/private-workflow-checkpoints` in the private repository `LiveCuratedChaos/Curated-Chaos`. Its immediate base is `codex/school-favorites-review` at `d4df3d077097338647db5f2c64190b7de91d2a44`. The original Mac development checkout is on `codex/browser-checks`.
 
+## November 24 recovery checkpoint
+
+A signed-in owner reopened the original shortcut after an encrypted restore, read its earlier name, filters, capture time and recovery time, and used the ordinary approval to rename it. The restored archive had started at revision 8. The rename created one native history entry and preserved all three imported entries. Replaying the old archive offered no write. All 92 related service, history and recovery tests passed on Node 24.22.3.
+
 ## Completed November 23
 
 - **R12 / R13** added an editable rename draft from a selected earlier shortcut name. It rechecks the current source and keeps its current filters. Reusing a name makes no write until the ordinary rename approval. All 381 related checks passed, including changes of name, duplicate activation, offline drafts and stale sources.
@@ -65,7 +69,7 @@ Playwright 1.65.1 discovered 238 cases. Eighteen selected desktop and phone-size
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R03/R12 with the signed-in history reader on a restored named shortcut in the isolated PostgreSQL destination. Verify recovered dates and prior names, then approve a rename and check the new native version and archive replay.
+2. Continue R13 with interpreted one-sided task and event date filters in the existing search and named-shortcut workflow.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
