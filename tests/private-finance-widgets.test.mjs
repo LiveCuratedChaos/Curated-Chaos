@@ -124,3 +124,31 @@ test('identically named Brief bills open their own schedule without replacing a 
  await tab.client.briefBills(today,true);
  await assert.rejects(tab.client.briefBillSource(keys[0]));
 });
+
+test('eleven bills page within one dated view and refuse changed inventory',async t=>{
+ const app=privateWorkspaceFixture(t,{allowBriefLayout:true,allowManualFinance:true,allowManualBills:true});
+ const tab=app.tab(),other=app.tab();await tab.login();await other.login();
+ for(let i=0;i<11;i++){
+  await tab.client.manualBillList();
+  const bill={label:'Fixture bill '+String(i+1).padStart(2,'0'),dueDay:today,frequency:'once',interval:1,endDay:'',estimated:false,amountMinor:100};
+  const review=await tab.client.manualBillReview({bill});await tab.client.manualBillSave(review.reviewId);
+ }
+ await assert.rejects(tab.client.briefBillsPage(today,10));
+ const first=await tab.client.briefBillsPage(today,0);
+ assert.equal(first.rows.length,10);assert.equal(first.total,11);
+ await assert.rejects(other.client.briefBillsPage(today,10,first.viewToken));
+ const second=await tab.client.briefBillsPage(today,10,first.viewToken);
+ assert.equal(second.day,today);assert.equal(second.offset,10);assert.equal(second.total,11);
+ assert.equal(second.expiresAt,first.expiresAt);assert.equal(second.viewToken,first.viewToken);
+ assert.deepEqual(second.rows.map(r=>r.label),['Fixture bill 11']);
+ assert.equal((await tab.client.briefBillSource(second.rows[0].billReadToken)).scheduleLabel,'Fixture bill 11');
+ await assert.rejects(tab.client.briefBillSource(first.rows[0].billReadToken));
+ const back=await tab.client.briefBillsPage(today,0,second.viewToken);
+ assert.deepEqual(back.rows.map(r=>r.label),first.rows.map(r=>r.label));
+ const manual=await other.client.manualBillList(),choice=manual.bills.find(b=>b.label==='Fixture bill 11');
+ const selected=await other.client.manualBillRead({billToken:choice.billToken,from:today,to:today});
+ const edit=await other.client.manualBillReview({billToken:choice.billToken,bill:{...selected.bill,label:'Renamed bill 11'}});
+ await other.client.manualBillSave(edit.reviewId);
+ await assert.rejects(tab.client.briefBillsPage(today,10,first.viewToken));
+ await assert.rejects(tab.client.briefBillSource(back.rows[0].billReadToken));
+});

@@ -10,11 +10,13 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
   const source=context();
   return source?.day===day&&source.expiresAt>clock();
  }
- function verify(value,day){
+ function verify(value,day,offset,previous){
   const now=clock();
-  if(!value||Object.keys(value).sort().join(',')!=='currentDay,day,expiresAt,rows,total'||value.day!==day||
+  if(!value||Object.keys(value).sort().join(',')!=='currentDay,day,expiresAt,offset,rows,total,viewToken'||value.day!==day||value.offset!==offset||
+     typeof value.viewToken!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(value.viewToken)||
+     previous&&['total','expiresAt','viewToken','currentDay'].some(k=>value[k]!==previous[k])||
      value.currentDay!==newYorkTaskDay(now)||!Number.isInteger(value.total)||value.total<0||value.total>100||
-     !Array.isArray(value.rows)||value.rows.length!==Math.min(10,value.total)||!Number.isFinite(value.expiresAt)||
+     !Array.isArray(value.rows)||offset>0&&offset>=value.total||value.rows.length!==Math.min(10,value.total-offset)||!Number.isFinite(value.expiresAt)||
      value.expiresAt<=now||value.expiresAt>now+300000)throw Error();
   const tokens=new Set();
   for(const row of value.rows){
@@ -24,14 +26,18 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
    tokens.add(row.billReadToken);
   }
  }
- async function open(){
+ async function open(direction=0){
   const source=context(),day=source?.day;
-  if(!validDay(day)||!available(day)||current?.busy)return;
+  if(!validDay(day)||!available(day)||current?.busy||![-1,0,1].includes(direction))return;
+  const previous=direction&&current?.day===day&&current.expiresAt>clock()?current.result:null;
+  if(direction&&!previous)return;
+  const offset=previous?previous.offset+direction*10:0;
+  if(offset<0||previous&&offset>=previous.total)return;
   reset();const view={day,busy:true};current=view;onChange();
   try{
-   const result=await client.briefBills(day,true);
+   const result=await client.briefBillsPage(day,offset,previous?.viewToken);
    if(current!==view||!available(day))return;
-   verify(result,day);
+   verify(result,day,offset,previous);
    view.result=result;view.expiresAt=Math.min(result.expiresAt,source.expiresAt);
    timer=setTimeout(()=>{if(current===view){reset();onChange();}},Math.max(0,view.expiresAt-clock()));timer.unref?.();
   }catch{if(current===view)view.failed=true;}
@@ -62,7 +68,8 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
   const result=current?.result;
   const button='<button class="btn" type="button" id="private-brief-bills-open"'+(current?.busy?' disabled':'')+'>'+(result?'Refresh bill schedule':'View bills due')+'</button>';
   if(!result)return (current?.failed?'<p role="status">Could not open the saved bill schedule.</p>':'')+button;
-  const summary=result.total?'Showing '+result.rows.length+' of '+result.total+' bills due on '+e(day)+'.':'No saved bills are due on '+e(day)+'.';
+  const position=result.rows.length===1?String(result.offset+1):(result.offset+1)+'–'+(result.offset+result.rows.length);
+  const summary=result.total?'Showing '+position+' of '+result.total+' bills due on '+e(day)+'.':'No saved bills are due on '+e(day)+'.';
   const detail=current.detail;
   const units={weekly:'week',monthly:'month',yearly:'year'};
   const frequencyLabels={once:'One time',weekly:'Weekly',monthly:'Monthly',yearly:'Yearly'};
@@ -70,6 +77,8 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
   const original=detail?'<section aria-label="Original bill schedule"><h3>'+e(detail.scheduleLabel)+'</h3><p>'+recurrence+' · First due '+e(detail.firstDueDay)+(detail.endDay?' · Ends '+e(detail.endDay):'')+'</p><p>'+e(detail.label)+' · '+e(detail.day)+' · '+e(detail.status)+(detail.paidDay?' on '+e(detail.paidDay):'')+'</p><button class="btn" type="button" id="private-brief-bill-close">Close schedule</button></section>':'';
   return '<p>'+summary+' Payment status as of '+e(result.currentDay)+'.</p>'+
    (result.rows.length?'<ul>'+result.rows.map(row=>'<li>'+e(row.label)+' · '+e(row.status)+' <button type="button" class="btn" data-brief-bill-source="'+e(row.billReadToken)+'" aria-label="Open schedule for '+e(row.label)+'"'+(current.busy?' disabled':'')+'>Open schedule</button></li>').join('')+'</ul>':'')+
+   (result.offset>0?'<button class="btn" type="button" data-brief-bills-page="previous"'+(current.busy?' disabled':'')+'>Previous bills</button>':'')+
+   (result.offset+result.rows.length<result.total?'<button class="btn" type="button" data-brief-bills-page="next"'+(current.busy?' disabled':'')+'>More bills</button>':'')+
    (current.sourceError?'<p role="status">The bill changed or its schedule expired. Refresh bills due.</p>':'')+original+button;
  }
  return {open,openSource,closeSource,render,reset};

@@ -481,7 +481,7 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
    const current=()=>live(c) && c.sequence===sequence;
    let attempted=false, marker;
    try {
-    const fields={receipts:categoryAction?['transactionToken','offset']:['index','offset'],'receipt-download':categoryAction?['transactionToken']:['index'],widget:['showAmounts','showPercentages','limit'],'brief-day':['day','includeSources'],'brief-read':['billReadToken'],expenses:['transactionToken','period','offset'],list:[],'cash-flow':[],candidates:['billToken','dueDay','offset'],read:holdingAction?['holdingToken']:categoryAction?['transactionToken']:[billAction?'billToken':'sourceToken','from','to'],open:categoryAction?['offset']:['period','periodStart','periodEnd'],review:holdingAction?['holdingToken','settings','activity','index']:categoryAction?['transactionToken','categories','expenseToken',...(documents?['receiptChoice']:[])]:billAction?['bill','billToken','dueDay','paidDay','amountMinor','transactionToken']:incomeAction?['sourceToken','schedule','payment']:manualBudgetAction?['budget','carryFrom','expense','index',...(documents?['receiptChoice']:[])]:['account','accountToken'],save:['approved','reviewId'],cancel:[]};
+    const fields={receipts:categoryAction?['transactionToken','offset']:['index','offset'],'receipt-download':categoryAction?['transactionToken']:['index'],widget:['showAmounts','showPercentages','limit'],'brief-day':['day','includeSources','offset','viewToken'],'brief-read':['billReadToken'],expenses:['transactionToken','period','offset'],list:[],'cash-flow':[],candidates:['billToken','dueDay','offset'],read:holdingAction?['holdingToken']:categoryAction?['transactionToken']:[billAction?'billToken':'sourceToken','from','to'],open:categoryAction?['offset']:['period','periodStart','periodEnd'],review:holdingAction?['holdingToken','settings','activity','index']:categoryAction?['transactionToken','categories','expenseToken',...(documents?['receiptChoice']:[])]:billAction?['bill','billToken','dueDay','paidDay','amountMinor','transactionToken']:incomeAction?['sourceToken','schedule','payment']:manualBudgetAction?['budget','carryFrom','expense','index',...(documents?['receiptChoice']:[])]:['account','accountToken'],save:['approved','reviewId'],cancel:[]};
     const values=await body(req,fields[action],(manualBudgetAction||incomeAction)&&action==='review'?65536:4096);
     if (!current() || c.recordChanging) throw Error();
     let result;
@@ -508,7 +508,9 @@ export function createPrivateSessionHttp({origin,api,calendarSelectionIO=null,ma
       if(action==='receipt-download')return finance.receiptDownload(c.id,actor,values);
       if(action==='brief-day'){
        if(Object.hasOwn(values,'includeSources')&&typeof values.includeSources!=='boolean')throw Error();
-       if(values.includeSources)return briefBillSources.list(c.id,actor,values.day,c.expiresAt);
+       const paged=Object.hasOwn(values,'offset')||Object.hasOwn(values,'viewToken');
+       if(paged&&(!values.includeSources||!Number.isInteger(values.offset)||Object.hasOwn(values,'viewToken')&&!/^[A-Za-z0-9_-]{43}$/.test(values.viewToken)))throw Error();
+       if(values.includeSources)return briefBillSources.list(c.id,actor,values.day,c.expiresAt,paged?{offset:values.offset,...(Object.hasOwn(values,'viewToken')?{viewToken:values.viewToken}:{})}:null);
        briefBillSources.clear(c.id);
        return readBriefBills({api,actor,day:values.day,now:now(),expiresAt:c.expiresAt});
       }

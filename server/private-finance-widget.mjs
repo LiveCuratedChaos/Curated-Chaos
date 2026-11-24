@@ -30,12 +30,14 @@ async function scheduledBills(api,{accessToken,ownerId},from,to,today){
  }
  return occurrences;
 }
-export async function readBriefBills({api,actor,day,now,expiresAt,sourceFor=null}){
+export async function readBriefBills({api,actor,day,now,expiresAt,sourceFor=null,offset=0,checkInventory=null}){
  if(typeof day!=='string'||!validDay(day))throw Error('Choose a valid Brief date.');
  const currentDay=newYorkTaskDay(now);
  const due=await scheduledBills(api,actor,day,day,currentDay);
  due.sort((a,b)=>a.occurrence.label.localeCompare(b.occurrence.label)||a.occurrence.status.localeCompare(b.occurrence.status)||a.row.id.localeCompare(b.row.id));
- const rows=due.slice(0,10).map(({row,occurrence})=>({label:occurrence.label,status:occurrence.status,...(sourceFor?{billReadToken:sourceFor(row,occurrence)}:{})}));
+ if(offset>0&&offset>=due.length)throw Error('Bill page is unavailable.');
+ if(checkInventory)checkInventory(due.map(({row,occurrence})=>[row.id,row.version,occurrence.label,occurrence.status]));
+ const rows=due.slice(offset,offset+10).map(({row,occurrence})=>({label:occurrence.label,status:occurrence.status,...(sourceFor?{billReadToken:sourceFor(row,occurrence)}:{})}));
  return {day,currentDay,total:due.length,rows,expiresAt:Math.min(expiresAt,now+300000)};
 }
 const percent=(value,base)=>base>0?Math.round((value/base)*1000)/10:null;
@@ -77,19 +79,37 @@ export function createBriefBillSources({api,now=Date.now}){
  const views=new Map();
  function clear(id){clearTimeout(views.get(id)?.timer);views.delete(id);}
  const active=(id,view)=>views.get(id)===view&&view.expiresAt>now();
- async function list(id,actor,day,expiresAt){
-  clear(id);
-  const view={owner:actor.ownerId,day,expiresAt:Math.min(expiresAt,now()+300000),choices:new Map()};
-  views.set(id,view);
-  view.timer=setTimeout(()=>{if(views.get(id)===view)clear(id);},Math.max(0,view.expiresAt-now()));view.timer.unref?.();
+ async function list(id,actor,day,expiresAt,page=null){
+  const offset=page?.offset??0;
+  if(!Number.isInteger(offset)||offset<0||offset>90||offset%10||page&&Object.keys(page).some(k=>!['offset','viewToken'].includes(k)))throw Error('Invalid bill page.');
+  const resume=page&&Object.hasOwn(page,'viewToken');
+  let view;
+  if(resume){
+   view=views.get(id);
+   if(!view||view.owner!==actor.ownerId||view.day!==day||!active(id,view)||view.viewToken!==page.viewToken||!view.viewToken)throw Error('Refresh the bill schedule.');
+  }else{
+   if(offset!==0)throw Error('Open the first bill page.');
+   clear(id);
+   view={owner:actor.ownerId,day,expiresAt:Math.min(expiresAt,now()+300000),choices:new Map(),viewToken:page?randomBytes(32).toString('base64url'):null};
+   views.set(id,view);
+   view.timer=setTimeout(()=>{if(views.get(id)===view)clear(id);},Math.max(0,view.expiresAt-now()));view.timer.unref?.();
+  }
+  const choices=new Map();
   try{
-   const result=await readBriefBills({api,actor,day,now:now(),expiresAt:view.expiresAt,sourceFor(row,occurrence){
-    const token=randomBytes(32).toString('base64url');
-    view.choices.set(token,{id:row.id,version:row.version,label:occurrence.label,status:occurrence.status});
-    return token;
-   }});
-   if(!active(id,view))throw Error('Bill lookup expired.');
-   return result;
+   const result=await readBriefBills({api,actor,day,now:now(),expiresAt:view.expiresAt,offset,
+    checkInventory:page?rows=>{
+     const snapshot=JSON.stringify(rows);
+     if(resume&&snapshot!==view.snapshot)throw Error('The bill schedule changed.');
+     view.snapshot=snapshot;
+    }:null,
+    sourceFor(row,occurrence){
+     const token=randomBytes(32).toString('base64url');
+     choices.set(token,{id:row.id,version:row.version,label:occurrence.label,status:occurrence.status});
+     return token;
+    }});
+   if(!active(id,view)||resume&&view.currentDay!==result.currentDay)throw Error('Bill lookup expired.');
+   view.choices=choices;view.currentDay=result.currentDay;
+   return page?{...result,offset,viewToken:view.viewToken}:result;
   }catch(error){if(views.get(id)===view)clear(id);throw error;}
  }
  async function read(id,actor,token){

@@ -103,11 +103,11 @@
     "R20 now has default-off, reviewed section color preferences through the original owner-private settings CAS; current task/project list accents are integrated. Per-item controls, all approved consumers and browser/device acceptance remain unfinished."
   ],
   "latestFocusedChecks": {
-    "passed": 490,
+    "passed": 369,
     "failed": 0,
     "node": "24.22.3",
-    "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment.",
-    "command": "CC_TEST_HTTP_TRANSPORT=handler node --test --test-concurrency=3 tests/private-brief-{bills,layout*,narrative}.test.mjs tests/private-{finance-widgets,manual-bill-workflow,manual-bills,dashboard-controller,workspace-restore-repository,workspace-static,workspace-client}.test.mjs"
+    "scope": "Eleven due bills, paginated original schedules, independent sessions, inventory edits, old selection invalidation, date and expiry.",
+    "command": "CC_TEST_HTTP_TRANSPORT=handler node --test --test-concurrency=3 tests/private-{finance-widgets,manual-bill-workflow,manual-bills,brief-bills,brief-layout-http,dashboard-controller,workspace-client}.test.mjs"
   },
   "targetedChecks": {
     "total": 532,
@@ -873,6 +873,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "dailyBriefBillPaging": {
+      "passed": 369,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Eleven due bills, paginated original schedules, independent sessions, inventory edits, old selection invalidation, date and expiry."
     }
   },
   "widgetSourceAssociations": {

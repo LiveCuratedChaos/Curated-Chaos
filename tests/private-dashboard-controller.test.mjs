@@ -992,7 +992,7 @@ test('Daily Brief bills are hidden by default and load only for the selected day
  const s=await setup(t,{...options,initialBriefLayout:layout});
  const day=narrativeSnapshot(now).day;
  const days=[];
- s.client.briefBills=async selected=>{days.push(selected);return {day:selected,currentDay:'2026-11-19',rows:[{label:'Private internet',status:'Paid',billReadToken:'b'.repeat(43)}],total:1,expiresAt:now+5000};};
+ s.client.briefBillsPage=async selected=>{days.push(selected);return {day:selected,offset:0,viewToken:'p'.repeat(43),currentDay:'2026-11-19',rows:[{label:'Private internet',status:'Paid',billReadToken:'b'.repeat(43)}],total:1,expiresAt:now+5000};};
  const click=id=>s.events.click({target:{closest:q=>q===id?{}:null}});
  assert.match(s.root.innerHTML,/View bills due/);assert.deepEqual(days,[]);
  click('#private-brief-bills-open');for(let n=0;n<5;n++)await turn();

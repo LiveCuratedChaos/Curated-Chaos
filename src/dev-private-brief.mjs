@@ -557,6 +557,8 @@ dayNoticeVisible=Boolean(user&&data&&!notesWorkspace&&dayChanged());let content=
   render();
  }
  const click=event=>{
+  const billPage=event.target.closest('[data-brief-bills-page]');
+  if(billPage){const dir=billPage.dataset.briefBillsPage;if(!dateBlocked()&&['next','previous'].includes(dir))void briefBills?.open(dir==='next'?1:-1);return;}
   if(event.target.closest('#private-brief-bill-close')){briefBills?.closeSource();return;}
   const billSource=event.target.closest('[data-brief-bill-source]');
   if(billSource){if(!dateBlocked())void briefBills?.openSource(billSource.dataset.briefBillSource);return;}
