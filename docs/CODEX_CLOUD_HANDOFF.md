@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R35** Prepared a reversible, read-only Household Hub SQL draft. The active household picker and selected counts use the existing row policies, omit private and removed records, and stop returning data after departure or session revocation. All six isolated checks passed. The draft still needs a guarded app route and Household Hub UI.
+
 - **R34** Expired manual holding drafts no longer block Finance navigation in a resumed tab. The expired form stays hidden, and reopening starts a fresh read. All 331 holding, budget planner, widget and Finance privacy checks passed. Real brokerage and physical-device acceptance remain pending.
 
 - **R32 / R33** Expired budget and bill drafts no longer block reopening Finance controls before their timers run. A current draft or in-flight request still holds its guard. All 342 related checks passed.
