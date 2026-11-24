@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R16 / R17** the Daily Brief announces loading for requested bill schedules. Expiry of a daily schedule clears only its own names and details, so a separately verified weekly summary remains visible until its own deadline. All 325 related checks passed.
+
 - **R19** Calendar event title interpretation accepts the date and category suffixes in either order, including multiword categories. Empty and duplicate fields leave the draft intact. All 323 focused checks passed.
 
 - **R19** extended the new Calendar event title action with an explicit date phrase. It accepts today, tomorrow in New York, or an exact calendar date before the optional category. Invalid dates keep the draft intact. All 323 focused checks passed.

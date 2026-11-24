@@ -87,3 +87,25 @@ test('week counts load on request, disappear on concealment and reject changed o
  ctx.week={range:'rolling',weekStart:1};
  const hidden=panel.openWeek();ctx=null;reply(good);await hidden;assert.equal(panel.renderWeek(),'');
 });
+
+test('daily expiry leaves an independently verified week visible',async t=>{
+ const context={day,week:{range:'rolling',weekStart:1},expiresAt:now+300000};
+ const days=Array.from({length:7},(_,index)=>({day:'2026-11-'+(18+index),paid:0,unpaid:index===0?1:0}));
+ let finishDaily,notifyExpiry;
+ const expired=new Promise(resolve=>{notifyExpiry=resolve;});
+ let ready=false;
+ const panel=createBriefBills({clock:()=>now,context:()=>context,onChange(){if(ready)notifyExpiry();},client:{
+  briefBillWeek:async()=>({currentDay:result.currentDay,days,expiresAt:now+300000}),
+  briefBillsPage:()=>new Promise(resolve=>{finishDaily=resolve;})
+ }});
+ t.after(()=>panel.reset());
+ await panel.openWeek();
+ const opening=panel.open();
+ assert.match(panel.render(day),/Loading the bill schedule/);
+ finishDaily({...result,expiresAt:now+5});await opening;
+ ready=true;
+ const keepAlive=setTimeout(()=>{},1000);t.after(()=>clearTimeout(keepAlive));
+ await expired;
+ assert.doesNotMatch(panel.render(day),/Rent/);
+ assert.match(panel.renderWeek(),/1 unpaid · 0 paid/);
+});

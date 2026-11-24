@@ -43,6 +43,7 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
   const source=context();
   if(!source?.week||source.expiresAt<=clock())return '';
   const button='<button class="btn" type="button" id="private-brief-week-bills"'+(week?.busy?' disabled':'')+'>'+(week?.result?'Refresh weekly bills':'View bills for this week')+'</button>';
+  if(week?.busy)return '<p role="status">Loading bills for this week…</p>'+button;
   if(!week?.result)return (week?.failed?'<p role="status">Could not load bills for this week.</p>':'')+button;
   const due=week.result.days.filter(row=>row.paid+row.unpaid>0);
   const summary=due.length?'<ul>'+due.map(row=>'<li><button type="button" class="btn" data-private-brief-day="'+e(row.day)+'" aria-label="Open bill date '+e(row.day)+'">'+e(billDate.format(new Date(row.day+'T00:00:00Z')))+'</button> · '+row.unpaid+' unpaid · '+row.paid+' paid</li>').join('')+'</ul>':'<p>No bills are due this week.</p>';
@@ -81,7 +82,7 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
    if(current!==view||!available(day))return;
    verify(result,day,offset,previous);
    view.result=result;view.expiresAt=Math.min(result.expiresAt,source.expiresAt);
-   timer=setTimeout(()=>{if(current===view){reset();onChange();}},Math.max(0,view.expiresAt-clock()));timer.unref?.();
+   timer=setTimeout(()=>{if(current===view){resetDay();onChange();}},Math.max(0,view.expiresAt-clock()));timer.unref?.();
   }catch{if(current===view)view.failed=true;}
   finally{if(current===view){view.busy=false;if(!available(day))resetDay();onChange();}}
  }
@@ -109,6 +110,7 @@ export function createBriefBills({client,clock=Date.now,context,onChange}){
   if(!available(day))return '<p role="status">The bill schedule is unavailable.</p>';
   const result=current?.result;
   const button='<button class="btn" type="button" id="private-brief-bills-open"'+(current?.busy?' disabled':'')+'>'+(result?'Refresh bill schedule':'View bills due')+'</button>';
+  if(current?.busy&&!result)return '<p role="status">Loading the bill schedule…</p>'+button;
   if(!result)return (current?.failed?'<p role="status">Could not open the saved bill schedule.</p>':'')+button;
   const position=result.rows.length===1?String(result.offset+1):(result.offset+1)+'–'+(result.offset+result.rows.length);
   const summary=result.total?'Showing '+position+' of '+result.total+' bills due on '+e(day)+'.':'No saved bills are due on '+e(day)+'.';
