@@ -322,7 +322,10 @@ test('encrypted recovery keeps removed shortcuts out of active search until thei
 test('named shortcut history survives encrypted recovery without storing search runs or results',async t=>{
  const source=await setup(t,{allowRecordHistoryImport:true}),destination=await setup(t,{allowRecordHistoryImport:true});
  const sql=await readFile(new URL('../supabase/drafts/private_record_versions.sql',import.meta.url),'utf8');
- for(const s of [source,destination]){await administrator(s.db);await s.db.exec(sql);await actor(s.db,i.a,i.sa);}
+ const retention=await readFile(new URL('../supabase/drafts/private_record_restore_window.sql',import.meta.url),'utf8');
+ for(const s of [source,destination]){
+  await administrator(s.db);await s.db.exec(sql);await s.db.exec(retention);await actor(s.db,i.a,i.sa);
+ }
  const viewer={ownerId:i.a,accessToken:'fictional'},service=shortcutService(t,source.db);
  const filters={type:'school-course',section:'School',query:'leadership',status:'all',dateFrom:'',dateTo:'',priority:'all',dateStatus:'all'};
  const shortcut=record({item_type:'saved_search',origin:'PRIVATE_COOKIE_SAVED_SEARCH',payload:{source:'PRIVATE_SAVED_SEARCH_V1',schemaVersion:1,fictional:true,title:'Course reading',filters}});
@@ -392,6 +395,30 @@ test('named shortcut history survives encrypted recovery without storing search 
  assert.equal(native.snapshot.payload.title,'Study plan');assert.deepEqual(native.snapshot.payload.filters,filters);
  const byVersion=(left,right)=>left.source_version-right.source_version;
  assert.deepEqual(changedHistory.filter(v=>v.recovery).sort(byVersion),recovered.toSorted(byVersion));
+ const removal=await restored.prepare('recovered',viewer,{action:'remove',savedSearchToken:after.savedSearchToken});
+ const removeClaim=restored.claim('recovered',i.a,removal.reviewId);
+ assert.equal(await restored.authorize(removeClaim,viewer),true);
+ const removed=await restored.save(removeClaim,viewer,{offerUndo:true});
+ const inTrash=(await destination.repository.readPrivateRows(destination.who,i.a)).find(r=>r.id===shortcut.id);
+ assert.ok(inTrash.deleted_at);
+ assert.equal(inTrash.payload.title,before.record.name);
+ const oldArchive=await destination.executor.prepare(destination.who,{bytes});
+ assert.equal(oldArchive.canRestore,false);
+ const restore=await restored.prepare('recovered',viewer,{action:'restore',savedSearchToken:removed.undo.savedSearchToken});
+ assert.equal(restore.name,before.record.name);assert.deepEqual(restore.filters,filters);
+ const restoreClaim=restored.claim('recovered',i.a,restore.reviewId);
+ assert.equal(await restored.authorize(restoreClaim,viewer),true);
+ assert.deepEqual(await restored.save(restoreClaim,viewer),{saved:true,action:'restore'});
+ await assert.rejects(restored.prepare('recovered',viewer,{action:'restore',savedSearchToken:removed.undo.savedSearchToken}));
+ const undone=(await destination.repository.readPrivateRows(destination.who,i.a)).find(r=>r.id===shortcut.id);
+ assert.equal(undone.deleted_at,null);assert.deepEqual(undone.payload,inTrash.payload);assert.equal(undone.version,inTrash.version+1);
+ const finalHistory=await history(destination);
+ assert.deepEqual(finalHistory.filter(v=>v.recovery).sort(byVersion),recovered.toSorted(byVersion));
+ const written=finalHistory.filter(v=>!v.recovery).sort(byVersion);
+ assert.equal(written.length,3);
+ assert.deepEqual(written.map(v=>v.snapshot.payload.title),['Study plan','Course reading','Course reading']);
+ assert.deepEqual(written.map(v=>v.snapshot.deleted_at!==null),[false,false,true]);
+ assert.equal(digest([written[2].snapshot]),digest([inTrash]));
  const replay=await destination.executor.prepare(destination.who,{bytes});
  assert.equal(replay.canRestore,false);assert.equal(replay.reviewId,undefined);
  for(const extra of [{results:['Unrelated text']},{filters:{...filters,results:['Unrelated text']}}]){

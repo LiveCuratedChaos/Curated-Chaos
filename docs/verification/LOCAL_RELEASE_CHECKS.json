@@ -874,6 +874,12 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "recoveredNamedShortcutUndo": {
+      "date": "2026-11-24",
+      "passed": 32,
+      "failed": 0,
+      "scope": "Verified encrypted recovery, the original removal and reviewed Undo, exact PostgreSQL snapshots, unchanged recovered entries and refusal to overwrite later changes."
+    },
     "detailedWeekBills": {
       "date": "2026-11-24",
       "node": "24.22.3",
