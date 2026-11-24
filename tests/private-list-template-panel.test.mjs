@@ -10,3 +10,30 @@ test('create and edit require explicit before-after review and one approval save
 test('form input stays in the private draft and expired or unavailable permission gates fail closed',()=>{const s=setup();s.click('#private-list-templates-open');return turn().then(()=>{s.click('#private-list-template-new');s.panel.input({target:{name:'template-name',value:'Saved draft'}});assert.match(s.panel.render(),/value="Saved draft"/);let disabled=createPrivateListTemplatePanel({client:s.client,canUse:()=>false});assert.match(disabled.render(),/disabled/);disabled.dispose();});});
 
 test('Home grocery template creates a Home task draft only when explicitly enabled',async()=>{const s=setup(true);s.click('#private-list-templates-open');await turn();s.click('#private-list-template-new');const form={id:'private-list-template-form',elements:{'template-name':{value:'Weekly groceries'},'template-task-title':{value:'Buy groceries'},'template-section':{value:'Home'},'template-checklist':{value:'Oats\nMilk'}}};s.panel.submit({target:form,preventDefault(){}});await turn();assert.match(s.panel.render(),/Home grocery template/);assert.equal(s.state.calls.find(call=>Array.isArray(call)&&call[0]==='review')[1].section,'Home');s.click('#private-list-template-approve');await turn();assert.equal(s.state.saves,1);});
+
+test('a cancelled template request cannot replace a reopened account view or create a draft',async()=>{
+ let older,instantiate;
+ const used=[],client={
+  listTaskTemplates:()=>new Promise(resolve=>{older=resolve;}),
+  readTaskTemplate:async()=>({selectionToken:selection,name:'Current saved template',taskTitle:'Current task',
+   checklist:['Current step'],version:1,section:'Personal Life',expiresAt:now+50000}),
+  reviewTaskTemplate:assert.fail,saveTaskTemplate:assert.fail,
+  instantiateTaskTemplate:()=>new Promise(resolve=>{instantiate=resolve;})
+ };
+ const panel=createPrivateListTemplatePanel({client,clock:()=>now,onInstantiate:value=>used.push(value)});
+ const click=selector=>panel.click({target:{closest:query=>query===selector?{dataset:{privateListTemplateOpen:selection}}:null}});
+ const reply=name=>({templates:[{selectionToken:selection,name,taskTitle:'Current task',checklistCount:1,version:1,section:'Personal Life'}],count:1,expiresAt:now+60000});
+ click('#private-list-templates-open');
+ const late=older;
+ panel.reset();
+ click('#private-list-templates-open');
+ older(reply('Current saved template'));await turn();
+ late(reply('Previous owner template'));await turn();
+ assert.match(panel.render(),/Current saved template/);
+ assert.doesNotMatch(panel.render(),/Previous owner template/);
+ click('[data-private-list-template-open]');await turn();
+ click('#private-list-template-use');panel.reset();
+ instantiate({taskDraft:{title:'Previous owner task',day:'',section:'Personal Life',subtasks:[]},expiresAt:now+50000});
+ await turn();
+ assert.deepEqual(used,[]);
+});
