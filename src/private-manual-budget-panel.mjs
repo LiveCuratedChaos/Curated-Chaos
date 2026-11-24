@@ -83,6 +83,8 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
  }
  reset();
  function fresh(){return view&&view.expiresAt>clock();}
+ function expired(){return Boolean((view&&!fresh())||(directory&&directory.expiresAt<=clock()));}
+ function resetExpiredChooser(){const selection=period;reset();period=selection;}
  function expire(){reset();notice='The budget view expired. Open the period again.';onChange();}
  async function findPeriods(selection,kind,trail=[null]){
   const before=trail.at(-1)??undefined;
@@ -285,6 +287,7 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
  }
  return {render,reset,blocked:()=>Boolean(draft||review||planner||busy),input(event){
   const el=event.target,form=el.form?.id;
+  if(form==='budget-period'&&expired())resetExpiredChooser();
   if(form==='budget-plan'&&el.name==='reserveAmount'&&planner&&!busy&&!review){planner.reserve=el.value;return true;}
   if(el.name==='priorStart'&&fresh()&&!busy){priorStart=el.value;return true;}
   if(form==='budget-period'&&!view&&!directory&&!busy&&Object.hasOwn(period,el.name)){period[el.name]=el.value;if(el.name==='period')onChange();return true;}
@@ -311,7 +314,9 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
    return true;
   }
   if(!['budget-period','budget-edit'].includes(event.target.id))return false;
-  event.preventDefault();if(busy)return true;
+  event.preventDefault();
+  if(event.target.id==='budget-period'&&expired())resetExpiredChooser();
+  if(busy)return true;
   if(event.target.id==='budget-period'&&!view&&!directory&&canOpen()){
    try{void open(period.period==='month'?manualBudgetMonth(period.periodStart):manualBudgetPeriod(period));}
    catch{notice='Choose valid budget dates.';onChange();}
@@ -320,9 +325,12 @@ export function createManualBudgetPanel({client,allowIncome=false,allowPlanner=f
  },click(event){
   const action=event.target.closest('[data-budget-action]')?.dataset.budgetAction;
   if(!action)return false;
+  if(expired()){
+   if(!['all-periods','saved-months','transactions'].includes(action)){expire();return true;}
+   resetExpiredChooser();
+  }
   if(busy)return true;
   if(directory){
-   if(directory.expiresAt<=clock()){expire();return true;}
    if(action==='close-months'){reset();onChange();return true;}
    if(directory.periods){
     if(!canOpen())return true;

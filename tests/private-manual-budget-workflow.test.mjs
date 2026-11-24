@@ -319,3 +319,22 @@ test('a page of saved periods rejects duplicate dates, financial fields, stale r
  delay=true;await click('all-periods');panel.reset();resolvePage({periods:[period],hasMore:false,expiresAt:now+20000});
  await new Promise(resolve=>setImmediate(resolve));assert.doesNotMatch(panel.render(),/data-budget-action="period-transactions-/);
 });
+
+test('an expired saved-period view does not block choosing a new budget in a suspended tab',async t=>{
+ let now=Date.parse('2026-11-18T12:00:00Z');
+ const calls=[];
+ const client={manualBudgetPeriods:async()=>({periods:[],hasMore:false,expiresAt:now+1000}),
+  manualBudgetOpen:async period=>{calls.push(period);return {period,budget:null,version:0,expiresAt:now+1000};}};
+ const panel=createManualBudgetPanel({client,clock:()=>now});t.after(()=>panel.reset());
+ const turn=()=>new Promise(resolve=>setImmediate(resolve));
+ panel.click({target:{closest:()=>({dataset:{budgetAction:'all-periods'}})}});
+ await turn();
+ assert.match(panel.render(),/No saved budget periods/);
+ now+=1001;
+ assert.match(panel.render(),/Choose a budget period/);
+ panel.input({target:{name:'periodStart',value:'2027-01-15',form:{id:'budget-period'}}});
+ panel.submit({target:{id:'budget-period'},preventDefault(){}});
+ await turn();
+ assert.deepEqual(calls,[{period:'month',periodStart:'2027-01-01',periodEnd:'2027-01-31'}]);
+ assert.match(panel.render(),/2027-01-01 through 2027-01-31/);
+});
