@@ -61,3 +61,24 @@ test('the selected date lists only saved scheduled occurrences with their origin
  ]});
  assert.equal(privateWorkspaceBrief({...args,includeRoutines:true,selectedDay:'2026-11-11'}).routines.count,0);
 });
+
+test('live Brief transport requests recurrence metadata only with recurring chores enabled',async()=>{
+ const project='devproject12345',config={supabaseUrl:'https://'+project+'.supabase.co',projectRef:project,publishableKey:'sb_publishable_fixture'};
+ const recurrence={anchorDay:'2026-11-09',frequency:'daily',interval:1};
+ let query;
+ const fetcher=async url=>{
+  query=new URL(url).searchParams;
+  return {ok:true,text:async()=>JSON.stringify([row('task'),row('event',2)].map(record=>({
+   ...record,payload:undefined,brief_fictional:true,brief_title:record.payload.title,
+   brief_day:record.payload.day,brief_done:record.payload.done,brief_time:record.payload.time,brief_recurrence:recurrence
+  })))};
+ };
+ const disabled=await createDevApi(config,fetcher).listPrivateBriefRecords('fixture',owner);
+ assert.doesNotMatch(query.get('select'),/recurrence/);
+ assert.equal(disabled[0].payload.recurrence,undefined);
+ const enabled=await createDevApi(config,fetcher,{includeRecurringChores:true}).listPrivateBriefRecords('fixture',owner);
+ assert.ok(query.get('select').split(',').includes('brief_recurrence:payload->recurrence'));
+ assert.equal(query.get('owner_id'),'eq.'+owner);
+ assert.deepEqual(enabled[0].payload.recurrence,recurrence);
+ assert.equal(enabled[1].payload.recurrence,undefined);
+});

@@ -41,6 +41,9 @@ test('saved routine starts with one occurrence and only approved completion crea
  assert.deepEqual(byTitle(after,title).map(row=>row.day).sort(),[day,next]);
  assert.equal(after.routines.rows.find(row=>row.title===title).done,true);
  assert.equal((await tab.client.brief(next)).routines.rows.find(row=>row.title===title).done,false);
+ const weekly=await tab.client.briefWeek({anchor:day,range:'rolling',weekStart:1,includeRoutines:true});
+ assert.deepEqual(weekly.days.find(entry=>entry.day===day).routines,{due:0,complete:1});
+ assert.deepEqual(weekly.days.find(entry=>entry.day===next).routines,{due:1,complete:0});
 });
 test('a routine must use the enabled scope, exact first date and a schedule with a future occurrence',async t=>{
  const day='2028-02-29',schedule={anchorDay:day,frequency:'yearly',interval:1},fields={section:'School',day,title:'Fixture annual date'};

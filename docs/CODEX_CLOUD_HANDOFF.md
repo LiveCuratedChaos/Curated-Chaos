@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R16** verified the live transport’s owner filter and recurrence projection, plus the signed-in week response after a reviewed completion. The original date showed one completed routine and the successor date showed one due. All 46 related checks passed.
+
 - **R16 / R17** prepared a signed-in desktop and phone browser case for enabling Routines, opening its original task, completing it, and following the next saved occurrence. Playwright discovered both cases. Execution stopped before either case because the fictional fixture could not start.
 
 - **R16 / R17** the local Daily Brief summary now accepts the optional Routines section. It describes due and completed counts for the selected date without repeating routine titles. The summary still renders when the optional source is absent. All 347 related checks passed.
@@ -106,7 +108,7 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 The November 24 full macOS check passed 3,533 of 3,557 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. Of the 24 listener-related failures, 16 directly reported a binding denial and eight received the same denial inside an assertion. Privacy, whitespace and launcher checks passed. The subsequent overlapping-pay-period recovery and timestamp change passed 39 focused checks. Two obsolete School shortcut expectations had failed on the first run and passed after correction.
 
-Playwright 1.65.1 discovered 242 cases. The 26 selected desktop and phone-size cases are pending. This session cannot bind the fictional fixture to loopback, and macOS also denied launch of the pinned headless Chromium. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, historical note and task text, Undo, saved shortcut history and monthly budget navigation. Local acceptance used fictional records.
+Playwright 1.65.1 discovered 244 cases. The 26 selected desktop and phone-size cases are pending. This session cannot bind the fictional fixture to loopback, and macOS also denied launch of the pinned headless Chromium. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, historical note and task text, Undo, saved shortcut history and monthly budget navigation. Local acceptance used fictional records.
 
 ## Where to resume
 
