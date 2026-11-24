@@ -974,3 +974,13 @@ test('Calendar previews a category and date phrase before applying the protected
  assert.deepEqual([calls[0].dateFrom,calls[0].dateTo],['2026-11-08','2026-11-14']);
  assert.equal(calls[0].query,'');
 });
+
+test('Brief refresh status reports only selected and authorized sources',async t=>{
+ const s=await setup(t,{allowBriefLayout:true,allowProjects:true,clock:()=>narrativeInstant,
+  projectOverviewReader:async()=>({available:false})});
+ assert.match(s.root.innerHTML,/Sources checked/);
+ const status=()=>s.root.innerHTML.match(/<details id="private-brief-source-status"[^>]*>(.*?)<\/details>/s)?.[1]??'';
+ assert.match(status(),/Tasks, events and note titles · Checked/);
+ assert.match(status(),/Projects · Unavailable/);
+ assert.doesNotMatch(status(),/School|Google|Apple/);
+});
