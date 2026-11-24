@@ -10,3 +10,21 @@ function hierarchyFixture(){const s=setup(),child=structuredClone(s.f.project);c
 test('proved subproject set deduplicates the original step linked to root and child',async()=>{const s=hierarchyFixture(),v=await s.read({includeSubprojects:true});assert.equal(v.progress.total,2);assert.equal(v.progress.completed,1);assert.equal(v.tasks.find(t=>t.reference.kind==='school-step').projectIds.length,2);const direct=await s.read();assert.equal(direct.tasks.find(t=>t.reference.kind==='school-step').projectIds.length,1);});
 test('changed hierarchy or descendant version refuses a roll-up rather than returning partial totals',async()=>{for(const mode of ['graph','child']){const s=hierarchyFixture();let n=0;const get=s.api.projectHierarchySnapshot;s.api.projectHierarchySnapshot=async()=>{if(++n===2){if(mode==='graph')s.snapshot.relationships=[];else s.child.version++;}return get();};await assert.rejects(s.read({includeSubprojects:true}));}});
 test('subproject reads require an explicit boolean and complete authenticated graph capability',async()=>{const s=setup();await assert.rejects(s.read({includeSubprojects:true}));await assert.rejects(s.read({includeSubprojects:'yes'}));});
+
+
+test('the combined project read refuses swapped responses for different courses in the same batch',async()=>{
+ const s=setup(),secondCourse={...structuredClone(s.f.course),id:id(700)};
+ const secondReference={...s.f.taskReference,recordId:secondCourse.id};
+ const second=link(prepareCommonTaskMembership({...s.f.values,taskRow:secondCourse,taskReference:secondReference}).payload);
+ second.id=id(701);
+ s.api.listCommonTaskMemberships=async()=>structuredClone([s.a,second]);
+ const get=s.api.getCommonTaskSource;
+ s.api.getCommonTaskSource=async(token,ref,who)=>ref.recordId===secondCourse.id?[structuredClone(secondCourse)]:get(token,ref,who);
+ assert.equal((await s.read()).progress.linkedTotal,3);
+ s.api.getCommonTaskSource=async(token,ref,who)=>{
+  if(ref.recordId===secondCourse.id)return [structuredClone(s.f.course)];
+  if(ref.recordId===s.f.course.id)return [structuredClone(secondCourse)];
+  return get(token,ref,who);
+ };
+ await assert.rejects(s.read(),/Complete current project task progress/);
+});

@@ -27,7 +27,17 @@ export async function readPrivateCommonProjectTasks({api,actor,selectedProject,i
   }
   const reservations=canonical.map(row=>commonTaskMembershipState(row,owner)),references=new Map();
   for(const row of reservations)if(row.deleted_at===null&&row.payload.project.kind==='project'&&included.has(row.payload.project.recordId.toLowerCase()))references.set(row.payload.task.recordId.toLowerCase(),row.payload.task);
-  const sources=[],refs=[...references.values()];for(let offset=0;offset<refs.length;offset+=4){if(!isCurrent())fail();const batch=await Promise.all(refs.slice(offset,offset+4).map(ref=>api.getCommonTaskSource(token,ref,owner)));if(!isCurrent()||batch.some(v=>!Array.isArray(v)||v.length!==1))fail();sources.push(...batch.map(rows=>rows[0]));}
+  const sources=[],refs=[...references.values()];
+  for(let offset=0;offset<refs.length;offset+=4){
+   if(!isCurrent())fail();
+   const batch=await Promise.all(refs.slice(offset,offset+4).map(async ref=>{
+    const rows=await api.getCommonTaskSource(token,ref,owner);
+    if(!Array.isArray(rows)||rows.length!==1||typeof rows[0]?.id!=='string'||rows[0].id.toLowerCase()!==ref.recordId.toLowerCase())fail();
+    return rows[0];
+   }));
+   if(!isCurrent())fail();
+   sources.push(...batch);
+  }
   const input={ownerId:owner,rootProjectId:target.source.id,projects:selectedProjects,ordinaryTasks:tasks,ordinaryMemberships:selectedMemberships,canonicalSources:sources,canonicalMemberships:reservations};
   const result=commonProjectTaskView(input);return{input,result,fingerprint:stableStringify({...input,hierarchy,projects:sorted(selectedProjects),ordinaryTasks:sorted(tasks),ordinaryMemberships:sorted(selectedMemberships),canonicalSources:sorted(sources),canonicalMemberships:sorted(reservations)})};
  }
