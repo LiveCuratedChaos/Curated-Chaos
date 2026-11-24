@@ -6,6 +6,7 @@ import {financeRecordId} from './private-finance-identity.mjs';
 import {randomBytes} from 'node:crypto';
 import {manualBudgetMonth,manualBudgetPeriod,normalizeManualBudget,calculateManualBudget,nextManualBudget} from '../src/private-finance-manual.mjs';
 import {stableStringify} from './stable-json.mjs';
+import {safeSavedAt} from './snapshot-freshness.mjs';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const same=(left,right)=>stableStringify(left)===stableStringify(right);
@@ -38,10 +39,10 @@ function preserveExpenseMatches(current,proposed){
 // PostgreSQL retains microseconds. Two budgets created in the same millisecond must still page in order.
 export function budgetCreationCursor(row){
  const value=row.created_at instanceof Date?row.created_at.toISOString():row.created_at;
- const match=typeof value==='string'&&/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(?:Z|\+00:00)$/.exec(value);
- if(!uuid.test(row.id)||!match||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,19)!==match[1])
-  throw Error('The saved budget creation time could not be verified.');
- return {createdAt:match[1]+'.'+(match[2]??'').padEnd(6,'0')+'Z',id:row.id};
+ const utc=safeSavedAt(value);
+ if(!uuid.test(row.id)||!utc||utc.length!==24)throw Error('The saved budget creation time could not be verified.');
+ const fraction=value.match(/\.(\d{1,6})/)?.[1]??'';
+ return {createdAt:utc.slice(0,-1)+fraction.padEnd(6,'0').slice(3)+'Z',id:row.id};
 }
 
 export function createPrivateBudgetReview({api,now=Date.now,documentStorage=null}) {

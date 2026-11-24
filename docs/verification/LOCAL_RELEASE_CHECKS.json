@@ -874,6 +874,13 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "recoveredOverlappingPayPeriods": {
+      "date": "2026-11-24",
+      "node": "24.22.3",
+      "passed": 39,
+      "failed": 0,
+      "scope": "Encrypted recovery of two overlapping pay periods, separate original transactions on the same day, a later reviewed expense, replay conflict protection and equivalent offset timestamps with all six fractional digits retained."
+    },
     "savedCustomBudgetPeriods": {
       "date": "2026-11-24",
       "node": "24.22.3",
@@ -1111,7 +1118,7 @@
     "failed": 0,
     "scope": "Canonical shared task/project progress and links, manual status independence, deduplicated hierarchy, recovery/archive boundaries and protected original details. Reuses existing project engine for Personal Life goals."
   },
-  "nextAction": "Verify restored overlapping custom pay periods through the original history browser and refusal to overwrite later spending.",
+  "nextAction": "Run the pending browser acceptance on a compatible free runner. Compare the approved Quick Add task categories with the reviewed editor under R19.",
   "pendingDecisions": [],
   "resolvedHomeCleaningRollover": {
     "requirement": "R31 Home cleaning rollover semantics",

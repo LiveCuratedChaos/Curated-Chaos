@@ -16,7 +16,7 @@ import {createIsolatedDevelopmentDatabase,identities,actor} from './fixtures/iso
 import {createManualFinanceStorage} from '../server/private-manual-finance-storage.mjs';
 import {incomeSourceType,incomePaymentType,paymentId,incomeMonth} from '../server/private-income-records.mjs';
 import {nextFinanceSlot} from '../server/private-finance-identity.mjs';
-import {budgetCreationCursor,manualBudgetId} from '../server/private-budget-period.mjs';
+import {budgetCreationCursor,createPrivateBudgetReview,manualBudgetId} from '../server/private-budget-period.mjs';
 import {blockedManualFinanceRestores,supportsOrdinaryWorkspaceRestore} from '../server/private-workspace-restore-contract.mjs';
 const {a,sa,b,sb}=identities;
 
@@ -363,4 +363,53 @@ test('saved budget pages retain exact PostgreSQL creation order and restrict the
  const second=await api.listManualBudgetPage('a',a,boundary);assert.deepEqual(second.map(row=>row.id),ordered.slice(10));
  assert.deepEqual(await api.listManualBudgetPage('b',a,null),[]);
  assert.equal(budgetCreationCursor({id:ids[0],created_at:'2026-11-24T11:22:33.000009+00:00'}).createdAt,'2026-11-24T11:22:33.000009Z');
+ assert.equal(budgetCreationCursor({id:ids[0],created_at:'2026-11-24T01:22:33.123789+05:30'}).createdAt,'2026-11-23T19:52:33.123789Z');
+ assert.throws(()=>budgetCreationCursor({id:ids[0],created_at:'2026-02-30T01:00:00-05:00'}));
+});
+
+test('encrypted recovery reopens independent transactions for overlapping pay periods and preserves a later reviewed expense',async t=>{
+ const {key,projectRef,who,viewer,sourceRepo,destinationRepo,api,restored,executor}=await financeRecovery(t,'fictionalpayperiods');
+ const sourceEditor=createPrivateBudgetReview({api}),editor=createPrivateBudgetReview({api:restored});
+ t.after(()=>{sourceEditor.dispose();editor.dispose();});
+ const first={period:'pay_period',periodStart:'2026-12-22',periodEnd:'2027-01-05'};
+ const second={period:'pay_period',periodStart:'2026-12-29',periodEnd:'2027-01-10'};
+ const expiresAt=Date.now()+300000;
+ async function saveExpense(service,period,expense){
+  const view=await service.open('fixture-tab',viewer,period,expiresAt);
+  const review=await service.prepare('fixture-tab',viewer,{index:null,expense});
+  const result=await service.save(service.claim('fixture-tab',a,review.reviewId),viewer);
+  assert.deepEqual(result,{saved:true,version:view.version+1});
+ }
+ const groceries={day:'2026-12-30',category:'Food',label:'Fictional market',amountMinor:2200};
+ const supplies={day:'2026-12-30',category:'Home',label:'Fictional supplies',amountMinor:3700};
+ await saveExpense(sourceEditor,first,groceries);
+ await saveExpense(sourceEditor,second,supplies);
+ const ids=new Set([manualBudgetId(a,first),manualBudgetId(a,second)]);
+ const rows=(await sourceRepo.readPrivateRows(who,a)).filter(row=>ids.has(row.id));
+ assert.equal(rows.length,2);
+ const bytes=sealPrivateWorkspace({projectRef,ownerId:a,key,rows}).bytes;
+ const ready=await executor.prepare(who,{bytes});
+ assert.equal(ready.canRestore,true);assert.equal(ready.insertCount,2);
+ assert.equal((await executor.execute(who,{reviewId:ready.reviewId,approved:true})).restored,2);
+ const periods=await editor.savedPeriods(viewer,{},expiresAt);
+ assert.equal(periods.hasMore,false);assert.equal(periods.periods.length,2);
+ assert.deepEqual(Object.keys(periods).sort(),['expiresAt','hasMore','periods']);
+ assert.deepEqual(periods.periods.toSorted((left,right)=>left.periodStart.localeCompare(right.periodStart)),[first,second]);
+ for(const period of periods.periods){
+  const view=await editor.open('fixture-tab',viewer,period,expiresAt);
+  const expected=period.periodStart===first.periodStart?groceries:supplies;
+  assert.deepEqual(view.budget.transactions,[expected]);
+ }
+ const same=await executor.prepare(who,{bytes});assert.equal(same.insertCount,0);
+ assert.equal((await executor.execute(who,{reviewId:same.reviewId,approved:true})).restored,0);
+ const extra={day:'2027-01-02',category:'Travel',amountMinor:1400};
+ await saveExpense(editor,first,extra);
+ const latest=await destinationRepo.readPrivateRows(who,a);
+ const replay=await executor.prepare(who,{bytes});
+ assert.equal(replay.conflictCount,1);assert.equal(replay.canRestore,false);assert.equal(replay.reviewId,undefined);
+ assert.deepEqual(await destinationRepo.readPrivateRows(who,a),latest);
+ const aView=await editor.open('fixture-tab',viewer,first,expiresAt);
+ const bView=await editor.open('fixture-tab',viewer,second,expiresAt);
+ assert.deepEqual(aView.budget.transactions,[groceries,extra]);assert.deepEqual(bView.budget.transactions,[supplies]);
+ assert.deepEqual([calculateManualBudget(aView.budget).totalActualMinor,calculateManualBudget(bView.budget).totalActualMinor],[3600,3700]);
 });
