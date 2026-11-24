@@ -2,9 +2,28 @@
 import {escapeHtml as e} from '/src/core.mjs';
 const status=document.getElementById('connection-status'),controls=document.getElementById('connection-controls');
 let csrf,busy=false,sessionTimer,macPreviewTimer,macReviewTimer,supportsSaveReview=false,closed=false,generation=0,sessionExpiresAt=null,savedSourceItems=[];
+const providerChecks=new Map();
+const previewFailures=new Map([
+ ['reconnect-required','Google authorization needs reconnection. Reauthorize this source before previewing again.'],
+ ['access-denied','Google denied the selected permission. Review the source permission before trying again.'],
+ ['selection-changed','The source selection changed. Reload its saved selection before previewing again.'],
+ ['session-ended','The app sign-in expired. Sign in again before previewing.'],
+ ['incomplete-read','The preview was incomplete. No items from it were accepted.'],
+ ['source-unavailable','Google is unavailable for this source. Check the connection before trying again.']
+]);
+function providerCheckText(connectionId){
+ const checked=providerChecks.get(connectionId);
+ return checked?'Last successful provider check in this tab: '+checked+'.':'The last successful provider check is unknown.';
+}
+function setProviderCheck(connectionId,checked){
+ if(checked)providerChecks.set(connectionId,checked);
+ else providerChecks.delete(connectionId);
+ const note=document.getElementById('google-check-'+connectionId);
+ if(note)note.textContent=providerCheckText(connectionId);
+}
 function connectionControls(c){
  const paused=c.status==='paused';
- return '<section class="panel"><h2>'+e(c.provider==='gmail'?'Gmail':'Google Calendar')+'</h2><p>'+e(c.accountLabel)+' · '+(paused?'Paused on this Mac':c.selectionRequired?'Saved authorization · source selection required':'Saved authorization · source selection saved')+'</p><p><strong>Permission:</strong> '+e(c.permission||'Unknown permission; reconnect review required.')+'</p><p class="tiny muted">The last successful provider check is unknown. No automatic refresh runs. '+(c.provider==='gmail'?'Gmail read-only authorization can cover the mailbox; this app preview is limited to the selected Inbox dates and subject/sender metadata.':'Calendar access is read only and limited to the selected calendar and dates.')+'</p><button class="btn" data-pause="'+e(c.connectionId)+'" data-paused="'+String(paused)+'">'+(paused?'Resume connection':'Pause connection')+'</button><p class="tiny muted">Pausing blocks new previews on this Mac and retains your encrypted credentials and source choices. It does not revoke Google permission or delete data. Resume only if you want this Mac to use the connection again.</p></section>'+(paused?'':selectionForm(c));
+ return '<section class="panel"><h2>'+e(c.provider==='gmail'?'Gmail':'Google Calendar')+'</h2><p>'+e(c.accountLabel)+' · '+(paused?'Paused on this Mac':c.selectionRequired?'Saved authorization · source selection required':'Saved authorization · source selection saved')+'</p><p><strong>Permission:</strong> '+e(c.permission||'Unknown permission; reconnect review required.')+'</p><p class="tiny muted"><span id="google-check-'+e(c.connectionId)+'">'+e(providerCheckText(c.connectionId))+'</span> No automatic refresh runs. '+(c.provider==='gmail'?'Gmail read-only authorization can cover the mailbox; this app preview is limited to the selected Inbox dates and subject/sender metadata.':'Calendar access is read only and limited to the selected calendar and dates.')+'</p><button class="btn" data-pause="'+e(c.connectionId)+'" data-paused="'+String(paused)+'">'+(paused?'Resume connection':'Pause connection')+'</button><p class="tiny muted">Pausing blocks new previews on this Mac and retains your encrypted credentials and source choices. It does not revoke Google permission or delete data. Resume only if you want this Mac to use the connection again.</p></section>'+(paused?'':selectionForm(c));
 }
 function selectionForm(c){
  const saved=c.sourceSelection,selection=saved?.selection;
@@ -41,7 +60,7 @@ function renderSavedRows(){
 controls.addEventListener('input',event=>{if(event.target.id==='saved-source-search')try{renderSavedRows();}catch{}});
 controls.addEventListener('change',event=>{if(event.target.id==='saved-source-provider')try{renderSavedRows();}catch{}});
 let sessionChannel;try{if(typeof BroadcastChannel!=='undefined'){sessionChannel=new BroadcastChannel('cc-private-development-session');sessionChannel.onmessage=event=>{if(event.data==='signed-out'){clearPrivateView();status.textContent='Signed out in another tab. Reload to sign in again.';}};}}catch{}
-function clearPrivateView(){clearTimeout(macReviewTimer);clearTimeout(macPreviewTimer);savedSourceItems=[];generation++;clearTimeout(sessionTimer);csrf=null;sessionExpiresAt=null;supportsSaveReview=false;controls.innerHTML='';}
+function clearPrivateView(){clearTimeout(macReviewTimer);clearTimeout(macPreviewTimer);savedSourceItems=[];providerChecks.clear();generation++;clearTimeout(sessionTimer);csrf=null;sessionExpiresAt=null;supportsSaveReview=false;controls.innerHTML='';}
 function checkCurrent(expected){
  if(closed||expected!==generation)throw Error('Page session ended.');
  if(sessionExpiresAt!==null&&sessionExpiresAt<=Date.now()){clearPrivateView();throw Error('Page session expired.');}
@@ -50,7 +69,7 @@ async function request(path,options={}){
  const expected=generation;checkCurrent(expected);
  const r=await fetch(path,{...options,cache:'no-store'});checkCurrent(expected);
  const data=await r.json();checkCurrent(expected);
- if(!r.ok)throw Error(data.error||'Connection unavailable.');return data;
+ if(!r.ok){const error=Error(data.error||'Connection unavailable.');if(previewFailures.has(data.outcome))error.outcome=data.outcome;throw error;}return data;
 }
 window.addEventListener('pagehide',()=>{closed=true;clearPrivateView();sessionChannel?.close();status.textContent='Private connections page closed.';});
 async function show(){
@@ -60,6 +79,7 @@ async function show(){
  if(/^cc_m0e_dev_session_[a-z0-9-]{10,32}$/.test(state.legacySessionKey||''))try{sessionStorage.removeItem(state.legacySessionKey);}catch{}
  if(!state.configured){status.textContent='Google development credentials are not installed yet. The live app is unchanged.';controls.innerHTML='';return;}
  if(!state.signedIn){
+  providerChecks.clear();
   status.textContent='Sign in with your development test account. Session credentials stay on the local server; sign-in lasts up to 30 minutes.';
   controls.innerHTML='<form id="connection-login"><label class="field-label">Development email<input type="email" name="email" autocomplete="username" required></label><label class="field-label">Development password<input type="password" name="password" autocomplete="current-password" required></label><button class="btn" type="submit">Sign in</button></form>';return;
  }
@@ -84,7 +104,7 @@ controls.addEventListener('submit',async event=>{
  if(event.target.classList.contains('source-selection')){
   event.preventDefault();if(busy)return;busy=true;
   const form=event.target,values=new FormData(form),result=form.querySelector('.selection-result'),button=form.querySelector('button');button.disabled=true;
-  try{await request('/auth/google/selection',{method:'POST',headers:{'Content-Type':'application/json','X-CC-CSRF':csrf},body:JSON.stringify({connectionId:form.dataset.connection,selection:{source:values.get('source'),startDate:values.get('startDate'),endDate:values.get('endDate')}})});result.textContent='Selection saved privately on this Mac. No data has been read or imported. Refresh to review or preview the saved choice.';}
+  try{await request('/auth/google/selection',{method:'POST',headers:{'Content-Type':'application/json','X-CC-CSRF':csrf},body:JSON.stringify({connectionId:form.dataset.connection,selection:{source:values.get('source'),startDate:values.get('startDate'),endDate:values.get('endDate')}})});setProviderCheck(form.dataset.connection,null);result.textContent='Selection saved privately on this Mac. No data has been read or imported. Refresh to review or preview the saved choice.';}
   catch{result.textContent='Selection could not be saved. Check the dates and sign-in, then retry.';}
   finally{busy=false;button.disabled=false;}return;
  }
@@ -143,14 +163,16 @@ controls.addEventListener('click',async event=>{
    catch{savedSourceItems=[];target.textContent='Saved source items are unavailable. Sign in again and retry. No partial list is shown.';}return;
   }
   if(button.dataset.pause){
-   await request('/auth/google/pause',{method:'POST',headers:{'Content-Type':'application/json','X-CC-CSRF':csrf},body:JSON.stringify({connectionId:button.dataset.pause,paused:button.dataset.paused!=='true'})});await show();return;
+   await request('/auth/google/pause',{method:'POST',headers:{'Content-Type':'application/json','X-CC-CSRF':csrf},body:JSON.stringify({connectionId:button.dataset.pause,paused:button.dataset.paused!=='true'})});setProviderCheck(button.dataset.pause,null);await show();return;
   }
   if(button.dataset.preview){
    const target=button.parentElement.querySelector('.source-preview');target.textContent='Reading the saved selection…';
    try{const data=await request('/auth/google/preview',{method:'POST',headers:{'Content-Type':'application/json','X-CC-CSRF':csrf},body:JSON.stringify({connectionId:button.dataset.preview,selectionId:button.dataset.selection,confirmed:true})});
-    const rows=data.result.messages||data.result.events||[];
+    const rows=data.result.messages||data.result.events;
+    if(!Array.isArray(rows)||typeof data.readAt!=='string'||!Number.isFinite(Date.parse(data.readAt))||new Date(data.readAt).toISOString()!==data.readAt)throw Error();
+    setProviderCheck(button.dataset.preview,data.readAt);
     target.innerHTML='<p>Read at '+e(data.readAt)+'. This is a snapshot, not a live feed.</p><p>'+rows.length+' '+(rows.length===1?'item':'items')+' in this preview. Nothing saved to the app database.</p>'+(rows.length?'<form class="import-review" data-preview-id="'+e(data.previewId)+'"><p>Select up to 250 items to review. Nothing is selected automatically. Review expires after five minutes and does not save items.</p><ul>'+rows.map(r=>'<li><label><input type="checkbox" name="item" value="'+e(r.key)+'"> '+e(r.subject||r.title)+' · '+e(r.sender||r.start||r.startDate||'')+'</label></li>').join('')+'</ul><button class="btn" type="submit">Review selected items</button><p role="status" class="review-result"></p></form>':'<p>No items to review in this window.</p>');
-   }catch{target.textContent='Preview unavailable. Reload and check your sign-in or reconnect Google. No partial result was accepted.';}return;
+   }catch(err){target.textContent=previewFailures.get(err.outcome)??'The preview is unavailable. No items were accepted.';}return;
   }
   if(button.dataset.provider){const result=await request('/auth/google/begin',{method:'POST',headers:{'Content-Type':'application/json','X-CC-CSRF':csrf},body:JSON.stringify({provider:button.dataset.provider})});location.assign(result.authorizationUrl);}
  }catch{status.textContent='Connection did not complete. Sign in again or retry.';}finally{busy=false;button.disabled=false;}

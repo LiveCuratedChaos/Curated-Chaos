@@ -94,3 +94,29 @@ test('saved-source search includes Mac calendar labels and filters and escapes t
 test('failed saved-source reload clears the previous in-memory inventory',async()=>{
  const h=harness(async path=>path==='/auth/google/status'?response(state):{ok:false,json:async()=>({error:'Fictional failed read'})});await vm.runInContext('boot',h.context);vm.runInContext("savedSourceItems=[{title:'PRIVATE OLD FIXTURE'}]",h.context);const target={innerHTML:'',textContent:''},button={dataset:{saved:'true'},disabled:false,closest:()=>null,parentElement:{querySelector:()=>target}};await h.events.click({target:{closest:()=>button}});assert.equal(vm.runInContext('savedSourceItems.length',h.context),0);assert.match(target.textContent,/unavailable/);
 });
+
+test('an explicit Google preview updates this tab’s check and gives outcome-specific recovery',async()=>{
+ const paths=[],checked='2026-11-24T15:00:00.000Z',connectionId='fixture-connection';
+ let outcome=null;
+ const h=harness(async path=>{
+  paths.push(path);
+  if(path==='/auth/google/status')return response(state);
+  if(outcome)return {ok:false,json:async()=>({error:'PRIVATE UPSTREAM ERROR',outcome})};
+  return response({readAt:checked,previewId:'fixture',result:{messages:[]}});
+ });
+ await vm.runInContext('boot',h.context);
+ const target={innerHTML:'',textContent:''};
+ const card={textContent:''};h.nodes['google-check-'+connectionId]=card;
+ const button={dataset:{preview:connectionId,selection:'fixture'},disabled:false,closest:()=>null,parentElement:{querySelector:()=>target}};
+ await h.events.click({target:{closest:()=>button}});
+ assert.equal(card.textContent,'Last successful provider check in this tab: '+checked+'.');
+ assert.match(target.innerHTML,/0 items/);
+ outcome='reconnect-required';
+ await h.events.click({target:{closest:()=>button}});
+ assert.match(target.textContent,/authorization needs reconnection/);
+ assert.doesNotMatch(target.textContent,/PRIVATE UPSTREAM ERROR/);
+ assert.equal(paths.filter(path=>path==='/auth/google/preview').length,2);
+ assert.match(card.textContent,/Last successful provider check/);
+ h.pageEvents.pagehide();
+ assert.equal(vm.runInContext('providerChecks.size',h.context),0);
+});
