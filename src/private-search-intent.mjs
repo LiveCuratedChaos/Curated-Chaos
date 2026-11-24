@@ -25,8 +25,8 @@ function dates(phrase,anchor,weekStart){
 export function parsePrivateSearchIntent(text,options={}){
  try{
   if(!options||typeof options!=='object'||Array.isArray(options))fail();
-  const {now=Date.now(),allowProjects=false,allowSchoolRead=false,allowDocuments=false,allowPriority=false,allowDates=false,allowUndated=false,weekStart=0}=options;
-  if(!Number.isFinite(now)||[allowProjects,allowSchoolRead,allowDocuments,allowPriority,allowDates,allowUndated].some(value=>typeof value!=='boolean')||!Number.isInteger(weekStart)||weekStart<0||weekStart>6||typeof text!=='string'||!text.trim()||text.length>300||/[\u0000-\u001f\u007f]/.test(text))fail();
+  const {now=Date.now(),allowProjects=false,allowSchoolRead=false,allowDocuments=false,allowCalendarFilters=false,allowPriority=false,allowDates=false,allowUndated=false,weekStart=0}=options;
+  if(!Number.isFinite(now)||[allowProjects,allowSchoolRead,allowDocuments,allowCalendarFilters,allowPriority,allowDates,allowUndated].some(value=>typeof value!=='boolean')||!Number.isInteger(weekStart)||weekStart<0||weekStart>6||typeof text!=='string'||!text.trim()||text.length>300||/[\u0000-\u001f\u007f]/.test(text))fail();
   const anchorDay=newYorkTaskDay(now);if(!day(anchorDay))fail();
   let remaining=text.trim(),type,status,section,priority,overdue=false;
   const leading=remaining.match(/^(?:show|find)\b\s*/i);if(leading)remaining=remaining.slice(leading[0].length);
@@ -55,8 +55,15 @@ export function parsePrivateSearchIntent(text,options={}){
    else if(['low','normal','high','urgent'].includes(lower)){if(priority!==undefined)fail();priority=lower[0].toUpperCase()+lower.slice(1);remaining=remaining.slice(word[0].length).replace(/^priority\b\s*/i,'');}
    else fail();
   }
-  if(!type||type==='project'&&!allowProjects||priority!==undefined&&!allowPriority||type!=='task'&&(status!==undefined&&status!=='all'||priority!==undefined||overdue)||type==='event'&&section!==undefined||type==='note'&&section!==undefined&&section!=='Personal Life')fail();
+  if(!type||allowCalendarFilters&&type!=='event'||type==='project'&&!allowProjects||priority!==undefined&&!allowPriority||type!=='task'&&(status!==undefined&&status!=='all'||priority!==undefined||overdue)||type==='event'&&section!==undefined||type==='note'&&section!==undefined&&section!=='Personal Life')fail();
   const fields={query:'',type,section:type==='event'?'Calendar':section??'all',status:status??'all',...(allowPriority?{priority:priority??'all'}:{}),...(allowDates?{dateFrom:'',dateTo:''}:{}),...(allowUndated?{dateStatus:'all'}:{})};
+  if(allowCalendarFilters){
+   const category=remaining.match(/^in\s+category\s+"([^"\\]+)"(?:\s+(.*))?$/i);
+   const value=category?.[1].trim();
+   if(category&&(!value||value==='all'))fail();
+   Object.assign(fields,{eventKind:'all',eventSource:'all',eventCategory:value??'all'});
+   if(category)remaining=category[2]?.trim()??'';
+  }
   let dateCondition=null,undated=false,titleText=remaining;
   if(/^about\s+"/i.test(remaining)){
    const quoted=remaining.match(/^about\s+"([^"\\]*)"(?:\s+(.*))?$/i);if(!quoted||!quoted[1].trim())fail();fields.query=quoted[1].trim();titleText='';const trailing=quoted[2]?.trim()??'';

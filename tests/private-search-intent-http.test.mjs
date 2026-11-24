@@ -5,10 +5,10 @@ const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',other='bbbbbbbb-bbbb-4bbb-8bb
 const id=n=>'11111111-1111-4111-a111-'+String(n).padStart(12,'0');
 const row=n=>({id:id(n),owner_id:owner,household_id:null,visibility:'private',section:'Calendar',item_type:'event',version:1,created_at:'2026-11-01T12:00:00Z',updated_at:'2026-11-02T12:00:00Z',deleted_at:null,payload:{fictional:true,title:'Fictional event '+String(n).padStart(2,'0'),day:'2026-11-17',time:'10:00',description:'PRIVATE_DESCRIPTION',location:'PRIVATE_LOCATION'}});
 
-async function setup(t,{dates=true}={}){
+async function setup(t,{dates=true,calendar=false}={}){
  const state={active:true,reads:0,selected:0,writes:0,rows:[row(1)]};
  const api={signIn:async()=>({accessToken:'FICTIONAL_ACCESS_TOKEN',refreshToken:'FICTIONAL_REFRESH_TOKEN',expiresAt:now+3600000}),getUser:async()=>({id:owner,email:'demo@example.test'}),isSessionActive:async()=>state.active,signOutLocal:async()=>{},refreshSession:async()=>{throw Error('Unexpected refresh');},listPrivateBriefRecords:async()=>{state.reads++;return structuredClone(state.rows);},getPrivateEvent:async(_token,selected,who)=>{assert.equal(who,owner);state.selected++;return structuredClone(state.rows.filter(r=>r.id===selected));},addFictionalEvent:async()=>{state.writes++;throw Error('Unexpected insert');},updatePrivateEvent:async()=>{state.writes++;throw Error('Unexpected write');}};
- const router=createPrivateSessionHttp({origin,api,now:()=>now,allowBriefRead:true,allowSearch:true,allowSearchDates:dates});t.after(()=>router.dispose());let cookie='',csrf='';
+ const router=createPrivateSessionHttp({origin,api,now:()=>now,allowBriefRead:true,allowSearch:true,allowSearchDates:dates,allowCalendarWorkspace:calendar,allowEventCreate:calendar,allowEventEdit:calendar,allowEventDetails:calendar});t.after(()=>router.dispose());let cookie='',csrf='';
  async function call(path,body,extra={},method=body===undefined?'GET':'POST'){
   const req={url:'/auth/workspace/'+path,method,headers:{host:'127.0.0.1:5312',origin,cookie,'content-type':'application/json','x-cc-request':'workspace-session','x-cc-csrf':csrf,...extra},async *[Symbol.asyncIterator](){yield JSON.stringify(body);}},res={writeHead(status,headers){this.status=status;this.headers=headers;return this;},end(body){this.body=body;}};
   assert.equal(await router.handle(req,res),true);const data=JSON.parse(res.body);if(res.headers['Set-Cookie'])cookie=res.headers['Set-Cookie'].split(';')[0];if(data.csrf)csrf=data.csrf;return{status:res.status,data,text:res.body};
@@ -39,4 +39,19 @@ test('compiled filters cannot widen disabled server date or project permissions'
 });
 test('compiled searches retain private owner boundaries and suppress invalid sources',async t=>{
  const s=await setup(t);for(const changed of [{owner_id:other},{visibility:'household',household_id:other}]){s.state.rows=[{...task(1),...changed}];const result=await s.call('search',compile('open work tasks due 2026-11-17'));assert.equal(result.status,409);assert.doesNotMatch(result.text,/Fictional|PRIVATE_|11111111/);}assert.equal(s.state.writes,0);
+});
+
+test('a compiled Calendar category and date phrase opens only the matching protected event',async t=>{
+ const fixture=await setup(t,{calendar:true});
+ const event=(index,day,category)=>({...row(index),origin:'PRIVATE_COOKIE_EVENT_CREATE',
+  payload:{...row(index).payload,day,calendarCategory:category}});
+ fixture.state.rows=[event(1,'2026-11-17','Work Shift'),event(2,'2026-11-17','Personal'),event(3,'2026-11-18','Work Shift')];
+ const fields=parsePrivateSearchIntent('calendar events in category "Work Shift" on 2026-11-17',{now,allowDates:true,allowCalendarFilters:true}).fields;
+ const result=await fixture.call('calendar',fields);
+ assert.equal(result.status,200);
+ assert.deepEqual(result.data.results.map(result=>result.title),['Fictional event 01']);
+ assert.equal(result.data.eventCategory,'Work Shift');
+ assert.equal(fixture.state.selected,0);
+ assert.equal(fixture.state.writes,0);
+ assert.doesNotMatch(result.text,/PRIVATE_DESCRIPTION|PRIVATE_LOCATION/);
 });

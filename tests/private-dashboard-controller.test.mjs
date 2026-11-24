@@ -959,3 +959,18 @@ test('reviewed document phrases use the authorized metadata search only after Ap
  await turn();await turn();
  assert.deepEqual(calls,[[{collection:'all',text:'warranty'},'first']]);
 });
+
+test('Calendar previews a category and date phrase before applying the protected event filters',async t=>{
+ const s=await setup(t,calendarOptions),calls=[],original=s.client.calendar;
+ s.client.calendar=fields=>{calls.push(structuredClone(fields));return original(fields);};
+ setIntentText(s,'Calendar events in category "Work Shift" this week');
+ clickIntent(s,'#private-search-interpret');
+ assert.match(s.root.innerHTML,/Event category<\/dt><dd>Work Shift/);
+ assert.deepEqual(calls,[]);
+ clickIntent(s,'#private-search-intent-apply');
+ await turn();await turn();
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].eventCategory,'Work Shift');
+ assert.deepEqual([calls[0].dateFrom,calls[0].dateTo],['2026-11-08','2026-11-14']);
+ assert.equal(calls[0].query,'');
+});

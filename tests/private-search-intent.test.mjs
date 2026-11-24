@@ -67,3 +67,13 @@ test('document metadata phrases require document scope and retain exact literal 
  assert.throws(()=>parse('find documents about warranty'));
  for(const phrase of ['find documents','documents about warranty due tomorrow','documents about "invoice" this week','documents about " "'])assert.throws(()=>parse(phrase,options));
 });
+
+test('a quoted Calendar category is exact and requires Calendar filter scope',()=>{
+ const phrase='Calendar events in category "Work Shift" this week';
+ assert.deepEqual(parse(phrase,{allowCalendarFilters:true}).fields,{
+  ...parse('events this week').fields,eventKind:'all',eventSource:'all',eventCategory:'Work Shift'
+ });
+ assert.throws(()=>parse(phrase));
+ for(const text of ['calendar events in category Work Shift','calendar events in category "all"','calendar events in category " "',
+  'calendar events in category "Work Shift" in category "Home"','tasks in category "Work Shift"'])assert.throws(()=>parse(text,{allowCalendarFilters:true}));
+});
