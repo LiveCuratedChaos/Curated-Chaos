@@ -1229,6 +1229,7 @@ test('the optional Routines section renders saved completion status and opens th
    {title:'Fictional evening stretch',section:'Personal Life',done:true}
   ]}})});
  assert.match(s.root.innerHTML,/data-private-brief-section="routines"/);
+ assert.match(s.root.innerHTML,/1 due · 1 complete/);
  assert.match(s.root.innerHTML,/Fictional morning stretch.*Personal Life · Due/);
  assert.match(s.root.innerHTML,/Fictional evening stretch.*Personal Life · Complete/);
  let requested;

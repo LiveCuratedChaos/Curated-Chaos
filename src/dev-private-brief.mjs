@@ -324,7 +324,7 @@ export function mountPrivateBrief(root,{client=createPrivateWorkspaceClient(),cl
    if(!allowBriefLayout||!allowRecurringChores)continue;
    const routines=data.routines;
    const body=validBriefRoutines(routines,data.counts?.supportedRecords)
-    ?routines.count?list(routines.rows,routines.count,row=>[row.section,row.done?'Complete':'Due'].join(' · ')):'<p>No saved routines are due on this date.</p>'
+    ?routines.count?'<p>'+(routines.count-routines.completed)+' due · '+routines.completed+' complete</p>'+list(routines.rows,routines.count,row=>[row.section,row.done?'Complete':'Due'].join(' · ')):'<p>No saved routines are due on this date.</p>'
     :'<p role="status">Saved routines are unavailable.</p>';
    html+=section.display==='collapsed'?'<details class="panel" id="private-brief-section-routines" '+(sectionOpen.routines?'open':'')+'><summary>Routines</summary>'+body+'</details>':'<section class="panel" data-private-brief-section="routines"><h2>Routines</h2>'+body+'</section>';
    continue;

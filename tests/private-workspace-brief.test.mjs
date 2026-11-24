@@ -56,8 +56,8 @@ test('the selected date lists only saved scheduled occurrences with their origin
  assert.equal(privateWorkspaceBrief(args).routines,undefined);
  const result=privateWorkspaceBrief({...args,includeRoutines:true,taskReadAction:task=>({taskReadToken:task===complete?'b'.repeat(43):'a'.repeat(43)})});
  assert.deepEqual(result.routines,{count:2,completed:1,rows:[
-  {title:complete.payload.title,section:'Home',done:true,taskReadToken:'b'.repeat(43)},
-  {title:incomplete.payload.title,section:'Home',done:false,taskReadToken:'a'.repeat(43)}
+  {title:incomplete.payload.title,section:'Home',done:false,taskReadToken:'a'.repeat(43)},
+  {title:complete.payload.title,section:'Home',done:true,taskReadToken:'b'.repeat(43)}
  ]});
  assert.equal(privateWorkspaceBrief({...args,includeRoutines:true,selectedDay:'2026-11-11'}).routines.count,0);
 });
@@ -81,4 +81,19 @@ test('live Brief transport requests recurrence metadata only with recurring chor
  assert.equal(query.get('owner_id'),'eq.'+owner);
  assert.deepEqual(enabled[0].payload.recurrence,recurrence);
  assert.equal(enabled[1].payload.recurrence,undefined);
+});
+
+
+test('completed occurrences cannot push an outstanding routine off the selected day',()=>{
+ const day='2026-11-09';
+ const rows=Array.from({length:21},(_,index)=>{
+  const task=row('task',index+1),done=index<20;
+  return {...task,payload:{...task.payload,done,title:done?'Earlier completed routine '+index:'Z outstanding routine',
+   recurrence:{anchorDay:day,frequency:'daily',interval:1}}};
+ });
+ const {routines}=privateWorkspaceBrief({rows,ownerId:owner,now,includeRoutines:true});
+ assert.equal(routines.count,21);
+ assert.equal(routines.completed,20);
+ assert.equal(routines.rows.length,20);
+ assert.deepEqual(routines.rows[0],{title:'Z outstanding routine',section:'Home',done:false});
 });

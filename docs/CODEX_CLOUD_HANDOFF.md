@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R16 / R17** The selected Daily Brief shows verified due and completed routine totals. Outstanding routines appear before completed ones, so completed occurrences cannot hide a due item within the 20-row display limit. All 379 related checks passed.
+
 - **R15** Smaller-project roll-ups verify each reply against its requested original project before combining tasks. All 35 related checks passed, including signed-in hierarchy navigation and isolated SQL guards. Independent database connections and device acceptance remain pending.
 
 - **R14** The combined project task reader checks that each batched source reply belongs to the requested original course. Swapped replies fail before progress is shown. All 41 related checks passed, including signed-in subproject reads and isolated membership writes.
