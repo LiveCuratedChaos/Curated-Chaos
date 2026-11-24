@@ -28,6 +28,7 @@ export async function runOfflineChecks({projectRoot=root,runCommand=runLocal,pla
   {name:'tests',command:process.execPath,args:['--test','--test-reporter='+resolve(root,'tools/offline-test-reporter.mjs'),'--test-concurrency='+Math.min(5,Math.max(1,availableParallelism()-1)),...runnableTests]},
   {name:'privacy',command:process.execPath,args:['tools/check-repository-privacy.mjs','--scan-content']},
   {name:'whitespace',command:'git',args:['diff','--check']},
+  {name:'stagedWhitespace',command:'git',args:['diff','--cached','--check']},
   {name:'launcher',command:'/bin/zsh',args:['-n','tools/Open-Private-Workspace.command']}
  ];
  const results={};for(const check of plan){try{results[check.name]=await runCommand(check,projectRoot);}catch{results[check.name]={code:null,stdout:''};}}
@@ -38,7 +39,7 @@ export async function runOfflineChecks({projectRoot=root,runCommand=runLocal,pla
   ?{loopbackListenerDenied:denied,assertionWithDeniedListener:wrapped,unclassified:counts.failed-denied-wrapped}:null;
  const sites=failureReasons?.unclassified>0?[...new Set([...results.tests.stdout.matchAll(/^# unclassifiedSite ([a-f0-9]{16}:[1-9][0-9]{0,7})$/gm)].map(match=>match[1]))].slice(0,16).filter(site=>locateOfflineFailure(site,projectRoot)):[];
  let privacy=null;try{privacy=JSON.parse(results.privacy.stdout.trim().split(/\r?\n/).at(-1));}catch{}
- const checks={tests:results.tests.code===0&&counts.total>0&&counts.passed===counts.total&&counts.failed===0&&counts.cancelled===0&&counts.skipped===0,privacy:results.privacy.code===0&&privacy?.safe===true&&privacy?.unprotectedPaths===0&&privacy?.trackedPrivateFiles===0&&Number.isInteger(privacy?.checkedIgnoreRules)&&privacy.checkedIgnoreRules>0&&privacy?.contentScan===true&&privacy?.content?.findingSources===0&&privacy?.content?.blockedSources===0,whitespace:results.whitespace.code===0,launcher:results.launcher.code===0};
+ const checks={tests:results.tests.code===0&&counts.total>0&&counts.passed===counts.total&&counts.failed===0&&counts.cancelled===0&&counts.skipped===0,privacy:results.privacy.code===0&&privacy?.safe===true&&privacy?.unprotectedPaths===0&&privacy?.trackedPrivateFiles===0&&Number.isInteger(privacy?.checkedIgnoreRules)&&privacy.checkedIgnoreRules>0&&privacy?.contentScan===true&&privacy?.content?.findingSources===0&&privacy?.content?.blockedSources===0,whitespace:results.whitespace.code===0&&results.stagedWhitespace.code===0,launcher:results.launcher.code===0};
  return{platformExclusions,localChecksPassed:Object.values(checks).every(Boolean),automatedTests:counts,...(failureReasons?{failureReasons}:{}),...(sites.length?{unclassifiedSites:sites}:{}),checks,privacy:privacy?{unprotectedPaths:privacy.unprotectedPaths,trackedPrivateFiles:privacy.trackedPrivateFiles,checkedIgnoreRules:privacy.checkedIgnoreRules,binarySourcesSkipped:privacy.content?.binarySourcesSkipped}:null};
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){

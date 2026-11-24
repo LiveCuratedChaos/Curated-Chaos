@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R01** The offline whitespace gate checks the staged snapshot and working tree independently. Eight focused runner checks passed, including a staged error hidden by a clean working-tree result. The preceding full Node 26 run on the Mac working tree passed 3,544 of 3,568 tests; all 24 remaining failures were attributed to a denied loopback listener. Privacy, whitespace and launcher checks passed. Hosted quota remains unverified.
+
 - **R16 / R17** Detailed week rejects routine totals that exceed the supported saved inventory across all seven dates. Every saved occurrence belongs to one date. The controller keeps the selected-day Brief available while suppressing an invalid weekly response. All 358 related checks passed on Node 26 with the in-process HTTP handler, including the signed-in week response after completing a routine. Browser acceptance remains pending because the fixture cannot bind to loopback in this environment.
 
 - **R16** reused the original task selection when a saved routine appears in both Routines and a task section. Both entries open the same revision. All 360 related checks passed.
