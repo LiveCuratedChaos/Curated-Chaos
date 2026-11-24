@@ -1170,6 +1170,16 @@ test('event title category interpretation updates the editable draft before its 
  click('#private-interpret-event-category');
  assert.match(s.root.innerHTML,/value="Work Shift"/);
  assert.match(s.root.innerHTML,/Team meeting date: 2027-02-29 category: Work/);
+ s.events.input({target:{name:'create-title',value:'Team meeting category: date: tomorrow'}});
+ click('#private-interpret-event-category');
+ assert.match(s.root.innerHTML,/Use one valid date/);
+ s.events.input({target:{name:'create-title',value:'Team meeting category: Work Shift date: date: tomorrow'}});
+ click('#private-interpret-event-category');
+ assert.match(s.root.innerHTML,/Use one valid date/);
+ s.events.input({target:{name:'create-title',value:'Team meeting category: Work Shift date: tomorrow'}});
+ click('#private-interpret-event-category');
+ assert.match(s.root.innerHTML,/name="create-calendarCategory"[^>]*value="Work Shift"/);
+ assert.match(s.root.innerHTML,/name="create-day"[^>]*value="2026-11-11"/);
  s.events.input({target:{name:'create-title',value:'Team meeting date: tomorrow category: Work'}});
  click('#private-interpret-event-category');
  assert.match(s.root.innerHTML,/name="create-title"[^>]*value="Team meeting"/);

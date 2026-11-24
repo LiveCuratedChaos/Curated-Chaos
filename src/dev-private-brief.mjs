@@ -597,28 +597,31 @@ dayNoticeVisible=Boolean(user&&data&&!notesWorkspace&&dayChanged());let content=
  const click=event=>{
   if(event.target.closest('#private-interpret-event-category')){
    if(!allowSmartTaskEntry||!allowCalendarWorkspace||!user||disposed||busy||creationReview||creationLocked||!taskDraft?.event||taskDraft.editToken)return;
-   let title=taskDraft.title.trim(),category,day;
-   const categoryPhrase=/\s+category\s*:\s*(.*)$/i.exec(title);
-   if(categoryPhrase){
-    category=categoryPhrase[1].trim();
-    title=title.slice(0,categoryPhrase.index).trimEnd();
+   const text=taskDraft.title.trim();
+   const markers=[...text.matchAll(/(?:^|\s+)(date|category)\s*:/gi)];
+   const title=text.slice(0,markers[0]?.index??text.length).trimEnd();
+   const fields=new Map(markers.map((marker,index)=>[
+    marker[1].toLowerCase(),
+    text.slice(marker.index+marker[0].length,markers[index+1]?.index??text.length).trim()
+   ]));
+   const hasCategory=fields.has('category'),hasDate=fields.has('date');
+   const category=fields.get('category');
+   let day=fields.get('date')?.toLowerCase();
+   if(day==='today'||day==='tomorrow'){
+    const today=newYorkTaskDay(clock());
+    day=day==='today'?today:new Date(Date.parse(today+'T00:00:00Z')+86400000).toISOString().slice(0,10);
    }
-   const datePhrase=/\s+date\s*:\s*(\S+)$/i.exec(title);
-   if(datePhrase){
-    const date=datePhrase[1].toLowerCase(),today=newYorkTaskDay(clock());
-    day=date==='today'?today:date==='tomorrow'?new Date(Date.parse(today+'T00:00:00Z')+86400000).toISOString().slice(0,10):date;
-    title=title.slice(0,datePhrase.index).trimEnd();
-   }
-   if(!title||!(categoryPhrase||datePhrase)||categoryPhrase&&(!category||category.length>48||/[\u0000-\u001f\u007f]/.test(category))||
-      datePhrase&&!validDay(day)||/\b(?:date|category)\s*:/i.test(title+' '+(category??''))){
+   if(!title||!markers.length||fields.size!==markers.length||
+      hasCategory&&(!category||category.length>48||/[\u0000-\u001f\u007f]/.test(category))||
+      hasDate&&!validDay(day)){
     error='Use one valid date and one category at most, for example Team meeting date: tomorrow category: Work.';
     focusTarget='[role="alert"]';
    }else{
     taskDraft.title=title;
-    if(categoryPhrase)taskDraft.calendarCategory=category;
-    if(datePhrase)taskDraft.day=day;
+    if(hasCategory)taskDraft.calendarCategory=category;
+    if(hasDate)taskDraft.day=day;
     error='';
-    focusTarget=categoryPhrase?'[name="create-calendarCategory"]':'[name="create-day"]';
+    focusTarget=hasCategory?'[name="create-calendarCategory"]':'[name="create-day"]';
    }
    render();
    return;
