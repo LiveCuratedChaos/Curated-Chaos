@@ -73,3 +73,25 @@ test('Household Hub escapes names and releases private listing state on expiry a
  complete({households:[{name:'Fictional late home',role:'adult'}],expiresAt:120001});await turn();
  assert.doesNotMatch(panel.render(),/Fictional/);
 });
+
+test('development directory uses the authenticated member filter and returns sparse names and roles',async()=>{
+ const {createDevApi}=await import('../src/dev-api.mjs');
+ const {validatePrivatePreviewArguments}=await import('../tools/private-session-preview-server.mjs');
+ const config={supabaseUrl:'https://devproject123.supabase.co',projectRef:'devproject123',publishableKey:'sb_publishable_fixture'};
+ let request;
+ const api=createDevApi(config,async(url,options)=>{
+  request={url:new URL(url),options};
+  return {ok:true,text:async()=>JSON.stringify([{role:'adult',cc_households:{name:'Fictional home'},user_id:i.b}])};
+ });
+ assert.deepEqual(await api.listHouseholdDirectory('fixture-session',i.b),[{name:'Fictional home',role:'adult'}]);
+ assert.equal(request.url.pathname,'/rest/v1/cc_household_memberships');
+ assert.deepEqual(Object.fromEntries(request.url.searchParams),{
+  select:'role,cc_households!inner(name)',user_id:'eq.'+i.b,status:'eq.active',order:'household_id.asc',limit:'101'
+ });
+ assert.equal(request.options.headers.Authorization,'Bearer fixture-session');
+ await assert.rejects(api.listHouseholdDirectory('fixture-session','invalid'));
+ const flags=['--fixtures-only','--serve-private-dashboard','--allow-private-brief-read','--allow-private-widget-layouts-reviewed','--allow-private-widget-pages'];
+ const enable='--allow-private-household-directory-reviewed';
+ assert.equal(validatePrivatePreviewArguments([...flags,enable]).allowHouseholdDirectory,true);
+ assert.throws(()=>validatePrivatePreviewArguments(flags.filter(f=>!f.endsWith('widget-pages')).concat(enable)));
+});

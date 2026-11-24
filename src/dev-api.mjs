@@ -101,6 +101,15 @@ export function createDevApi(config,fetcher=fetch,{timeoutMs=15000,includeAllDay
       if(!data?.access_token || !data?.refresh_token || !Number.isFinite(data.expires_in) || data.expires_in<=0) throw Error('Session renewal did not return valid credentials.');
       return {accessToken:data.access_token,refreshToken:data.refresh_token,expiresAt:Date.now()+data.expires_in*1000};
     },
+    async listHouseholdDirectory(token,ownerId){
+      if(!recoveryUuid(ownerId))throw Error('Verified household member required.');
+      const query=new URLSearchParams({
+        select:'role,cc_households!inner(name)',user_id:'eq.'+ownerId,status:'eq.active',order:'household_id.asc',limit:'101'
+      });
+      const rows=await request('/rest/v1/cc_household_memberships?'+query,{},token);
+      if(!Array.isArray(rows)||rows.length>100)throw Error('Household list could not be verified.');
+      return rows.map(row=>({name:row?.cc_households?.name,role:row?.role}));
+    },
     getUser(token){return request('/auth/v1/user',{},token);},
     async isSessionActive(token){const active=await request('/rest/v1/rpc/cc_development_session_active',{method:'POST',body:'{}'},token);if(typeof active!=='boolean')throw Error('Development session status not verified.');return active;},
     signOutLocal(token){return request('/auth/v1/logout?scope=local',{method:'POST'},token);},
