@@ -30,5 +30,7 @@ test('optional routine counts use saved occurrences on each exact date',()=>{
  const options={anchor:values.anchor,dateView:values,now,includeRoutines:true};
  const invalid=structuredClone(view);invalid.days[0].routines.complete=3;
  assert.throws(()=>verifyPrivateBriefWeek(invalid,options));
+ const duplicated=structuredClone(view);duplicated.days[2].routines.due=1;
+ assert.throws(()=>verifyPrivateBriefWeek(duplicated,options),/Saved routine counts could not be verified/);
  assert.throws(()=>verifyPrivateBriefWeek(view,{...options,includeRoutines:false}));
 });

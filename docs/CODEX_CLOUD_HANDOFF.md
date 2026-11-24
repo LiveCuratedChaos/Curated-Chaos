@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R16 / R17** Detailed week rejects routine totals that exceed the supported saved inventory across all seven dates. Every saved occurrence belongs to one date. All 357 related checks passed on Node 26 with the in-process HTTP handler, including the signed-in week response after completing a routine. Browser acceptance remains pending because the fixture cannot bind to loopback in this environment.
+
 - **R16** reused the original task selection when a saved routine appears in both Routines and a task section. Both entries open the same revision. All 360 related checks passed.
 
 - **R16 / R17** the Daily Brief verifies routine totals, completion status, allowed fields and original-task selections before displaying them. The same validation applies to the narrative. All 367 related checks passed.
