@@ -45,12 +45,14 @@ test('a compiled Calendar category and date phrase opens only the matching prote
  const fixture=await setup(t,{calendar:true});
  const event=(index,day,category)=>({...row(index),origin:'PRIVATE_COOKIE_EVENT_CREATE',
   payload:{...row(index).payload,day,calendarCategory:category}});
- fixture.state.rows=[event(1,'2026-11-17','Work Shift'),event(2,'2026-11-17','Personal'),event(3,'2026-11-18','Work Shift')];
- const fields=parsePrivateSearchIntent('calendar events in category "Work Shift" on 2026-11-17',{now,allowDates:true,allowCalendarFilters:true}).fields;
+ fixture.state.rows=[event(1,'2026-11-17','Work Shift'),event(2,'2026-11-17','Personal'),event(3,'2026-11-18','Work Shift'),{...event(4,'2026-11-17','Work Shift'),origin:'mac_calendar_import'}];
+ const fields=parsePrivateSearchIntent('calendar events of type timed from manual calendar in category "Work Shift" on 2026-11-17',{now,allowDates:true,allowCalendarFilters:true}).fields;
  const result=await fixture.call('calendar',fields);
  assert.equal(result.status,200);
  assert.deepEqual(result.data.results.map(result=>result.title),['Fictional event 01']);
  assert.equal(result.data.eventCategory,'Work Shift');
+ assert.equal(result.data.eventKind,'timed');
+ assert.equal(result.data.eventSource,'manual');
  assert.equal(fixture.state.selected,0);
  assert.equal(fixture.state.writes,0);
  assert.doesNotMatch(result.text,/PRIVATE_DESCRIPTION|PRIVATE_LOCATION/);

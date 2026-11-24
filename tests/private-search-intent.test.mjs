@@ -77,3 +77,15 @@ test('a quoted Calendar category is exact and requires Calendar filter scope',()
  for(const text of ['calendar events in category Work Shift','calendar events in category "all"','calendar events in category " "',
   'calendar events in category "Work Shift" in category "Home"','tasks in category "Work Shift"'])assert.throws(()=>parse(text,{allowCalendarFilters:true}));
 });
+
+test('Calendar can narrow event kind and source without widening other filters',()=>{
+ const options={allowCalendarFilters:true};
+ const phrase='Calendar events of type all-day from saved calendar in category "Work Shift" this week';
+ assert.deepEqual(parse(phrase,options).fields,{
+  ...parse('events this week').fields,eventKind:'allDay',eventSource:'saved',eventCategory:'Work Shift'
+ });
+ assert.equal(parse('Calendar events of type timed from other saved calendar',options).fields.eventSource,'other');
+ assert.throws(()=>parse(phrase));
+ for(const invalid of ['Calendar events of type random','Calendar events from private calendar',
+  'Calendar events from saved calendar from manual calendar','Calendar events of type timed of type all-day'])assert.throws(()=>parse(invalid,options));
+});

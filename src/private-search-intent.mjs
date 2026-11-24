@@ -58,11 +58,20 @@ export function parsePrivateSearchIntent(text,options={}){
   if(!type||allowCalendarFilters&&type!=='event'||type==='project'&&!allowProjects||priority!==undefined&&!allowPriority||type!=='task'&&(status!==undefined&&status!=='all'||priority!==undefined||overdue)||type==='event'&&section!==undefined||type==='note'&&section!==undefined&&section!=='Personal Life')fail();
   const fields={query:'',type,section:type==='event'?'Calendar':section??'all',status:status??'all',...(allowPriority?{priority:priority??'all'}:{}),...(allowDates?{dateFrom:'',dateTo:''}:{}),...(allowUndated?{dateStatus:'all'}:{})};
   if(allowCalendarFilters){
+   const kind=remaining.match(/^of\s+type\s+(timed|all-day)(?:\s+|$)/i);
+   if(kind)remaining=remaining.slice(kind[0].length).trim();
+   const source=remaining.match(/^from\s+(manual|saved|other\s+saved)\s+calendar(?:\s+|$)/i);
+   if(source)remaining=remaining.slice(source[0].length).trim();
    const category=remaining.match(/^in\s+category\s+"([^"\\]+)"(?:\s+(.*))?$/i);
    const value=category?.[1].trim();
    if(category&&(!value||value==='all'))fail();
-   Object.assign(fields,{eventKind:'all',eventSource:'all',eventCategory:value??'all'});
+   const sourceName=source?.[1].toLowerCase().split(/\s+/)[0];
+   Object.assign(fields,{
+    eventKind:kind?kind[1].toLowerCase()==='timed'?'timed':'allDay':'all',
+    eventSource:sourceName??'all',eventCategory:value??'all'
+   });
    if(category)remaining=category[2]?.trim()??'';
+   if(/^(?:of\s+type|from|in\s+category)\b/i.test(remaining))fail();
   }
   let dateCondition=null,undated=false,titleText=remaining;
   if(/^about\s+"/i.test(remaining)){
