@@ -56,11 +56,11 @@
     }
   },
   "browser": {
-    "preparedCases": 230,
+    "preparedCases": 232,
     "freshExecutionVerified": false,
-    "selectedCases": 6,
+    "selectedCases": 8,
     "selectedCasesExecuted": 0,
-    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews'",
+    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens'",
     "reason": "The fictional fixture could not bind 127.0.0.1:5316 in the managed Mac session."
   },
   "releaseComplete": false,
@@ -811,6 +811,13 @@
       "passed": 432,
       "failed": 0,
       "scope": "Original event handoff with date and filters retained, selected note, task, project and event reads from the Favorites widget, removal, expiry and partial inventory handling. Signed-in fictional HTTP and controller checks."
+    },
+    "documentFavorites": {
+      "passed": 435,
+      "failed": 0,
+      "node": "24.22.3",
+      "command": "node --test --test-concurrency=3 tests/private-document-*.test.mjs tests/private-favorites.test.mjs tests/private-school-library.test.mjs tests/private-workspace-restore-repository.test.mjs tests/private-workspace-client.test.mjs tests/private-workspace-static.test.mjs tests/private-dashboard-controller.test.mjs",
+      "scope": "Document originals, reviewed collections, widget, expiry, inaccessible documents and encrypted restoration."
     }
   },
   "widgetSourceAssociations": {
@@ -878,7 +885,7 @@
     "failed": 0,
     "scope": "Canonical shared task/project progress and links, manual status independence, deduplicated hierarchy, recovery/archive boundaries and protected original details. Reuses existing project engine for Personal Life goals."
   },
-  "nextAction": "Run the six selected desktop and phone-size Chromium cases and the full offline suite on a runner that permits loopback listeners. Continue R13 with saved private document Favorites and the original document reader.",
+  "nextAction": "Add private loopback failure counts to the standard offline report and continue independent R13 search and recovery work.",
   "pendingDecisions": [],
   "resolvedHomeCleaningRollover": {
     "requirement": "R31 Home cleaning rollover semantics",

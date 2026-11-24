@@ -7,8 +7,9 @@ export function validateFavoriteItems(value){
  if(!keys(value,'items,version')||value.version!==1||!Array.isArray(value.items)||value.items.length>500)throw Error('Unsupported favorite items.');
  const seen=new Set();
  for(const item of value.items){
-  if(!keys(item,'collections,id,type')||!['note','task','project','event','program','course'].includes(item.type)||!uuid(item.id)||seen.has(item.id)||!Array.isArray(item.collections)||item.collections.length>100||item.collections.some(id=>!uuid(id))||new Set(item.collections).size!==item.collections.length)throw Error('Unsupported favorite item reference.');
-  seen.add(item.id);
+  const identity=item?.type==='document'?'document/'+item.id:item?.id;
+  if(!keys(item,'collections,id,type')||!['note','task','project','event','program','course','document'].includes(item.type)||!uuid(item.id)||seen.has(identity)||!Array.isArray(item.collections)||item.collections.length>100||item.collections.some(id=>!uuid(id))||new Set(item.collections).size!==item.collections.length)throw Error('Unsupported favorite item reference.');
+  seen.add(identity);
  }
  return structuredClone(value);
 }

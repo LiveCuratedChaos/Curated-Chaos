@@ -36,6 +36,21 @@ export function createPrivateFavoriteSchool(options,type){
  return createFavoriteRecords(options,{type,lookup:'getPrivateSchoolRecord',tokenField:'schoolReadToken',summary,selected,
   inventory:(api,actor)=>api.listPrivateSchoolSummaries(actor.accessToken,actor.ownerId)});
 }
+export function createPrivateFavoriteDocuments({api,now,documents,favoriteReader}){
+ const storage=api.documentStorage;
+ const row=(doc,owner)=>({id:doc.id,version:doc.version,owner,section:null,payload:{title:doc.fields.name},doc});
+ const selectedReader=(id,key)=>[documents,favoriteReader].find(reader=>reader.current(id,key));
+ const inventoryReader={begin(id,owner,expiresAt){
+  const issue=favoriteReader.beginSelection(id,owner,expiresAt);
+  return record=>issue(record.doc);
+ }};
+ return createFavoriteRecords({api,now,selectedReader,inventoryReader},{
+  type:'document',tokenField:'documentReadToken',summary:(record,owner)=>record.owner===owner,
+  async selected(reader,id,actor,key){const {doc,expiresAt}=await reader.selected(id,actor,key);return {record:row(doc,actor.ownerId),expiresAt};},
+  async inventory(api,actor,ids){return (await storage.selectedMetadata(actor,[...ids])).map(doc=>row(doc,actor.ownerId));},
+  async lookupRows(actor,id){return [row(await storage.inspect(actor,id),actor.ownerId)];}
+ });
+}
 function createFavoriteRecords({api,now,selectedReader,inventoryReader},policy){
  const store=createPrivateFavoriteItemStore({api,now}),states=new Map();
  function clear(id){clearTimeout(states.get(id)?.timer);states.delete(id);store.clear(id);}
@@ -82,7 +97,7 @@ function createFavoriteRecords({api,now,selectedReader,inventoryReader},policy){
   const result=await store.save(c.inner,actor);if(!active(c.s)||!result.saved)throw Error('Check current favorites.');
   clear(c.s.id);return{saved:true};
  }
- const inventory=actor=>policy.inventory?policy.inventory(api,actor):api.listPrivateBriefRecords(actor.accessToken,actor.ownerId);
+ const inventory=(actor,ids)=>policy.inventory?policy.inventory(api,actor,ids):api.listPrivateBriefRecords(actor.accessToken,actor.ownerId);
  function visibleRows(rows,owner,refs){
   if(!Array.isArray(rows)||rows.length>2000)throw Error('Favorite items are unavailable.');
   const visible=new Map();
@@ -95,7 +110,7 @@ function createFavoriteRecords({api,now,selectedReader,inventoryReader},policy){
  }
  function originalRow(row,issue){return {title:row.payload.title,...policy.fields?.(row),[policy.tokenField]:issue(row)[policy.tokenField]};}
  async function widgetOriginal(id,actor,expiresAt,ref,current){
-  const rows=await api[policy.lookup](actor.accessToken,ref.id,actor.ownerId);
+  const rows=policy.lookupRows?await policy.lookupRows(actor,ref.id):await api[policy.lookup](actor.accessToken,ref.id,actor.ownerId);
   const row=rows?.[0];
   if(!current()||!Array.isArray(rows)||rows.length!==1||!policy.summary(row,actor.ownerId)
    ||row.id!==ref.id||row.version!==ref.version||row.payload.title!==ref.title||row.section!==ref.section)throw Error('Favorite changed.');
@@ -103,12 +118,14 @@ function createFavoriteRecords({api,now,selectedReader,inventoryReader},policy){
  }
  async function list(id,actor,deadline,offset,current,collectionId){
   if(!Number.isInteger(offset)||offset<0||offset%50!==0)throw Error('Choose a page of favorites.');
-  const [snapshot,rows]=await Promise.all([store.snapshotFor(actor),inventory(actor)]);
+  const snapshot=await store.snapshotFor(actor);
   if(!current())throw Error('Favorite items are unavailable.');
   validateFavoriteMemberships(snapshot.layout,snapshot.collections);
   const collection=collectionId===undefined?null:snapshot.collections.find(c=>c.id===collectionId);
   if(collectionId!==undefined&&!collection)throw Error('Choose a current collection.');
   const refs=new Map(snapshot.layout.items.filter(item=>item.type===policy.type&&(!collection||item.collections.includes(collection.id))).map(item=>[item.id,item.collections]));
+  const rows=refs.size?await inventory(actor,refs.keys()):[];
+  if(!current())throw Error('Favorite items are unavailable.');
   const entries=visibleRows(rows,actor.ownerId,refs).sort((a,b)=>a.payload.title.localeCompare(b.payload.title)||a.id.localeCompare(b.id));
   const expiresAt=Math.min(deadline,now()+300000),issue=inventoryReader.begin(id,actor.ownerId,expiresAt,50);
   const items=entries.slice(offset,offset+50).map(r=>({...originalRow(r,issue),collections:snapshot.collections.filter(c=>refs.get(r.id).includes(c.id)).map(c=>c.name)}));

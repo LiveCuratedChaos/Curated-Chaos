@@ -9,7 +9,7 @@ export function createFavoritesWidget({favorites,services,now}){
   for(const view of context.favoriteWidgetViews?.values()??[])clearTimeout(view.timer);
   context.favoriteWidgetViews=null;
  }
- const inventoryGroup=type=>({project:'projects',program:'school',course:'school'}[type]??'brief');
+ const inventoryGroup=type=>({project:'projects',program:'school',course:'school',document:'documents'}[type]??'brief');
  async function eligible(actor,refs,filter){
   const inventories=new Map(),matches=[];
   let incomplete=false;
@@ -18,7 +18,7 @@ export function createFavoritesWidget({favorites,services,now}){
    const ids=new Set(refs.filter(ref=>ref.type===type).map(ref=>ref.id));
    if(!ids.size)continue;
    const group=inventoryGroup(type);
-   if(!inventories.has(group))inventories.set(group,Promise.resolve().then(()=>service.inventory(actor)));
+   if(!inventories.has(group))inventories.set(group,Promise.resolve().then(()=>service.inventory(actor,ids)));
    try{
     for(const row of service.visibleRows(await inventories.get(group),actor.ownerId,ids)){
      if(filter==='all'||row.section===filter)matches.push({type,row});

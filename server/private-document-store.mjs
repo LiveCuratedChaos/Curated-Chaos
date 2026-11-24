@@ -84,6 +84,16 @@ export function createDocumentStorage(repository,keyLoader){
   if(!Array.isArray(rows)||rows.length>26||new Set(rows.map(r=>r.id)).size!==rows.length)throw Error('Incomplete document page.');
   return {documents:await Promise.all(rows.slice(0,25).map(r=>decode(actor,r))),hasMore:rows.length===26};
  }
+ async function selectedMetadata(actor,ids){
+  if(!Array.isArray(ids)||ids.length>500||new Set(ids).size!==ids.length||!ids.every(isDocumentId))throw Error('Choose current document references.');
+  const documents=[];
+  for(let offset=0;offset<ids.length;offset+=50){
+   const batch=ids.slice(offset,offset+50),rows=await repository.byIds(actor,batch);
+   if(!Array.isArray(rows)||rows.length>batch.length||new Set(rows.map(row=>row.id)).size!==rows.length||!rows.every(row=>batch.includes(row.id)))throw Error('Invalid document selection.');
+   documents.push(...await Promise.all(rows.map(row=>decode(actor,row))));
+  }
+  return documents;
+ }
  async function prepareEdit(actor,selected,changes){
   if(!changes||Object.keys(changes).filter(k=>!['classification','expiresOn'].includes(k)).sort().join(',')!=='folder,name,tags')throw Error('Choose a file name, folder and tags.');
   const row=await repository.metadata(actor,selected.id),current=await decode(actor,row);
@@ -140,7 +150,7 @@ export function createDocumentStorage(repository,keyLoader){
    }finally{bytes.fill(0);}
   }finally{master?.fill?.(0);}
  }
- return {list,search,textBatch,prepare,save,prepareEdit,saveEdit,read,inspect:async(actor,id)=>decode(actor,await repository.metadata(actor,id))};
+ return {list,selectedMetadata,search,textBatch,prepare,save,prepareEdit,saveEdit,read,inspect:async(actor,id)=>decode(actor,await repository.metadata(actor,id))};
 }
 
 export function documentRepository(request){
@@ -148,6 +158,7 @@ export function documentRepository(request){
  const select=(actor,query,columns=meta)=>request(table+'?select='+columns+'&owner_id=eq.'+encodeURIComponent(actor.ownerId)+'&'+query,{method:'GET'},actor.accessToken);
  async function one(rows){const values=await rows;if(!Array.isArray(values)||values.length>1)throw Error('Unexpected document result.');return values[0]??null;}
  return {list:(actor,offset)=>select(actor,'order=id.asc&limit=26&offset='+offset),
+  byIds:(actor,ids)=>select(actor,'id=in.('+ids.join(',')+')&limit='+ids.length),
   after:(actor,cursor)=>select(actor,'order=id.asc&limit=26'+(cursor?'&id=gt.'+encodeURIComponent(cursor):'')),
   find:(actor,key)=>one(select(actor,'content_key=eq.'+encodeURIComponent(key)+'&limit=2')),
   metadata:(actor,id)=>one(select(actor,'id=eq.'+encodeURIComponent(id)+'&limit=2')),

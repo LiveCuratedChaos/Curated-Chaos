@@ -185,3 +185,38 @@ test('School Library archives require originals for current and historical guide
  assert.equal(result.documentsRestored,1);assert.deepEqual((await repo.readPrivateRows({},owner)).find(r=>r.id===degree.id).payload,degree.payload);
  const [row]=await repo.readDocuments({},owner,[document]);assert.deepEqual(openStoredDocument(row,owner,key).bytes,file);
 });
+
+test('encrypted recovery preserves document Favorites and reopens the original bytes from their collection',async t=>{
+ const {makeBriefPreferencesRecord}=await import('../src/dev-preferences-model.mjs');
+ const {createDocumentLibrary}=await import('../server/private-document-library.mjs');
+ const {createPrivateFavoriteDocuments}=await import('../server/private-favorite-records.mjs');
+ const key=randomBytes(32),{document}=await sample(key),subject={ownerId:owner},who={owner,session};
+ const collection=randomUUID(),profile={...makeBriefPreferencesRecord({},owner),id:randomUUID(),version:1,created_at:'2026-11-01T12:00:00Z',updated_at:'2026-11-01T12:00:00Z',deleted_at:null};
+ profile.payload.favorites={version:1,collections:[{id:collection,name:'File cabinet'}],pages:[]};
+ profile.payload.favoriteItems={version:1,items:[{type:'document',id:document.id,collections:[collection]}]};
+ const archive=sealPrivateWorkspace({projectRef,ownerId:owner,key,rows:[profile],documents:[document]});
+ const db=await createIsolatedDevelopmentDatabase();t.after(()=>db.close());
+ const repository=createPrivateWorkspaceRestoreRepository({projectRef,allowDocumentRestore:true,verifyTarget:async(connection,ref)=>connection===db&&ref===projectRef,
+  withConnection:async(a,callback)=>{await actor(db,a.owner,a.session);return callback(db);}});
+ const restore=createPrivateWorkspaceRestoreExecutor({repository,projectRef,key,allowDocumentRestore:true,resolveActor:async a=>({ownerId:a.owner,sessionBinding:a.session,expiresAt:Date.now()+300000}),authorizeWrite:async()=>true});
+ t.after(()=>restore.dispose());
+ const plan=await restore.prepare(who,{bytes:archive.bytes});
+ assert.equal(plan.canRestore,true);
+ const saved=await restore.execute(who,{reviewId:plan.reviewId,approved:true});
+ assert.equal(saved.documentsRestored,1);assert.equal(saved.restored,1);
+ const [restored]=await repository.readDocuments(who,owner,[document]);
+ let accessible=true,now=Date.now();
+ const select=(a,id)=>accessible&&a.ownerId===owner&&id===restored.id?restored:null;
+ const storage=createDocumentStorage({metadata:select,get:select,byIds:async(a,ids)=>ids.map(id=>select(a,id)).filter(Boolean)},async()=>Buffer.from(key));
+ const api={documentStorage:storage,listBriefPreferences:async()=>(await repository.readPrivateRows(who,owner)).filter(r=>r.id===profile.id),updateBriefPreferences:assert.fail,addBriefPreferences:assert.fail};
+ const documents=createDocumentLibrary({storage,now:()=>now});
+ const service=createPrivateFavoriteDocuments({api,now:()=>now,documents,favoriteReader:documents});
+ t.after(()=>{service.dispose();documents.dispose();});
+ const list=()=>service.list('tab',subject,now+1000,0,()=>true,collection);
+ const item=(await list()).documents[0];assert.deepEqual(item.collections,['File cabinet']);assert.equal(item.title,'Filed.pdf');
+ assert.equal((await documents.download('tab',subject,item.documentReadToken)).data,file.toString('base64'));
+ accessible=false;await assert.rejects(documents.selected('tab',subject,item.documentReadToken));
+ assert.equal((await list()).count,0);
+ accessible=true;const fresh=(await list()).documents[0];now+=1000;
+ await assert.rejects(documents.download('tab',subject,fresh.documentReadToken));
+});

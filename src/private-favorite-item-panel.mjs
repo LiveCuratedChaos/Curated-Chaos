@@ -8,7 +8,7 @@ const title=v=>typeof v==='string'&&v.trim().length>0&&v.length<=200;
 const keys=(v,expected)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).sort().join(',')===expected;
 const control=(action,title)=>'<button type="button" class="btn" data-favorite-item-action="'+action+'">'+e(title)+'</button>';
 const heading='#private-favorite-items-title';
-export const favoriteTokenFields=Object.freeze({program:'schoolReadToken',course:'schoolReadToken',event:'eventReadToken',project:'projectReadToken',task:'taskReadToken',note:'noteToken'});
+export const favoriteTokenFields=Object.freeze({document:'documentReadToken',program:'schoolReadToken',course:'schoolReadToken',event:'eventReadToken',project:'projectReadToken',task:'taskReadToken',note:'noteToken'});
 export function schoolFavoriteButton(kind,selection){
  if(!token(selection)||!['degree','course'].includes(kind))return '';
  const type=kind==='degree'?'program':'course';
@@ -27,6 +27,7 @@ export function validFavoriteOriginal(type,row,withCollections=false){
 }
 export function createFavoriteItemPanel({client,clock,onChange,canUse,openers,onSaved=()=>{}}){
  const services={
+  document:{field:'documentReadToken',list:client.favoriteDocumentsList,read:client.favoriteDocumentRead,review:client.favoriteDocumentReview,save:client.favoriteDocumentSave,cancel:client.favoriteDocumentCancel},
   event:{field:'eventReadToken',list:client.favoriteEventsList,read:client.favoriteEventRead,review:client.favoriteEventReview,save:client.favoriteEventSave,cancel:client.favoriteEventCancel},
   project:{field:'projectReadToken',list:client.favoriteProjectsList,read:client.favoriteProjectRead,review:client.favoriteProjectReview,save:client.favoriteProjectSave,cancel:client.favoriteProjectCancel},
   note:{field:'noteToken',list:client.favoriteNotesList,read:client.favoriteNoteRead,review:client.favoriteNoteReview,save:client.favoriteNoteSave,cancel:client.favoriteNoteCancel},

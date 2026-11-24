@@ -836,3 +836,26 @@ test('School title search previews the filters and reopens a favorite course aft
  await expect(details).toContainText('Exact fictional course notes');
  await expect(details.getByRole('button',{name:'Manage course favorite'})).toBeVisible();
 });
+
+test('a favorite document reopens the private original from a different page',async({page})=>{
+ const name='Fictional receipt.pdf';
+ const library=page.locator('#private-document-library');
+ await library.getByRole('button',{name:'Open my documents'}).click();
+ await library.getByRole('button',{name:'Add a document'}).click();
+ await library.locator('input[type=file]').setInputFiles({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.5\nFictional receipt\n%%EOF')});
+ await library.getByRole('button',{name:'Review private upload'}).click();
+ await library.getByRole('button',{name:'Approve document save'}).click();
+ await library.getByRole('button',{name:'Manage document favorite'}).click();
+ await page.getByLabel('Save this document in Favorites').check();
+ await page.getByRole('button',{name:'Review favorite document change'}).click();
+ await page.getByRole('button',{name:'Approve favorite document change'}).click();
+ await expect(page.getByRole('button',{name,exact:true})).toBeVisible();
+ await page.goto('/dev-tasks.html');
+ await page.getByRole('button',{name:'Favorites',exact:true}).click();
+ await page.getByRole('button',{name:'View favorite documents',exact:true}).click();
+ await page.getByRole('button',{name,exact:true}).click();
+ await expect(library.getByRole('heading',{name,exact:true})).toBeFocused();
+ const completed=page.waitForEvent('download');
+ await library.getByRole('button',{name:'Download '+name,exact:true}).click();
+ expect((await completed).suggestedFilename()).toBe(name);
+});

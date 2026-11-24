@@ -24,7 +24,7 @@ export function downloadCheckedDocument(v,expected,download=downloadFile){
  const bytes=Uint8Array.from(atob(v.data),c=>c.charCodeAt(0));if(bytes.length!==fields.bytes)throw Error('Invalid file.');
  download(bytes,fields);
 }
-export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=false,onNameSearch=null,canOpen=()=>true,onChange=()=>{},download=downloadFile}){
+export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=false,allowFavorites=false,favoritesOnly=false,onNameSearch=null,canOpen=()=>true,onChange=()=>{},download=downloadFile}){
  let reading=null,readQuery='',scan=null,contentQuery='';
  let seq=0,view,draft,review,duplicate,status,busy,timer,filter;
  function reset(){seq++;reading=null;readQuery='';scan=null;contentQuery='';clearTimeout(timer);view=draft=review=duplicate=null;status='';busy=false;filter={collection:'all',text:''};}reset();
@@ -44,6 +44,27 @@ export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=fals
    view={...v,documents};status=notice;timer=setTimeout(()=>{reset();status='Document access expired. Open your library again.';onChange();},Math.max(1,v.expiresAt-clock()));timer.unref?.();
   }catch{if(n===seq)status='Could not open your documents.';}
   finally{if(n===seq){busy=false;onChange();}}
+ }
+ async function openFavorite(choice,row,expiresAt){
+  if(!allowFavorites||!canOpen()||busy||draft||review||!token(choice)||choice!==row?.documentReadToken||
+     !Number.isFinite(expiresAt)||expiresAt<=clock()||expiresAt>clock()+300000)return;
+  reset();const n=seq;busy=true;onChange();
+  try{
+   const source=await client.openFavoriteDocument(choice);
+   if(n!==seq)return;
+   if(!keys(source,'expiresAt,fields')||!Number.isFinite(source.expiresAt)||source.expiresAt>expiresAt||source.expiresAt<=clock())throw Error();
+   const fields=documentFields(source.fields);
+   if(fields.name!==row.title)throw Error();
+   view={favorite:true,expiresAt:source.expiresAt,documents:[{choice,fields}]};
+   timer=setTimeout(()=>{if(n===seq){reset();status='Document access expired. Reopen the current favorite.';onChange();}},Math.max(1,source.expiresAt-clock()));timer.unref?.();
+  }catch{if(n===seq)status='Could not open this favorite. Refresh Favorites and choose the document again.';}
+  finally{if(n===seq){busy=false;onChange(Boolean(view?.favorite));}}
+ }
+ function favoriteButton(item){
+  return allowFavorites?'<button type="button" class="btn" data-kind="document" data-favorite-item-action="select" data-selection="'+e(item.choice)+'">Manage document favorite</button>':'';
+ }
+ function fileActions(item){
+  return button('get-'+item.choice,'Download '+item.fields.name)+' '+button('text-open-'+item.choice,'Read and search '+item.fields.name)+' '+favoriteButton(item);
  }
  async function search(direction){
   const n=seq;busy=true;status='';onChange();
@@ -224,11 +245,13 @@ export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=fals
    button('text-review-'+row.suggestion,'Review '+suggestionLabel[row.field].toLowerCase())+'</li>').join('')+'</ul>':'<p>No supported filing suggestions for this document.</p>');
  }
  function render(){
-  let html='<h2>Document Library</h2><p role="status">'+e(busy?'Checking documents…':status)+'</p>';
-  if(!fresh())return html+button('open','Open my documents',busy);
+  if(favoritesOnly&&!view&&!busy&&!status)return '';
+  let html=(view?.favorite?'<h2 id="private-favorite-document-title" tabindex="-1">'+e(view.documents[0].fields.name)+'</h2>':'<h2>Document Library</h2>')+'<p role="status">'+e(busy?'Checking documents…':status)+'</p>';
+  if(!fresh())return html+(favoritesOnly?'':button('open','Open my documents',busy));
   html+='<fieldset '+(busy?'disabled':'')+'>';
   if(onNameSearch&&!reading&&!draft&&!duplicate&&!review&&(scan||view.criteria))html+=button('name-search','Name this document search',busy||!canOpen());
-  if(reading)html+=renderDocumentText(reading.result,readQuery,button)+(reading.item.contentHit?'':suggestionHtml()+linkHtml());
+  if(reading)html+=renderDocumentText(reading.result,readQuery,button)+(reading.item.contentHit||view.favorite?'':suggestionHtml()+linkHtml())+favoriteButton(reading.item);
+  else if(view.favorite){const item=view.documents[0];html+='<p>'+info(item.fields)+'</p>'+fileActions(item);}
   else if(scan)html+=renderContentResults(scan,busy,button);
   else if(review)html+=(review.before?'<legend>Review document changes</legend><p>Current · '+info(review.before)+'</p><p>After saving · ':'<legend>Review private upload</legend><p>')+info(review.fields)+'</p>'+(review.proposal?'<p>'+proof(review.proposal)+'</p>':'')+'<p>Only you can open this document.</p>'+button('save','Approve document save')+button('edit',review.proposal?'Back to documents':'Back to file details');
   else if(duplicate)html+='<p>These file bytes are already in your library.</p><p>'+info(duplicate.fields)+'</p>'+button('existing','Download existing document')+button('list','Back to my documents');
@@ -243,11 +266,11 @@ export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=fals
    '<label>Search names, folders or tags<input type="search" maxlength="150" data-document-field="text" value="'+e(filter.text)+'"></label>'+
    '<label>Collection<select data-document-field="collection">'+Object.entries(DOCUMENT_COLLECTIONS).map(([key,label])=>'<option value="'+key+'" '+(filter.collection===key?'selected':'')+'>'+e(label)+'</option>').join('')+'</select></label>'+button('search','Find documents')+
    (view.criteria?'<p>Showing '+e(DOCUMENT_COLLECTIONS[view.criteria.collection])+(view.criteria.text?' matching “'+e(view.criteria.text)+'”':'')+'</p>'+button('clear','Clear search'):'')+
-   (view.documents.length?'<ul>'+view.documents.map(item=>'<li>'+info(item.fields)+' '+button('get-'+item.choice,'Download '+item.fields.name)+' '+button('text-open-'+item.choice,'Read and search '+item.fields.name)+' '+button('organize-'+item.choice,'Organize '+item.fields.name)+'</li>').join('')+'</ul>':view.criteria?'<p>'+(view.hasMore?'No matches in this group. Continue searching with Next documents.':'No matches on this page.')+'</p>':'<p>No documents on this page.</p>')+
+   (view.documents.length?'<ul>'+view.documents.map(item=>'<li>'+info(item.fields)+' '+fileActions(item)+' '+button('organize-'+item.choice,'Organize '+item.fields.name)+'</li>').join('')+'</ul>':view.criteria?'<p>'+(view.hasMore?'No matches in this group. Continue searching with Next documents.':'No matches on this page.')+'</p>':'<p>No documents on this page.</p>')+
    (view.offset||view.hasPrevious?button('previous','Previous documents'):'')+(view.hasMore?button('next','Next documents'):'');
   return html+button('close','Close document library')+'</fieldset>'+(scan&&busy?button('content-stop','Stop content search'):'');
  }
- return {render,reset,openContentSearch,openSavedSearch,blocked:()=>Boolean(draft||review||busy),input(event){
+ return {render,reset,openFavorite,openContentSearch,openSavedSearch,blocked:()=>Boolean(draft||review||busy),input(event){
   const field=event.target.dataset?.documentField;if(!field)return false;
   if(!draft&&!reading&&!scan&&!busy&&field==='contentQuery'){contentQuery=event.target.value;return true;}
   if(reading&&!busy&&field==='textQuery'){readQuery=event.target.value;return true;}
@@ -265,14 +288,16 @@ export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=fals
   if(!action)return false;
   if(action==='content-stop'&&scan&&busy){reset();status='Content search stopped.';onChange();void client.documentClose().catch(()=>{});return true;}
   if(busy)return true;
-  if(action==='open'&&canOpen())void list();
-  if(action==='close'){reset();onChange();void client.documentClose().catch(()=>{});return true;}
+  if(action==='open'&&!favoritesOnly&&canOpen())void list();
+  if(action==='close'){const original=view?.favorite;reset();onChange();if(!original)void client.documentClose().catch(()=>{});return true;}
   if(!fresh())return true;
+  if(view.favorite&&!action.startsWith('text-')&&!action.startsWith('get-'))return true;
   if(action==='name-search'){void nameSearch();return true;}
   if(action.startsWith('text-open-')&&!reading&&!draft){
    const item=view.documents.find(row=>row.choice===action.slice(10));if(item)void readText(item,1,'');return true;
   }
   if(reading){
+   if(view.favorite&&['text-school','text-school-save','text-suggest'].includes(action))return true;
    const {item,result}=reading;
    if(action==='text-back'){reading=null;readQuery='';onChange();}
    else if(action==='text-school'&&allowSchoolLinks)void schoolLink(item,null);

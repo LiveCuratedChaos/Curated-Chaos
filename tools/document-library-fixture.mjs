@@ -6,6 +6,7 @@ export function createDocumentFixture(){
  const owned=actor=>[...rows.values()].filter(r=>r.owner_id===actor.ownerId);
  const metadata=row=>{if(!row)return null;const {file_envelope,...rest}=row;return rest;};
  return createDocumentStorage({list:async(actor,offset)=>owned(actor).sort((a,b)=>a.id.localeCompare(b.id)).slice(offset,offset+26).map(metadata),
+  byIds:async(actor,ids)=>owned(actor).filter(row=>ids.includes(row.id)).map(metadata),
   find:async(actor,key)=>metadata(owned(actor).find(r=>r.content_key===key)),
   after:async(actor,cursor)=>owned(actor).filter(row=>!cursor||row.id>cursor).sort((a,b)=>a.id.localeCompare(b.id)).slice(0,26).map(metadata),
   metadata:async(actor,id)=>metadata(owned(actor).find(r=>r.id===id)),

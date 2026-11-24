@@ -8,11 +8,34 @@ const token=()=>randomBytes(32).toString('base64url');
 export function createDocumentLibrary({storage,now=Date.now,extract=extractDocumentPages}){
  const sessions=new Map();
  function clear(id){clearTimeout(sessions.get(id)?.timer);sessions.delete(id);}
+ function beginView(id,owner,expiresAt){
+  if(!Number.isFinite(expiresAt)||expiresAt<=now())throw Error('Document view expired.');
+  clear(id);
+  const v={owner,expiresAt:Math.min(now()+300000,expiresAt),choices:new Map()};sessions.set(id,v);
+  v.timer=setTimeout(()=>{if(sessions.get(id)===v)clear(id);},Math.max(1,v.expiresAt-now()));v.timer.unref?.();
+  return v;
+ }
+ function current(id,key){
+  const view=sessions.get(id);
+  return Boolean(view&&view.expiresAt>now()&&view.choices.has(key));
+ }
+ function beginSelection(id,owner,expiresAt){
+  const view=beginView(id,owner,expiresAt);
+  return doc=>{
+   if(sessions.get(id)!==view||view.expiresAt<=now()||view.choices.size>=50)throw Error('Document selection expired.');
+   const choice=token();view.choices.set(choice,doc);return {documentReadToken:choice};
+  };
+ }
+ async function selected(id,actor,key){
+  const view=active(id,actor),doc=view.choices.get(key);
+  if(!doc)throw Error('Choose a current document.');
+  const fresh=await storage.inspect(actor,doc.id);
+  if(stableStringify(fresh)!==stableStringify(doc)||active(id,actor)!==view||view.choices.get(key)!==doc)throw Error('Document changed.');
+  return {doc:fresh,expiresAt:view.expiresAt};
+ }
  async function list(id,actor,offset,expiresAt){
   if(!Number.isInteger(offset)||offset<0||offset>100000||offset%25)throw Error('Choose a document page.');
-  clear(id);
-  const v={owner:actor.ownerId,expiresAt:Math.min(now()+300000,expiresAt),choices:new Map()};sessions.set(id,v);
-  v.timer=setTimeout(()=>{if(sessions.get(id)===v)clear(id);},Math.max(1,v.expiresAt-now()));v.timer.unref?.();
+  const v=beginView(id,actor.ownerId,expiresAt);
   const {documents,hasMore}=await storage.list(actor,offset);
   if(sessions.get(id)!==v||v.expiresAt<=now())throw Error('Document view expired.');
   return {offset,hasMore,expiresAt:v.expiresAt,documents:documents.map(doc=>{
@@ -156,7 +179,7 @@ export function createDocumentLibrary({storage,now=Date.now,extract=extractDocum
  }
  async function download(id,actor,choice){
   const v=active(id,actor),doc=v.choices.get(choice);if(!doc)throw Error('Choose a document.');
-  const r=await storage.read(actor,doc);if(active(id,actor)!==v)throw Error('Document view changed.');
+  const r=await storage.read(actor,doc);if(active(id,actor)!==v||v.choices.get(choice)!==doc)throw Error('Document view changed.');
   return {fields:r.fields,data:r.data};
  }
  function checkedSearch(id,actor){
@@ -166,5 +189,5 @@ export function createDocumentLibrary({storage,now=Date.now,extract=extractDocum
   if(view.search)return{type:'document-library',query:view.search.criteria.text,collection:view.search.criteria.collection};
   throw Error('Run the document search again before naming it.');
  }
- return {list,search,searchContents,checkedSearch,prepare,organize,claim,save,download,readText,selectedText,suggest,reviewSuggestion,clear,dispose(){for(const id of sessions.keys())clear(id);}};
+ return {current,beginSelection,selected,list,search,searchContents,checkedSearch,prepare,organize,claim,save,download,readText,selectedText,suggest,reviewSuggestion,clear,dispose(){for(const id of sessions.keys())clear(id);}};
 }
