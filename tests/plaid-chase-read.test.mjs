@@ -42,6 +42,8 @@ test('bank failures distinguish reconnect, denied permission, changed selection 
  for(const [response,expected] of [
   [{ok:false,status:401,json:async()=>({error_code:'ITEM_LOGIN_REQUIRED',error_message:'private-bank-detail'})},'reconnect-required'],
   [{ok:false,status:403,json:async()=>({error_code:'PRIVATE_DENIAL'})},'access-denied'],
+  [{ok:false,status:401,json:async()=>{throw Error('private-bank-detail');}},'reconnect-required'],
+  [{ok:false,status:403,json:async()=>{throw Error('private-bank-detail');}},'access-denied'],
   [{ok:true,status:200,json:async()=>({error_code:'INVALID_ACCOUNT_ID',error_message:'private-bank-detail'})},'selection-changed'],
  ]){
   const api=createPlaidChaseRead({clientId:'fixture-client',secret:'fixture-secret'},async()=>response);

@@ -23,7 +23,7 @@ export function createPlaidChaseRead({clientId,secret,environment='sandbox',prod
  const key=(ctx,kind,sourceId)=>createHash('sha256').update(JSON.stringify([ctx.ownerId,'plaid',ctx.connectionId,ctx.grant.itemId,kind,sourceId])).digest('hex');
  async function request(path,ctx,body){
   let response,data;
-  try{response=await fetcher(origin+path,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json','Plaid-Version':'2020-09-14'},body:JSON.stringify({client_id:clientId,secret,access_token:ctx.accessToken,...body}),cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)});data=await response.json();}
+  try{response=await fetcher(origin+path,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json','Plaid-Version':'2020-09-14'},body:JSON.stringify({client_id:clientId,secret,access_token:ctx.accessToken,...body}),cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)});try{data=await response.json();}catch(error){if(response.status!==401&&response.status!==403)throw error;}}
   catch{throw new ProviderReadError('source-unavailable','Bank preview could not be reached. No partial snapshot was accepted.');}
   const code=data?.error_code||data?.item?.error?.error_code;
   if(response.status===401||['ITEM_LOGIN_REQUIRED','INVALID_ACCESS_TOKEN'].includes(code))throw new ProviderReadError('reconnect-required','Bank authorization needs reconnection. No partial snapshot was accepted.');

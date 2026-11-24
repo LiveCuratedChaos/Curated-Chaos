@@ -13,7 +13,7 @@ function fixture(){
   holdings:[{security_id:'fund',account_id:'chosen',quantity:10.5,institution_price:1.234567,institution_value:13.04,iso_currency_code:'USD',institution_price_as_of:'2026-11-20'}]};
  const f={grant,data,requests:[],calls:0,status:200};
  f.source=createBrokerageHoldingsSource({clientId:'fixture',secret:'fixture',now:()=>now,loadGrant:async()=>{f.calls++;return f.get?f.get():grant;},
-  fetcher:async(url,options)=>{f.requests.push({url,body:JSON.parse(options.body)});return {ok:f.status===200,status:f.status,json:async()=>data};}});
+  fetcher:async(url,options)=>{f.requests.push({url,body:JSON.parse(options.body)});return {ok:f.status===200,status:f.status,json:async()=>{if(f.nonJson)throw Error('PRIVATE_PROVIDER_BODY');return data;}};}});
  return f;
 }
 test('brokerage selection reads only consented accounts and uses dated institution amounts without deriving a position from bank activity',async t=>{
@@ -47,6 +47,15 @@ test('revoked, changed, incomplete or foreign brokerage results cannot be displa
   const request=f.source.read('tab',actor,[v.accounts[0].choice]);
   if(change==='missing currency'){const result=await request;assert.equal(result.positions[0].price,null);assert.equal(result.positions[0].value,null);}
   else await assert.rejects(request);
+ }
+});
+test('brokerage HTTP authentication failures are classified even without JSON',async t=>{
+ const f=fixture();t.after(()=>f.source.dispose());f.nonJson=true;
+ const view=await f.source.open('tab',actor,now+300000);
+ for(const [status,outcome] of [[401,'reconnect-required'],[403,'access-denied'],[503,'source-unavailable']]){
+  f.status=status;
+  await assert.rejects(f.source.read('tab',actor,[view.accounts[0].choice]),
+   error=>error.outcome===outcome&&!error.message.includes('PRIVATE_PROVIDER_BODY'));
  }
 });
 test('signed-in Finance reviews the brokerage selection, hides amounts on reopen, and supports a disconnected source',async t=>{

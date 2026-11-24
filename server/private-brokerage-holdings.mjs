@@ -58,7 +58,7 @@ export function createBrokerageHoldingsSource({environment='sandbox',productionA
     response=await fetcher(origin+'/investments/holdings/get',{method:'POST',cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000),
      headers:{'Content-Type':'application/json',Accept:'application/json','Plaid-Version':'2020-09-14'},
      body:JSON.stringify({client_id:clientId,secret,access_token:grant.accessToken,options:{account_ids:selected}})});
-    data=await response.json();
+    try{data=await response.json();}catch(error){if(response.status!==401&&response.status!==403)throw error;}
    }catch{fail('source-unavailable');}
    const code=data?.error_code??data?.item?.error?.error_code;
    if(response.status===401||['ITEM_LOGIN_REQUIRED','INVALID_ACCESS_TOKEN','ITEM_NOT_FOUND'].includes(code))fail('reconnect-required');
