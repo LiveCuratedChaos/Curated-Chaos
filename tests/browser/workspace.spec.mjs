@@ -1015,3 +1015,40 @@ test('monthly budget navigation preserves the selected view and conceals amounts
  await expect(panel.getByRole('heading',{name:'Manual transactions'})).toBeVisible();
  await expect(panel).toContainText('2028-03-24 through 2028-04-10');
 });
+
+test('Daily Brief Routines opens the original and follows its next saved occurrence',async({page})=>{
+ const date=page.getByLabel('Brief date',{exact:true}),day=await date.inputValue();
+ const tomorrow=new Date(Date.parse(day+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+ const title='Fictional morning stretch',menu=page.locator('#private-quick-add');
+ await menu.locator('summary').click();
+ await menu.getByRole('button',{name:'Routine',exact:true}).click();
+ await page.locator('[name="create-title"]').fill(title);
+ await page.locator('[name="create-day"]').fill(day);
+ await page.locator('[name="create-routine-frequency"]').selectOption('daily');
+ await page.getByRole('button',{name:'Review new task',exact:true}).click();
+ await page.getByRole('button',{name:'Approve task creation',exact:true}).click();
+ await expect(page.locator('#private-task-create-form')).toHaveCount(0);
+
+ await page.getByRole('button',{name:'Customize Daily Brief',exact:true}).click();
+ await page.getByLabel('Routines',{exact:true}).selectOption('expanded');
+ await page.getByLabel('Date view',{exact:true}).selectOption('week');
+ await page.getByRole('button',{name:'Review Brief layout',exact:true}).click();
+ await page.getByRole('button',{name:'Approve Brief layout',exact:true}).click();
+
+ const routines=page.locator('[data-private-brief-section="routines"]');
+ const original=routines.getByRole('listitem').filter({hasText:title});
+ await expect(original).toContainText('Due');
+ await original.getByRole('button',{name:'Open task',exact:true}).click();
+ await expect(page.locator('#private-task-details-title')).toHaveText(title);
+ await page.getByRole('button',{name:'Close task',exact:true}).click();
+
+ const due=page.locator('[data-private-brief-section="dueTasks"]').getByRole('listitem').filter({hasText:title});
+ await due.getByRole('button',{name:'Review completion',exact:true}).click();
+ await page.getByRole('button',{name:'Approve completion and next chore',exact:true}).click();
+ await expect(original).toContainText('Complete');
+ const week=page.locator('[data-private-brief-summary-day="'+tomorrow+'"]');
+ await expect(week).toContainText('1 due · 0 complete');
+ await page.getByRole('button',{name:'Show Daily Brief for '+tomorrow,exact:true}).click();
+ await expect(date).toHaveValue(tomorrow);
+ await expect(original).toContainText('Due');
+});

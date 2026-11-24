@@ -61,11 +61,11 @@
     }
   },
   "browser": {
-    "preparedCases": 242,
+    "preparedCases": 244,
     "freshExecutionVerified": false,
-    "selectedCases": 24,
+    "selectedCases": 26,
     "selectedCasesExecuted": 0,
-    "command": "npm run test:browser -- --grep 'Calendar day schedule preserves its month|calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description|monthly budget navigation'",
+    "command": "npm run test:browser -- --grep 'Calendar day schedule preserves its month|Daily Brief Routines opens|calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns|saved task shortcuts retain|an earlier task description|monthly budget navigation'",
     "reason": "The fictional fixture could not bind 127.0.0.1:5316. A separate launch of the installed pinned headless Chromium was denied by macOS."
   },
   "releaseComplete": false,
