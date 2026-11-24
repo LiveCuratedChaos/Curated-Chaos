@@ -45,13 +45,13 @@ export function createPrivateRecordRecovery({api,now=Date.now,allowWidgetViews=f
  }
  function claim(contextId,ownerId,reviewId){const state=contexts.get(contextId),review=state?.review;if(!state||!alive(state)||state.ownerId!==ownerId||!review||typeof reviewId!=='string'||review.reviewId!==reviewId||review.expiresAt<=now()||review.claimed)throw Error('Recovery review ended.');eligible(review.record);review.claimed=true;return{state,review};}
  async function authorize({state,review},actor){review.authorized=false;if(!alive(state)||state.review!==review||!review.claimed||state.ownerId!==actor.ownerId)return false;eligible(review.record);if(review.expiresAt<=now())return false;const row=await get(actor,review.record.id);review.authorized=alive(state)&&review.expiresAt>now()&&state.review===review&&same(row,review.record);return review.authorized;}
- async function save({state,review},actor){
+ async function save({state,review},actor,onRemoved){
   if(!alive(state)||state.review!==review||!review.claimed||!review.authorized||review.expiresAt<=now()||review.started||state.ownerId!==actor.ownerId)throw Error('Recovery review ended.');eligible(review.record);review.started=true;review.authorized=false;
   const deletedAt=review.record.deleted_at===null?new Date(now()).toISOString():null;
   const rows=await api.setPrivateRecordDeletedAt(actor.accessToken,review.record,actor.ownerId,deletedAt);
   if(!Array.isArray(rows)||rows.length!==1)throw Error('Recovery acknowledgement unverified.');const ack=privateRecoveryState(rows[0],actor.ownerId,{allowProjects}),expected={...review.record,version:ack.version,deleted_at:deletedAt};
   if(ack.version<=review.record.version||!same(ack,expected))throw Error('Recovery acknowledgement unverified.');
-  const latest=await get(actor,review.record.id);if(!alive(state)||state.review!==review||!same(latest,ack))throw Error('Recovery reread unverified.');clear(state.contextId);return{saved:true,restored:deletedAt===null};
+  const latest=await get(actor,review.record.id);if(!alive(state)||state.review!==review||!same(latest,ack))throw Error('Recovery reread unverified.');clear(state.contextId);if(deletedAt!==null)onRemoved?.(latest);return{saved:true,restored:deletedAt===null};
  }
  return{begin,add,list,prepare,claim,authorize,save,clear,cancelReview(id){const state=contexts.get(id);if(state)state.review=null;},hasAction(id,token){const state=contexts.get(id);return Boolean(state&&alive(state)&&state.actions.has(token)&&state.actionExpiries.get(token)>now());},current(id,reviewId){const state=contexts.get(id);return Boolean(state&&alive(state)&&state.review?.expiresAt>now()&&!state.review.claimed&&state.review.reviewId===reviewId);},dispose(){disposed=true;for(const id of contexts.keys())clear(id);}};
 }

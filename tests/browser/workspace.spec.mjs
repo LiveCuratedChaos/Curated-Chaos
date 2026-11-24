@@ -904,3 +904,17 @@ test('Daily Brief bills show a reviewed schedule for the day and honor finance c
  await expect(section).toContainText('Financial details are hidden');
  await expect(section).not.toContainText('Fictional internet for the Brief');
 });
+
+test('Undo removal returns the chosen note through a separate restoration approval',async({page})=>{
+ await page.goto('/dev-notes.html');
+ const note=page.locator('li').filter({has:page.getByText('Fictional planning note',{exact:true})});
+ await note.getByRole('button',{name:'Review removal',exact:true}).click();
+ await page.getByRole('button',{name:'Approve removal',exact:true}).click();
+ await expect(note).toHaveCount(0);
+ await page.getByRole('button',{name:'Undo removal',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Restore this item?',exact:true})).toBeVisible();
+ await expect(note).toHaveCount(0);
+ await page.getByRole('button',{name:'Approve restore',exact:true}).click();
+ await expect(note.getByRole('button',{name:'Open note',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Undo removal',exact:true})).toHaveCount(0);
+});

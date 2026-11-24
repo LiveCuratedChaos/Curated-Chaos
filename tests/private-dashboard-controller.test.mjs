@@ -1036,3 +1036,47 @@ test('Recently Deleted ties review and approval to the displayed choice and its 
   assert.doesNotMatch(s.root.innerHTML,/Approve restoration|Approve removal|Different note/);
  }
 });
+
+test('Undo removal uses the acknowledged choice after refresh and requires a separate restoration approval',async t=>{
+ let now=1;
+ const s=await setup(t,{allowRecentlyDeleted:true,clock:()=>now}),normal='n'.repeat(43),undo='u'.repeat(43),writes=[],selections=[];
+ const review=key=>({reviewId:(key===undo?'s':'r').repeat(43),title:'Same title',type:'note',section:'Personal Life',restoring:key===undo,retentionDays:90,expiresAt:100000});
+ s.client.reviewRecord=async key=>{selections.push(key);return review(key);};
+ s.client.saveRecord=async (id,options)=>{
+  writes.push(structuredClone(options));
+  return options.offerUndo?{saved:true,restored:false,undo:{recordToken:undo,expiresAt:90,deletedAt:new Date(now).toISOString()}}:{saved:true,restored:true};
+ };
+ const click=(selector,dataset={})=>s.events.click({target:{closest:q=>q===selector?{dataset}:null}});
+ const settle=async()=>{for(let n=0;n<6;n++)await turn();};
+ click('[data-private-record-review]',{privateRecordReview:normal});await settle();
+ click('#private-record-approve');await settle();
+ assert.match(s.root.innerHTML,/Undo removal/);
+ click('#private-record-undo');await settle();
+ assert.deepEqual(selections,[normal,undo]);
+ assert.match(s.root.innerHTML,/Restore this item/);
+ assert.deepEqual(writes,[{offerUndo:true}]);
+ click('#private-record-approve');await settle();
+ assert.deepEqual(writes,[{offerUndo:true},{offerUndo:false}]);
+ assert.match(s.root.innerHTML,/Item restored/);
+ assert.doesNotMatch(s.root.innerHTML,/Undo removal/);
+});
+
+test('expired removal Undo and uncertain acknowledgment never open a restore review',async t=>{
+ for(const mode of ['expired','uncertain','invalid']){
+  let now=1,reads=0;
+  const s=await setup(t,{allowRecentlyDeleted:true,clock:()=>now});
+  s.client.reviewRecord=async()=>{reads++;return{reviewId:'r'.repeat(43),title:'Removed note',type:'note',section:'Personal Life',restoring:false,retentionDays:90,expiresAt:1000};};
+  s.client.saveRecord=async()=>{
+   if(mode==='uncertain')throw Error('Save could not be confirmed.');
+   return{saved:true,restored:false,undo:{recordToken:mode==='invalid'?'bad':'u'.repeat(43),expiresAt:90,deletedAt:new Date(now).toISOString()}};
+  };
+  const click=(selector,dataset={})=>s.events.click({target:{closest:q=>q===selector?{dataset}:null}});
+  const settle=async()=>{for(let n=0;n<6;n++)await turn();};
+  click('[data-private-record-review]',{privateRecordReview:'n'.repeat(43)});await settle();
+  click('#private-record-approve');await settle();
+  if(mode==='expired'){assert.match(s.root.innerHTML,/Undo removal/);now=90;}
+  click('#private-record-undo');await settle();
+  assert.doesNotMatch(s.root.innerHTML,/Undo removal|Restore this item/);
+  assert.equal(reads,1);
+ }
+});

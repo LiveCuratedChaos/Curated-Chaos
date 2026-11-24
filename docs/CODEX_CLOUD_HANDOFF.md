@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R12** added Undo removal for a verified private task, note, event or project removal. An explicit Undo opens the ordinary restore review for that exact version. The latest action survives the acknowledgment refresh for up to five minutes. All 382 targeted checks passed, including duplicate note titles, a newer deletion, same-account tab isolation, sign-out and lost acknowledgments.
+
 - **R12** bound the restoration review to the selected Recently Deleted row and its original deadline. A delayed response, a different title or record type, a switched action, or an expired approval prevents any write. All 333 related checks passed, plus four final timer and approval checks.
 
 - **R12** added separate earlier-title and earlier-body actions for notes. Copying just the body preserved the current title in embedded PostgreSQL, and a lost acknowledgment retained the selected draft. All 377 related checks passed. Ten panel checks also passed after clarifying the combined action label.
@@ -46,17 +48,17 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 The latest full macOS check, through the private database restore-window guard, passed 3,493 of 3,517 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. The subsequent removed-shortcut archive drill passed in the 16-test repository suite. Sixteen failures directly reported a denied local listener and eight assertions received that denial. No failures were unclassified. Privacy, whitespace and launcher checks passed. The earlier default-transport run through School search passed 3,460 of 3,495 and reported 35 listener-related failures.
 
-Playwright 1.65.1 discovered 236 cases. Fourteen selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills and selective earlier note text. All local acceptance used fictional records.
+Playwright 1.65.1 discovered 238 cases. Sixteen selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills, selective earlier note text and Undo removal. All local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12 with a short-lived Undo for a confirmed removal. Bind it to the exact version that was just removed, retain it across the acknowledgment refresh, and use the ordinary restoration review before writing. Verify duplicate titles, changed records, lost acknowledgments, expiry and sign-out.
+2. Continue R03/R12 by verifying Undo removal with the actual PostgreSQL version-history and restore-window triggers together. Verify both audit entries, exact original record identity, duplicate-name isolation and rollback on refusal.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
-npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain'
+npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns'
 ```
 
 Earlier Calendar and Favorites contributions passed 432 focused tests. The previous full attempt passed 3,441 of 3,476. Historical logs under `/tmp` belong to the originating Mac. Linux omits the macOS-native Calendar transfer check.

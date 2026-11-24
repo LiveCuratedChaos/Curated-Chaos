@@ -61,11 +61,11 @@
     }
   },
   "browser": {
-    "preparedCases": 236,
+    "preparedCases": 238,
     "freshExecutionVerified": false,
-    "selectedCases": 14,
+    "selectedCases": 16,
     "selectedCasesExecuted": 0,
-    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain'",
+    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain|Undo removal returns'",
     "reason": "The fictional fixture could not bind 127.0.0.1:5316 in the managed Mac session."
   },
   "releaseComplete": false,
@@ -873,6 +873,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "confirmedRemovalUndo": {
+      "passed": 382,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Reviewed Undo following a confirmed removal, exact version and duplicate names, independent tabs, sign-out, uncertain saves, expired actions and legacy acknowledgment compatibility."
     },
     "selectedRemovalReview": {
       "passed": 333,
