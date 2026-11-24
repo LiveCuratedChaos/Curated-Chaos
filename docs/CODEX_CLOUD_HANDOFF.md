@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R29** Work task-list browsing now hides expired names and selections immediately and refuses to use them when a suspended tab resumes. Responses cannot extend the five-minute window. All 331 related checks passed.
+
 - **R28** Study Planner rechecks saved availability before showing approval. In a signed-in two-tab test, a newly approved Calendar event blocked the old study proposal and save. The course agenda stayed unchanged, and checking again offered the next free time. All 18 related checks passed.
 
 - **R27** Completed-credit milestones group by original program selection, so programs with the same display title no longer share a credit total. All 50 School read, outline and milestone checks passed.
