@@ -1,7 +1,59 @@
 import {request as httpRequest} from 'node:http';
 import test from 'node:test';import assert from 'node:assert/strict';import {validatePrivatePreviewArguments,makePrivateSessionPreview} from '../tools/private-session-preview-server.mjs';import {validateCookieTestArguments,verifyPrivateCookieSessions as verifyPrivateCookieSessionsAtDefaultPort} from '../tools/verify-private-cookie-sessions.mjs';import {makeBriefPreferencesRecord} from '../src/dev-preferences-model.mjs';import {makePrivateRecordQaFixture} from './fixtures/private-record-qa.mjs';
-// Use ephemeral sockets while preserving the exact logical Host/Origin security contract.
-function verifyPrivateCookieSessions(options,dependencies={}){let preview;const expectedOrigin=options.titleSearch||options.appearanceRead?'http://127.0.0.1:5313':'http://127.0.0.1:5312';return verifyPrivateCookieSessionsAtDefaultPort(options,{...dependencies,previewFactory:(...args)=>{preview=makePrivateSessionPreview(...args);const listen=preview.server.listen.bind(preview.server);preview.server.listen=(_port,_host,callback)=>listen(0,'127.0.0.1',callback);return preview;},fetcher:async(input,request={})=>{const url=new URL(input);if(url.origin!==expectedOrigin||!preview?.server.address())throw Error('Only the isolated preview may be accessed.');const port=preview.server.address().port;return new Promise((resolve,reject)=>{const call=httpRequest({hostname:'127.0.0.1',port,path:url.pathname+url.search,method:request.method||'GET',signal:request.signal,headers:{...request.headers,Host:new URL(expectedOrigin).host}},response=>{const chunks=[];response.on('data',chunk=>chunks.push(chunk));response.on('error',reject);response.on('end',()=>{const body=Buffer.concat(chunks).toString('utf8'),headers=new Headers();for(const [name,value]of Object.entries(response.headers))for(const part of Array.isArray(value)?value:[value])if(part!==undefined)headers.append(name,part);resolve({status:response.statusCode,ok:response.statusCode>=200&&response.statusCode<300,headers,text:async()=>body,json:async()=>JSON.parse(body)});});});call.on('error',reject);call.end(request.body);});}});}
+// Keep socket coverage by default and use the same request handler on restricted runners.
+function verifyPrivateCookieSessions(options,dependencies={}){
+ const inProcess=process.env.CC_TEST_HTTP_TRANSPORT==='handler';
+ const expectedOrigin=options.titleSearch||options.appearanceRead?'http://127.0.0.1:5313':'http://127.0.0.1:5312';
+ let preview,started=false;
+ function response(status,fields,body){
+  const headers=new Headers();
+  for(const [name,value] of Object.entries(fields)){
+   for(const part of Array.isArray(value)?value:[value])if(part!==undefined)headers.append(name,part);
+  }
+  return {status,ok:status>=200&&status<300,headers,text:async()=>body,json:async()=>JSON.parse(body)};
+ }
+ return verifyPrivateCookieSessionsAtDefaultPort(options,{
+  ...dependencies,
+  previewFactory:(...args)=>{
+   preview=makePrivateSessionPreview(...args);
+   const server=preview.server;
+   if(inProcess){
+    server.listen=(_port,_host,callback)=>{started=true;callback();return server;};
+    server.close=callback=>{started=false;callback();return server;};
+   }else{
+    const listen=server.listen.bind(server);
+    server.listen=(_port,_host,callback)=>listen(0,'127.0.0.1',callback);
+   }
+   return preview;
+  },
+  fetcher:async(input,request={})=>{
+   const url=new URL(input);
+   if(url.origin!==expectedOrigin||!(inProcess?started:preview?.server.address()))throw Error('Only the isolated preview may be accessed.');
+   const path=url.pathname+url.search,method=request.method||'GET';
+   const headers={...request.headers,Host:new URL(expectedOrigin).host};
+   if(inProcess){
+    request.signal?.throwIfAborted();
+    const req={url:path,method,headers:Object.fromEntries(Object.entries(headers).map(([key,value])=>[key.toLowerCase(),value])),
+     async *[Symbol.asyncIterator](){if(request.body!==undefined)yield Buffer.from(request.body);}};
+    let status,fields,body='';
+    const res={writeHead(code,values){status=code;fields=values;return this;},end(value){body=value?.toString()??'';}};
+    await preview.server.listeners('request')[0](req,res);
+    if(!status)throw Error('The isolated preview did not respond.');
+    return response(status,fields,body);
+   }
+   return new Promise((resolve,reject)=>{
+    const call=httpRequest({hostname:'127.0.0.1',port:preview.server.address().port,path,method,signal:request.signal,headers},incoming=>{
+     const chunks=[];
+     incoming.on('data',chunk=>chunks.push(chunk));
+     incoming.on('error',reject);
+     incoming.on('end',()=>resolve(response(incoming.statusCode,incoming.headers,Buffer.concat(chunks).toString('utf8'))));
+    });
+    call.on('error',reject);
+    call.end(request.body);
+   });
+  }
+ });
+}
 test('sign-in preview defaults offline, separates fictional mode and requires exact real development target',()=>{assert.equal(validatePrivatePreviewArguments([]),null);assert.deepEqual(validatePrivatePreviewArguments(['--fixtures-only']),{fixtures:true});assert.throws(()=>validatePrivatePreviewArguments(['--fixtures-only','--project=devproject12345']));assert.deepEqual(validatePrivatePreviewArguments(['--start-private-session-preview','--project=devproject12345']),{fixtures:false,project:'devproject12345'});});
 test('persistent widget source associations stay off unless the direct preview factory receives every private scope',()=>{assert.notEqual(validatePrivatePreviewArguments(['--fixtures-only']).allowWidgetSourceAssociations,true);assert.throws(()=>makePrivateSessionPreview({fixtures:true,allowWidgetLayouts:true,allowWidgetSourceAssociations:true}),/private layout, note and project scopes/);});
 test('Brief presentation requires its explicit reviewed opt-in and private dashboard/read scopes',()=>{

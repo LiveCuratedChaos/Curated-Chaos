@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R01 / R04** The existing restricted-runner mode now covers the staged cookie acceptance suite through the original request handler. It retains socket transport by default. All 71 related checks passed, recovering 20 tests that previously stopped at a denied listener. Release-environment and actual socket acceptance remain separate.
+
 - **R03** Restore review uses the same microsecond-accurate timestamp comparison as approval. A same-millisecond change to a creation or removal timestamp blocks approval, while an equivalent offset permits recovery. All 51 related checks passed, including encrypted archives and isolated PostgreSQL. Separate-device acceptance still requires a verified destination and authenticated sessions.
 
 - **R02** Thirty-four direct-handler HTTPS candidate checks passed. Both native certificate-verified socket checks failed before the handshake because loopback binding was denied. Hosted staging remains paused under the owner’s Mac-only development decision.
