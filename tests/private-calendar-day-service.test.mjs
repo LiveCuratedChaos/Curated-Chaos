@@ -40,3 +40,20 @@ test('clear, expiry or disposal suppress pending day lists and private detail re
 test('invalid day requests and expired capabilities stop before inventory or detail reads',async t=>{
  const f=fixture(t);for(const values of [{day:'2026-02-30'},{day,query:'x'.repeat(101)},{day,offset:1},{day,owner_id:other}])await assert.rejects(f.list(values));assert.equal(f.s.inventories,0);const view=await f.list();f.s.now+=300000;assert.equal(f.service.currentView('ctx',view.viewId),false);assert.equal(f.service.isCurrentToken('ctx',view.events[0].eventReadToken),false);await assert.rejects(f.service.read('ctx',f.actor,view.events[0].eventReadToken));assert.equal(f.s.reads,0);for(const flags of [{allowAllDay:'yes'},{allowRanges:1}])assert.throws(()=>createPrivateCalendarDay({api:f.api,...flags}));
 });
+
+test('same-title and same-time events remain distinct original selections across calendar sources',async t=>{
+ const manual={...event(1,{title:'Fictional meeting',location:'Manual location'}),origin:'PRIVATE_COOKIE_EVENT_CREATE'};
+ const saved={...event(2,{title:'Fictional meeting',location:'Saved location'}),origin:'google_readonly'};
+ const f=fixture(t,{rows:[manual,saved]});
+ const both=await f.list({day,query:'Fictional meeting'});
+ assert.equal(both.matchCount,2);
+ assert.notEqual(both.events[0].eventReadToken,both.events[1].eventReadToken);
+ const originalDetails=await Promise.all(both.events.map(row=>f.service.read('ctx',f.actor,row.eventReadToken)));
+ assert.deepEqual(originalDetails.map(row=>row.location).sort(),['Manual location','Saved location']);
+ for(const [eventSource,location] of [['manual','Manual location'],['saved','Saved location']]){
+  const fields={day,query:'Fictional meeting',eventSource},view=await f.list(fields);
+  assert.equal(verifyCalendarDay(view,fields,{now:f.s.now}).matchCount,1);
+  assert.equal((await f.service.read('ctx',f.actor,view.events[0].eventReadToken)).location,location);
+ }
+ assert.equal(f.s.writes,0);
+});

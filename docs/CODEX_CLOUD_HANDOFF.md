@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## November 24 development
 
+- **R21** Verified that identical Calendar titles and times remain distinct original selections across manual and saved sources. Each source filter reopened the matching event’s own details. All 62 related checks passed. Desktop and phone Playwright acceptance still require a runner with loopback access and compatible Chromium.
+
 - **R20** Signed-in appearance acceptance now covers the reviewed transition from an explicit item accent to Theme default and then to Use section color. The other task with the same title retains section inheritance throughout. All 13 related checks passed.
 
 - **R19** A new Calendar event can interpret yesterday in New York from its title and preview the resulting editable date. Ordinary event approval still applies. All 338 related checks passed. Browser and physical device acceptance remain pending.
