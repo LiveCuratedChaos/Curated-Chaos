@@ -63,9 +63,9 @@
   "browser": {
     "preparedCases": 236,
     "freshExecutionVerified": false,
-    "selectedCases": 12,
+    "selectedCases": 14,
     "selectedCasesExecuted": 0,
-    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show'",
+    "command": "npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain'",
     "reason": "The fictional fixture could not bind 127.0.0.1:5316 in the managed Mac session."
   },
   "releaseComplete": false,
@@ -873,6 +873,12 @@
       "failed": 0,
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
+    },
+    "selectiveNoteHistory": {
+      "passed": 377,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "Current note title/body preservation, limits on the selected field, uncertain-save drafts, retained SQL history, ten passing final label checks and two browser cases discovered."
     },
     "schoolSqlElapsedRecovery": {
       "passed": 217,

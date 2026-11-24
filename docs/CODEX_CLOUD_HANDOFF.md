@@ -4,6 +4,8 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R12** added separate earlier-title and earlier-body actions for notes. Copying just the body preserved the current title in embedded PostgreSQL, and a lost acknowledgment retained the selected draft. All 377 related checks passed. Ten panel checks also passed after clarifying the combined action label.
+
 - **R12** corrected a reproduced daylight-saving error in the School SQL guard. The inclusive boundary is 2,160 elapsed hours in every database time zone. Readiness checks for academic history and common task memberships still require the exact reviewed functions. All 217 focused checks passed.
 
 - **R03 / R12 / R13** recovered a removed School shortcut from an encrypted archive into isolated PostgreSQL with the restore-window guard installed. Only the original reviewed shortcut action returned it to active use. Its filters were exact, an expired shortcut stayed absent, and replaying the archive preserved the newer state. All 16 repository drills passed.
@@ -42,17 +44,17 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 The latest full macOS check, through the private database restore-window guard, passed 3,493 of 3,517 tests with Node 24.22.3 and `CC_TEST_HTTP_TRANSPORT=handler`. The subsequent removed-shortcut archive drill passed in the 16-test repository suite. Sixteen failures directly reported a denied local listener and eight assertions received that denial. No failures were unclassified. Privacy, whitespace and launcher checks passed. The earlier default-transport run through School search passed 3,460 of 3,495 and reported 35 listener-related failures.
 
-Playwright 1.65.1 discovered 236 cases. Twelve selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget and Daily Brief bills. All local acceptance used fictional records.
+Playwright 1.65.1 discovered 236 cases. Fourteen selected desktop and phone-size cases are pending. The fictional fixture cannot bind `127.0.0.1:5316` in this session. The selection covers Calendar, Favorites, School search, original documents, the compact Search widget, Daily Brief bills and selective earlier note text. All local acceptance used fictional records.
 
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12 by letting a person take just the earlier title or just the earlier body from a note into its original editor. Preserve the other current field and require the normal reviewed save. Exercise old editor limits and the authenticated source checks.
+2. Continue R12 by binding a Recently Deleted restoration review to the specific displayed row and expiry, even after a tab has been suspended. Check late responses, wrong titles or actions, and an expired approval before any write.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh
 npm run check:offline
-npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show'
+npm run test:browser -- --grep 'calendar favorite hands off|Favorites widget opens|School title search previews|a favorite document reopens|compact Search widget|Daily Brief bills show|note saved versions remain'
 ```
 
 Earlier Calendar and Favorites contributions passed 432 focused tests. The previous full attempt passed 3,441 of 3,476. Historical logs under `/tmp` belong to the originating Mac. Linux omits the macOS-native Calendar transfer check.
