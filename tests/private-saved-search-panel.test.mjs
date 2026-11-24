@@ -60,3 +60,57 @@ test('a selected shortcut reveals an earlier name and filters only on explicit r
  assert.equal(reads,1);assert.equal(x.s.runs.length,0);assert.equal(x.s.writes,0);
  x.panel.offline();assert.doesNotMatch(x.panel.render(),/older planning/);
 });
+
+test('running a historical shortcut rechecks the current source and submits its fixed filters only once',async t=>{
+ const previous={...filters,query:'exact earlier titles',dateFrom:'2026-11-01',dateTo:'2026-11-08'};
+ for(const state of ['active','changed','expired','hidden','offline']){
+  const x=setup(t,{allowHistory:true}),token='H'.repeat(43),expiresAt=x.s.clock+500;
+  x.s.row={name:'Current name',removed:false};
+  const entry={version:1,capturedAt:new Date(x.s.clock-1000).toISOString(),operation:'UPDATE',historyReadToken:token};
+  x.client.shortcutHistoryList=async()=>({readOnly:true,available:true,offset:0,limit:50,matchCount:1,versions:[entry],expiresAt});
+  x.client.shortcutHistoryRead=async()=>({readOnly:true,historical:true,version:1,operation:'UPDATE',capturedAt:entry.capturedAt,expiresAt,wasDeleted:false,record:{name:'Old name',filters:state==='hidden'?{type:'document-text',query:'unavailable'}:previous}});
+  await x.show();x.button('versions');await turn();
+  x.panel.click({target:{closest:key=>key==='[data-shortcut-history-read]'?{getAttribute:()=>token}:null}});await turn();
+  if(state==='hidden'){
+   assert.doesNotMatch(x.panel.render(),/Run search with earlier filters|unavailable.*Old name/);
+   x.click('#private-shortcut-history-use-filters');assert.equal(x.s.runs.length,0);continue;
+  }
+  assert.match(x.panel.render(),/Run search with earlier filters/);assert.equal(x.s.runs.length,0);
+  let finish,loads=0;
+  x.client.loadSavedSearch=()=>{loads++;return new Promise(resolve=>{finish=resolve;});};
+  x.click('#private-shortcut-history-use-filters');x.click('#private-shortcut-history-use-filters');
+  assert.equal(loads,1);assert.equal(x.s.runs.length,0);
+  if(state==='expired')x.s.clock=expiresAt;
+  if(state==='offline')x.panel.offline();
+  finish({name:state==='changed'?'Replaced name':'Current name',filters});await turn();
+  assert.deepEqual(x.s.runs,state==='active'?[previous]:[]);
+  assert.equal(x.s.row.name,'Current name');assert.equal(x.s.writes,0);
+ }
+});
+
+test('an earlier shortcut name enters the current rename draft and every write remains reviewed',async t=>{
+ for(const state of ['approve','edited','stale','same','offline']){
+  const x=setup(t,{allowHistory:true}),token='V'.repeat(43),expiresAt=x.s.clock+60000;
+  x.s.row={name:'Current shortcut',removed:false};
+  const earlierName=state==='same'?x.s.row.name:'Earlier <shortcut>';
+  const entry={version:1,operation:'UPDATE',capturedAt:new Date(x.s.clock-1000).toISOString(),historyReadToken:token};
+  x.client.shortcutHistoryList=async()=>({readOnly:true,available:true,offset:0,limit:50,matchCount:1,versions:[entry],expiresAt});
+  x.client.shortcutHistoryRead=async()=>({readOnly:true,historical:true,version:1,operation:'UPDATE',capturedAt:entry.capturedAt,expiresAt,wasDeleted:false,record:{name:earlierName,filters:{...filters,query:'different earlier filter'}}});
+  await x.show();x.button('versions');await turn();
+  x.panel.click({target:{closest:key=>key==='[data-shortcut-history-read]'?{getAttribute:()=>token}:null}});await turn();
+  if(state==='same'){
+   assert.doesNotMatch(x.panel.render(),/Use earlier name in rename draft/);
+   x.click('#private-shortcut-history-use-name');assert.equal(x.panel.blocked(),false);continue;
+  }
+  if(state==='stale')x.client.loadSavedSearch=async()=>({name:'Another name',filters});
+  x.click('#private-shortcut-history-use-name');await turn();
+  if(state==='stale'){assert.doesNotMatch(x.panel.render(),/private-saved-search-name-form/);assert.equal(x.s.writes,0);continue;}
+  assert.match(x.panel.render(),/value="Earlier &lt;shortcut&gt;"/);assert.equal(x.s.reviews,0);assert.equal(x.s.writes,0);
+  if(state==='offline'){x.panel.offline();x.submit();await turn();assert.equal(x.s.reviews,0);continue;}
+  if(state==='edited')x.input('Edited proposal');
+  const expected=state==='edited'?'Edited proposal':earlierName;
+  x.submit();await turn();assert.equal(x.s.review.name,expected);assert.deepEqual(x.s.review,{action:'rename',name:expected,savedSearchToken:'S'.repeat(43)});
+  assert.match(x.panel.render(),/Approve renaming this search/);assert.equal(x.s.writes,0);
+  x.click('#private-saved-search-approve');await turn();assert.equal(x.s.writes,1);assert.equal(x.s.row.name,expected);assert.deepEqual(x.s.runs,[]);
+ }
+});

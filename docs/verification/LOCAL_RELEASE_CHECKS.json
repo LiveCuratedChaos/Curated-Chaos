@@ -874,6 +874,17 @@
       "node": "24.22.3",
       "scope": "Brief bill originals with duplicate names, source revision and payment status, independent pending approvals, exact per-session choices, amount omission and safe concealment."
     },
+    "reviewEarlierShortcutName": {
+      "passed": 381,
+      "failed": 0,
+      "scope": "Signed-in shortcut history, current-source reread, editable rename draft, unavailable when names match, offline, and ordinary approval before saving."
+    },
+    "runEarlierShortcutFilters": {
+      "passed": 380,
+      "failed": 0,
+      "node": "24.22.3",
+      "scope": "71 saved-search and shared panel checks plus 309 signed-in workspace controller checks. Explicit current request, fixed earlier dates, read scope, double activation, offline, expiry, changed source and current shortcut preservation."
+    },
     "selectedNamedShortcutVersions": {
       "passed": 477,
       "failed": 0,

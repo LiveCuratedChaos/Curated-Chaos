@@ -152,7 +152,11 @@ test('saved task shortcuts retain create rename remove restore and run workflows
  const prior=page.getByRole('article',{name:'Earlier shortcut version'});
  await expect(prior.getByRole('heading',{name:'Fictional guarded shortcut',exact:true})).toBeVisible();
  await expect(prior).toContainText('All task titles');
- await page.getByRole('button',{name:'Close versions',exact:true}).click();
+ await prior.getByRole('button',{name:'Run search with earlier filters',exact:true}).click();
+ await expect(page.getByText('Fictional plan for today',{exact:true})).toBeVisible();
+ await expect(prior).toHaveCount(0);
+ await page.getByRole('button',{name:'Saved searches',exact:true}).click();
+ await expect(shortcuts.getByText('Fictional renamed shortcut',{exact:true})).toBeVisible();
  await page.locator('[aria-labelledby="private-saved-searches-title"]').getByRole('button',{name:'Review removal',exact:true}).click();await page.getByRole('button',{name:'Approve shortcut removal',exact:true}).click();
  await page.getByRole('button',{name:'Saved searches',exact:true}).click();await page.getByRole('button',{name:'Removed saved searches',exact:true}).click();await page.getByRole('button',{name:'Review restoration',exact:true}).click();await page.getByRole('button',{name:'Approve shortcut restoration',exact:true}).click();await page.getByRole('button',{name:'Saved searches',exact:true}).click();await expect(page.getByText('Fictional renamed shortcut',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Run search',exact:true}).click();await expect(page.getByText('Fictional plan for today',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Name this search',exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });

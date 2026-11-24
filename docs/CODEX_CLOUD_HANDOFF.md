@@ -4,6 +4,10 @@ Resume from `codex/private-workflow-checkpoints` in the private repository `Live
 
 ## Completed November 23
 
+- **R12 / R13** added an editable rename draft from a selected earlier shortcut name. It rechecks the current source and keeps its current filters. Reusing a name makes no write until the ordinary rename approval. All 381 related checks passed, including changes of name, duplicate activation, offline drafts and stale sources.
+
+- **R12 / R13** added Run search with earlier filters to a selected shortcut version. It rechecks the active shortcut and submits its historical filters to the current workspace search. It preserves original dates and the current shortcut. A duplicate click, expired detail, changed source, offline transition or unavailable document scope cannot start a second or unauthorized search. All 71 saved-search and shared panel checks and 309 signed-in controller checks passed.
+
 - **R12 / R13** added View versions on an active named shortcut. Selecting one earlier version reveals its name and exact filters. Reopening a stale selection or using it from a different tab fails. The optional School and document scopes now apply to active and removed list counts as well as version reads. All 477 integration checks passed. All 64 saved-search checks passed with the additional scope coverage.
 
 - **R03 / R12 / R13** added protected history for explicitly named saved shortcuts. Rename, removal and restoration produced the three expected versions. Running or offering an unsaved query produced none. An encrypted archive restored all three with verified provenance. The database and archive refused unrelated results. All 148 related checks passed, followed by the expanded archive case.
@@ -61,7 +65,7 @@ Playwright 1.65.1 discovered 238 cases. Eighteen selected desktop and phone-size
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback listeners, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. Continue R12/R13 by letting an owner run the filters of a selected earlier shortcut against current data. Recheck that the original is still active, keep dates fixed, and use the existing scoped search entry point.
+2. Continue R03/R12 with the signed-in history reader on a restored named shortcut in the isolated PostgreSQL destination. Verify recovered dates and prior names, then approve a rename and check the new native version and archive replay.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

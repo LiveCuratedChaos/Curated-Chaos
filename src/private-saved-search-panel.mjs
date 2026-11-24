@@ -34,6 +34,15 @@ export function createSavedSearchPanel({client,clock=Date.now,canUse,onChange,on
    if(!inScope(detail.record.filters))throw Error('Shortcut scope unavailable.');
    return detail;
   },
+  draftActions:[{
+   id:'use-filters',label:'Run search with earlier filters',
+   canUse:detail=>inScope(detail.record.filters),
+   onUse:detail=>{void useSelected(historySource.savedSearchToken,detail,'search');}
+  },{
+   id:'use-name',label:'Use earlier name in rename draft',
+   canUse:detail=>detail.record.name!==historySource?.name,
+   onUse:detail=>{void useSelected(historySource.savedSearchToken,detail,'rename');}
+  }],
   renderDetails:detail=>'<h3>'+e(detail.record.name)+'</h3><p>'+e(savedSearchSummary(detail.record.filters))+'</p><p>'+(detail.wasDeleted?'Removed at capture':'Active at capture')+'</p>'
  }):null;
  function clearHistory(){historySource=null;history?.reset();}
@@ -59,7 +68,7 @@ export function createSavedSearchPanel({client,clock=Date.now,canUse,onChange,on
   list={...v,expiresAt};expireAt(expiresAt);notify('#private-saved-searches-title');
  }catch(error){if(current(n)){list=null;message=error.message;}}finally{if(active(n)){busy=false;notify(review?'#private-saved-search-review-title':list?'#private-saved-searches-title':undefined);}}}
  function startCreate(){if(disposed||!canUse()||busy||pendingWrite||form||review||!offer)return;form={action:'create',name:'',filters:structuredClone(offer.filters),saveSearchToken:offer.key};locked=false;message='';notify('[name="saved-search-name"]');}
- function startRename(key){if(disposed||!canUse()||busy||pendingWrite||form||review||list?.removed)return;const r=list?.records.find(r=>r.savedSearchToken===key);if(!r)return;clearHistory();form={action:'rename',name:r.name,filters:structuredClone(r.filters),savedSearchToken:key};locked=false;message='';notify('[name="saved-search-name"]');}
+ function startRename(key,initialName){if(disposed||!canUse()||busy||pendingWrite||form||review||list?.removed)return;const r=list?.records.find(r=>r.savedSearchToken===key);if(!r)return;clearHistory();form={action:'rename',name:initialName??r.name,filters:structuredClone(r.filters),savedSearchToken:key};locked=false;message='';notify('[name="saved-search-name"]');}
  async function prepare(action,key){if(disposed||!canUse()||busy||pendingWrite||review||locked)return;let values,expected;
   if(action==='create'||action==='rename'){if(!form||form.action!==action||!name(form.name.trim())){message='Enter a search name up to 80 characters.';notify('[name="saved-search-name"]');return;}values={action,name:form.name.trim(),...(action==='create'?{saveSearchToken:form.saveSearchToken}:{savedSearchToken:form.savedSearchToken})};expected={name:values.name,filters:form.filters};}
   else{if(form)return;const r=list?.records.find(r=>r.savedSearchToken===key);if(!r||!['remove','restore'].includes(action)||(action==='restore')!==list.removed)return;values={action,savedSearchToken:key};expected=r;}
@@ -70,7 +79,25 @@ export function createSavedSearchPanel({client,clock=Date.now,canUse,onChange,on
  async function approve(){if(disposed||!canUse()||busy||pendingWrite||!review||locked)return;const expected=review.action,id=review.reviewId,n=++generation,marker={};pendingWrite=marker;busy=true;locked=true;review=null;message='';notify();try{const v=await client.saveSavedSearch(id);if(!current(n))return;if(v.saved!==true||v.action!==expected)throw Error('Shortcut save could not be confirmed. Check saved searches before trying again.');reset();message=({create:'Search saved.',rename:'Saved search renamed.',remove:'Saved search moved to Removed saved searches. Matching records are unchanged.',restore:'Saved search restored.'})[expected];notify('[role="status"]');}
   catch(error){if(current(n)){offer=null;list=null;message=error.message+' Check saved searches before starting another save.';}}finally{if(pendingWrite===marker){pendingWrite=null;if(active(n)){busy=false;notify(review?'#private-saved-search-review-title':list?'#private-saved-searches-title':undefined);}else notify();}}}
  async function cancel(){if(disposed||!canUse()||busy||pendingWrite)return;const n=++generation;busy=true;review=null;message='';notify();try{await client.cancelSavedSearch();if(!current(n))return;reset();notify('#private-saved-searches-open');}catch(error){if(current(n)){locked=true;message=error.message;}}finally{if(active(n)){busy=false;notify(review?'#private-saved-search-review-title':list?'#private-saved-searches-title':undefined);}}}
- async function run(key){if(disposed||!canUse()||busy||pendingWrite||form||review||list?.removed)return;const expected=list?.records.find(r=>r.savedSearchToken===key);if(!expected)return;clearHistory();const n=++generation;busy=true;message='';notify();try{const v=await client.loadSavedSearch(key);if(!current(n))return;if(v.name!==expected.name||!sameFilters(v.filters,expected.filters))throw Error('Saved search changed. Check saved searches again.');reset();onRun(v.filters);}catch(error){if(current(n)){list=null;message=error.message;}}finally{if(active(n)){busy=false;notify(review?'#private-saved-search-review-title':list?'#private-saved-searches-title':undefined);}}}
+ async function useSelected(key,earlier=null,action='search'){
+  if(disposed||!canUse()||busy||pendingWrite||form||review||!list||list.removed)return;
+  const expected=list.records.find(row=>row.savedSearchToken===key);
+  const expiresAt=Math.min(list.expiresAt,earlier?.expiresAt??Infinity);
+  if(!expected||expiresAt<=clock())return;
+  clearHistory();const n=++generation;busy=true;message='';notify();
+  try{
+   const loaded=await client.loadSavedSearch(key);
+   if(!current(n))return;
+   if(expiresAt<=clock()||loaded.name!==expected.name||!sameFilters(loaded.filters,expected.filters))throw Error('Saved search changed or expired. Check saved searches again.');
+   if(action==='rename'){
+    generation++;busy=false;startRename(key,earlier.record.name);return;
+   }
+   const filters=earlier?earlier.record.filters:loaded.filters;
+   if(!inScope(filters))throw Error('These search filters are unavailable in this workspace.');
+   reset();onRun(structuredClone(filters));
+  }catch(error){if(current(n)){list=null;message=error.message;}}
+  finally{if(active(n)){busy=false;notify();}}
+ }
  function render(){if(disposed||!canUse())return'';if(removedViewExpired())expire();const disabled=busy||Boolean(pendingWrite)||!canUse();let html=`<button class="btn" type="button" id="private-saved-searches-open" ${disabled||form||review?'disabled':''}>Saved searches</button>`;
   if(message)html+=`<p role="status" class="notice">${e(message)}</p>`;
   if(busy)html+='<p role="status">Checking saved searches…</p>';
@@ -92,6 +119,6 @@ export function createSavedSearchPanel({client,clock=Date.now,canUse,onChange,on
   }
   return true;
  }
- if(hit('#private-saved-searches-open')){void show();return true;}if(hit('#private-saved-search-new')){startCreate();return true;}if(hit('#private-saved-search-cancel')||hit('#private-saved-search-close')){void cancel();return true;}if(hit('#private-saved-search-approve')){void approve();return true;}if(hit('#private-saved-search-mode')){if(list)void show(!list.removed);return true;}for(const [selector,delta]of [['#private-saved-search-previous',-50],['#private-saved-search-next',50]])if(hit(selector)){if(list&&list.offset+delta>=0&&list.offset+delta<list.matchCount)void show(list.removed,list.offset+delta);return true;}for(const action of ['run','rename','remove','restore']){const button=hit('[data-saved-'+action+']');if(button){const key=button.dataset['saved'+action[0].toUpperCase()+action.slice(1)];if(action==='run')void run(key);else if(action==='rename')startRename(key);else void prepare(action,key);return true;}}return false;}
+ if(hit('#private-saved-searches-open')){void show();return true;}if(hit('#private-saved-search-new')){startCreate();return true;}if(hit('#private-saved-search-cancel')||hit('#private-saved-search-close')){void cancel();return true;}if(hit('#private-saved-search-approve')){void approve();return true;}if(hit('#private-saved-search-mode')){if(list)void show(!list.removed);return true;}for(const [selector,delta]of [['#private-saved-search-previous',-50],['#private-saved-search-next',50]])if(hit(selector)){if(list&&list.offset+delta>=0&&list.offset+delta<list.matchCount)void show(list.removed,list.offset+delta);return true;}for(const action of ['run','rename','remove','restore']){const button=hit('[data-saved-'+action+']');if(button){const key=button.dataset['saved'+action[0].toUpperCase()+action.slice(1)];if(action==='run')void useSelected(key);else if(action==='rename')startRename(key);else void prepare(action,key);return true;}}return false;}
  return{setOffer,startDocumentOffer(result,expected){if(!canUse()||pendingWrite||busy||form||review||!isDocumentShortcut(expected)||!sameFilters(result?.filters,expected)||!token(result?.saveSearchToken)||!validExpiry(result.saveSearchExpiresAt))return false;reset();offer={key:result.saveSearchToken,filters:structuredClone(expected),expiresAt:result.saveSearchExpiresAt};expireAt(offer.expiresAt);startCreate();return true;},render,click,submit(event){if(event.target.id!=='private-saved-search-name-form')return false;event.preventDefault();if(form)void prepare(form.action);return true;},input(event){if(event.target.name!=='saved-search-name')return false;if(!disposed&&canUse()&&form&&!busy&&!pendingWrite&&!review&&!locked)form.name=event.target.value;return true;},blocked:()=>busy||Boolean(form||review||pendingWrite),visible:()=>Boolean(list||form||review),reset,offline(){clearHistory();generation++;clearTimeout(timer);offer=null;list=null;review=null;busy=false;locked=Boolean(form);message=form?'You are offline. Check saved searches before reviewing this shortcut again.':'';},dispose(){reset();history?.dispose();disposed=true;}};
 }
