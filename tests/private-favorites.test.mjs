@@ -378,3 +378,37 @@ test('a School original must stay accessible through review, approval, and reope
  await assert.rejects(service.review(context,actor,{baseTag:selected.baseTag,favorite:false,members:[]}));
  assert.equal(settings.payload.favoriteItems.items.length,1);
 });
+
+test('a document favorite rejects missing originals and revoked document choices',async t=>{
+ const {createPrivateFavoriteDocuments}=await import('../server/private-favorite-records.mjs');
+ const {createDocumentLibrary}=await import('../server/private-document-library.mjs');
+ const {fixture,owner,id:recordId}=await import('./fixtures/common-task-memberships.mjs');
+ const {makeBriefPreferencesRecord}=await import('../src/dev-preferences-model.mjs');
+ const {degree}=fixture(),actor={ownerId:owner},context='document-test';
+ const document={id:recordId(13),version:1,fields:{name:'Receipt.pdf'}};
+ let now=Date.now(),current=document;
+ const settings={...degree,...makeBriefPreferencesRecord({},owner),id:recordId(12)};
+ settings.payload.favoriteItems={version:1,items:[{type:'document',id:document.id,collections:[]}]};
+ const storage={
+  list:async()=>({documents:[document],hasMore:false}),
+  inspect:async()=>{if(!current)throw Error();return current;}
+ };
+ const library=createDocumentLibrary({storage,now:()=>now});
+ const api={documentStorage:storage,listBriefPreferences:async()=>[settings],addBriefPreferences:assert.fail,updateBriefPreferences:assert.fail};
+ const service=createPrivateFavoriteDocuments({api,library,now:()=>now});
+ t.after(()=>{service.dispose();library.dispose();});
+ const deadline=now+10000;
+ const [item]=(await service.list(context,actor,deadline,0,()=>true)).documents;
+ const [selection]=(await library.list(context,actor,0,deadline)).documents;
+ const selected=await service.read(context,actor,deadline,selection.choice);
+ const review=await service.review(context,actor,{baseTag:selected.baseTag,favorite:false,members:[]});
+ current=null;
+ await assert.rejects(service.open(context,actor,item.documentToken,()=>true));
+ await assert.rejects(service.authorize(service.claim(context,actor,review.reviewId),actor));
+ assert.equal((await service.list(context,actor,deadline,0,()=>true)).count,0);
+ current=document;
+ const [restored]=(await service.list(context,actor,deadline,0,()=>true)).documents;
+ now=deadline;
+ await assert.rejects(service.open(context,actor,restored.documentToken,()=>true));
+ await assert.rejects(service.read(context,actor,deadline,selection.choice));
+});

@@ -4,6 +4,9 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {createDocumentStorage,openStoredDocument} from '../server/private-document-store.mjs';
 import {categorySource,categoryRecordId,categoryRecordType} from '../server/private-transaction-category-record.mjs';
 import {createTokenSealer} from '../server/token-sealer.mjs';
+import {makeBriefPreferencesRecord} from '../src/dev-preferences-model.mjs';
+import {createDocumentLibrary} from '../server/private-document-library.mjs';
+import {createPrivateFavoriteDocuments} from '../server/private-favorite-records.mjs';
 import {makeSchoolDegree} from '../src/dev-school-model.mjs';
 import {makePrivateRecordQaFixture} from './fixtures/private-record-qa.mjs';
 import {manualBudgetId} from '../server/private-budget-period.mjs';
@@ -37,7 +40,11 @@ async function sample(key){
 
 test('reviewed recovery preserves original attachment bytes, file revision and receipt link in one authenticated transaction',async t=>{
  const key=randomBytes(32),{document,record,receiptFile}=await sample(key);
- const args={key,ownerId:owner,projectRef,rows:[record]},archive=sealPrivateWorkspace({...args,documents:[document]});
+ const collection=randomUUID(),base=makeBriefPreferencesRecord({},owner);
+ const profile={...record,...base,id:randomUUID(),version:1,payload:{...base.payload,
+  favorites:{version:1,pages:[],collections:[{id:collection,name:'Receipts'}]},
+  favoriteItems:{version:1,items:[{type:'document',id:document.id,collections:[collection]}]}}};
+ const args={key,ownerId:owner,projectRef,rows:[record,profile]},archive=sealPrivateWorkspace({...args,documents:[document]});
  assert.equal(JSON.parse(archive.bytes).v,2);
  assert.doesNotMatch(archive.bytes.toString(),/Filed|Fictional|receiptFile|document_id/);
  assert.deepEqual(inspectPrivateWorkspace(archive.bytes,args).documents,[document]);
@@ -62,14 +69,32 @@ test('reviewed recovery preserves original attachment bytes, file revision and r
  const failedReview=await failing.prepare(who,{bytes:archive.bytes});assert.equal(failedReview.documentsToRestore,1);
  await assert.rejects(failing.execute(who,{reviewId:failedReview.reviewId,approved:true}));
  assert.deepEqual(await repository.readDocuments(who,owner,[document]),[]);
- const review=await restore.prepare(who,{bytes:archive.bytes});assert.equal(review.canRestore,true);assert.equal(review.insertCount,1);
+ const review=await restore.prepare(who,{bytes:archive.bytes});assert.equal(review.canRestore,true);assert.equal(review.insertCount,2);
  const result=await restore.execute(who,{reviewId:review.reviewId,approved:true});
- assert.equal(result.documentsRestored,1);assert.equal(result.restored,1);
+ assert.equal(result.documentsRestored,1);assert.equal(result.restored,2);
  await assert.rejects(restore.execute(who,{reviewId:review.reviewId,approved:true}));
  const restored=(await repository.readPrivateRows(who,owner)).find(r=>r.id===record.id);
  const expense=decodeManualFinanceRow(restored,owner,createTokenSealer(key)).payload.budget.transactions[0];
  assert.deepEqual(expense.receiptFile,receiptFile);
  const [recovered]=await repository.readDocuments(who,owner,[document]);assert.deepEqual(recovered,document);
+ const rows=await repository.readPrivateRows(who,owner),restoredProfile=rows.find(row=>row.id===profile.id);
+ assert.deepEqual(restoredProfile.payload.favoriteItems,profile.payload.favoriteItems);
+ assert.deepEqual(restoredProfile.payload.favorites,profile.payload.favorites);
+ const documentStorage=createDocumentStorage({
+  metadata:async(_actor,id)=>(await repository.readDocuments(who,owner,[{id}]))[0],
+  get:async(_actor,id)=>(await repository.readDocuments(who,owner,[{id}]))[0]
+ },async()=>Buffer.from(key));
+ const library=createDocumentLibrary({storage:documentStorage});
+ const favorites=createPrivateFavoriteDocuments({library,now:Date.now,api:{
+  documentStorage,listBriefPreferences:async()=>[restoredProfile],addBriefPreferences:assert.fail,updateBriefPreferences:assert.fail
+ }});
+ t.after(()=>{favorites.dispose();library.dispose();});
+ const principal={ownerId:owner},context='recovered';
+ const [favorite]=(await favorites.list(context,principal,Date.now()+300000,0,()=>true,collection)).documents;
+ assert.deepEqual(favorite.collections,['Receipts']);
+ const selected=await favorites.open(context,principal,favorite.documentToken,()=>true);
+ const original=await library.download(context,principal,selected.document.choice);
+ assert.deepEqual(Buffer.from(original.data,'base64'),file);
  const opened=openStoredDocument(recovered,owner,key);assert.deepEqual(opened.bytes,file);assert.equal(opened.fields.name,'Filed.pdf');assert.equal(opened.version,2);
  assert.deepEqual(await repository.readDocuments(otherUser,other,[document]),[]);
  const repeat=await restore.prepare(who,{bytes:archive.bytes});assert.equal(repeat.documentsToRestore,0);assert.equal(repeat.documentsRetained,1);assert.equal(repeat.insertCount,0);

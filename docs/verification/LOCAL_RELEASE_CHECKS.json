@@ -2,6 +2,26 @@
   "userDate": "2026-11-23",
   "timezone": "America/New_York",
   "command": "npm run check:offline",
+  "documentFavoritesFollowup": {
+    "date": "2026-11-24",
+    "scope": "Private document Favorites and named collections",
+    "focused": {
+      "documentsFavoritesAndSchoolLinks": 48,
+      "controllersStaticAndSearchIntent": 353,
+      "failed": 0
+    },
+    "recovery": "Isolated PostgreSQL restored the collection membership and reopened the original encrypted file bytes.",
+    "browser": "Pending. Chromium could not launch on the selected runner.",
+    "baselineOffline": {
+      "total": 3428,
+      "passed": 3424,
+      "failed": 4,
+      "privacy": true,
+      "whitespace": true,
+      "launcher": true,
+      "note": "The report provides counts without failure names. This baseline predates document Favorites."
+    }
+  },
   "cloudFollowup": {
     "date": "2026-11-24",
     "platform": "linux",

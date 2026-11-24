@@ -1,6 +1,6 @@
 # Curated Chaos development handoff
 
-Resume from `codex/school-favorites-review` in the private repository `LiveCuratedChaos/Curated-Chaos`. This review branch builds on `codex/cloud-handoff-20261123` at `b88f7dd0b9351310bfa0fcea89351502b955e72e`. The local handoff snapshot and that GitHub commit had the same file tree. The original Mac development checkout is on `codex/browser-checks`.
+Resume from `codex/document-favorites-review` in the private repository `LiveCuratedChaos/Curated-Chaos`. This review branch builds on the Cloud verification checkpoint and the November 23 School Favorites branch. The local handoff snapshot and that GitHub commit had the same file tree. The original Mac development checkout is on `codex/browser-checks`.
 
 ## Completed November 23
 
@@ -8,9 +8,14 @@ Resume from `codex/school-favorites-review` in the private repository `LiveCurat
 - **R18:** The optional Favorites widget includes programs and courses when School reads are enabled. School-area filtering and opening the current course notes passed in the signed-in Curation controller.
 - **R13:** “Find School records about leadership” previews the program and course title filters. Applying the preview uses the existing protected search. The parser rejects unsupported dates and task status filters for School.
 
+## Completed November 24
+
+- **R13:** Save a private document to Favorites and assign it to named collections from the Document Library. Favorites lists reopen the current original through the existing document reader, including after a rename. Unavailable originals are omitted, and stale, expired and cross-session choices are rejected. Removing the favorite keeps the file. Encrypted recovery into isolated PostgreSQL preserved the document, its collection and the original bytes.
+- **Verification:** All 48 focused Favorites, document and School-link tests passed. All 353 controller, static and search-intent checks passed. Browser assertions remain pending.
+
 ## November 24 Cloud verification
 
-The Cloud copy matched the Git tree of `d4df3d077097338647db5f2c64190b7de91d2a44`. All 40 focused Favorites and search-intent tests passed. The fictional fixture started on loopback. The pinned Chromium download failed, and the installed Chromium 156 aborted at its process-singleton socket with `Operation not permitted`. All six desktop and phone-size cases stopped at browser launch before page assertions.
+The Cloud copy matched the Git tree of `d4df3d077097338647db5f2c64190b7de91d2a44`. All 40 focused Favorites and search-intent tests passed. The fictional fixture started on loopback. The pinned Chromium download failed, and the installed Chromium 156 aborted at its process-singleton socket with `Operation not permitted`. All six desktop and phone-size cases stopped at browser launch before page assertions. On the pre-document baseline, the full Linux suite passed 3,424 of 3,428 checks. The report provides counts without names for the four failures. Privacy, whitespace and launcher checks passed on that baseline.
 
 ## Earlier verification
 
@@ -21,7 +26,7 @@ Playwright 1.65.1 discovered 230 cases. Six relevant cases are pending across de
 ## Where to resume
 
 1. On a Node 24 runner that permits loopback and can launch the pinned Chromium build, run the two commands below. Use the pinned lockfile and matching Chromium. Record the results under R13, R18 and R21 and in the [local verification record](verification/LOCAL_RELEASE_CHECKS.json).
-2. The next independent R13 workflow is favoriting saved private documents. Use the current authorized document reader, reviewed collection membership and the original document after a rename. Cover loss of access, deletion, and encrypted recovery before marking it verified.
+2. Verify the document Favorites workflow in a browser that can launch the fixture. Open the Document Library, manage a favorite, assign it to a named collection, then reopen the original from that collection. Continue R18 widget coverage or the next ready checklist row independently of the browser blocker.
 3. Keep the [release checklist](RELEASE_CHECKLIST.md) authoritative. Spending stays at $0. Production deployment, owner activation and live provider changes require separate authorization.
 
 ```sh

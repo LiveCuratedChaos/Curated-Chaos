@@ -1,3 +1,4 @@
+import {documentFavoriteButton} from './private-favorite-item-panel.mjs';
 import {appendContentResults,renderContentResults} from './private-document-content-search.mjs';
 import {guideLabels} from './private-school-guides.mjs';
 import {suggestionFields} from './private-document-suggestions.mjs';
@@ -24,7 +25,7 @@ export function downloadCheckedDocument(v,expected,download=downloadFile){
  const bytes=Uint8Array.from(atob(v.data),c=>c.charCodeAt(0));if(bytes.length!==fields.bytes)throw Error('Invalid file.');
  download(bytes,fields);
 }
-export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=false,onNameSearch=null,canOpen=()=>true,onChange=()=>{},download=downloadFile}){
+export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=false,allowFavorites=false,onNameSearch=null,canOpen=()=>true,onChange=()=>{},download=downloadFile}){
  let reading=null,readQuery='',scan=null,contentQuery='';
  let seq=0,view,draft,review,duplicate,status,busy,timer,filter;
  function reset(){seq++;reading=null;readQuery='';scan=null;contentQuery='';clearTimeout(timer);view=draft=review=duplicate=null;status='';busy=false;filter={collection:'all',text:''};}reset();
@@ -43,6 +44,20 @@ export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=fals
    const documents=choices(v.documents);
    view={...v,documents};status=notice;timer=setTimeout(()=>{reset();status='Document access expired. Open your library again.';onChange();},Math.max(1,v.expiresAt-clock()));timer.unref?.();
   }catch{if(n===seq)status='Could not open your documents.';}
+  finally{if(n===seq){busy=false;onChange();}}
+ }
+ async function openFavorite(key,row,deadline){
+  if(!allowFavorites||!canOpen()||busy||!token(key)||deadline<=clock())return;
+  reset();const n=seq;busy=true;onChange();
+  try{
+   const result=await client.favoriteDocumentOpen(key);
+   if(n!==seq)return;
+   if(!keys(result,'document,expiresAt')||!Number.isFinite(result.expiresAt)||result.expiresAt<=clock()||result.expiresAt>deadline)throw Error();
+   const documents=choices([result.document]);
+   if(documents[0].fields.name!==row.title)throw Error();
+   view={documents,expiresAt:result.expiresAt,offset:0,hasMore:false,favorite:true};
+   timer=setTimeout(()=>{reset();status='Document access expired. Open your library again.';onChange();},result.expiresAt-clock());timer.unref?.();
+  }catch{if(n===seq)status='This favorite could not be opened. Refresh your Favorites and try again.';}
   finally{if(n===seq){busy=false;onChange();}}
  }
  async function search(direction){
@@ -243,11 +258,11 @@ export function createDocumentPanel({client,clock=Date.now,allowSchoolLinks=fals
    '<label>Search names, folders or tags<input type="search" maxlength="150" data-document-field="text" value="'+e(filter.text)+'"></label>'+
    '<label>Collection<select data-document-field="collection">'+Object.entries(DOCUMENT_COLLECTIONS).map(([key,label])=>'<option value="'+key+'" '+(filter.collection===key?'selected':'')+'>'+e(label)+'</option>').join('')+'</select></label>'+button('search','Find documents')+
    (view.criteria?'<p>Showing '+e(DOCUMENT_COLLECTIONS[view.criteria.collection])+(view.criteria.text?' matching “'+e(view.criteria.text)+'”':'')+'</p>'+button('clear','Clear search'):'')+
-   (view.documents.length?'<ul>'+view.documents.map(item=>'<li>'+info(item.fields)+' '+button('get-'+item.choice,'Download '+item.fields.name)+' '+button('text-open-'+item.choice,'Read and search '+item.fields.name)+' '+button('organize-'+item.choice,'Organize '+item.fields.name)+'</li>').join('')+'</ul>':view.criteria?'<p>'+(view.hasMore?'No matches in this group. Continue searching with Next documents.':'No matches on this page.')+'</p>':'<p>No documents on this page.</p>')+
+   (view.documents.length?'<ul>'+view.documents.map(item=>'<li>'+info(item.fields)+' '+(allowFavorites?documentFavoriteButton(item.choice)+' ':'')+button('get-'+item.choice,'Download '+item.fields.name)+' '+button('text-open-'+item.choice,'Read and search '+item.fields.name)+' '+button('organize-'+item.choice,'Organize '+item.fields.name)+'</li>').join('')+'</ul>':view.criteria?'<p>'+(view.hasMore?'No matches in this group. Continue searching with Next documents.':'No matches on this page.')+'</p>':'<p>No documents on this page.</p>')+
    (view.offset||view.hasPrevious?button('previous','Previous documents'):'')+(view.hasMore?button('next','Next documents'):'');
-  return html+button('close','Close document library')+'</fieldset>'+(scan&&busy?button('content-stop','Stop content search'):'');
+  return html+(view.favorite&&!draft&&!reading&&!review&&!duplicate&&!scan&&!view.criteria?button('list','Back to my documents'):'')+button('close','Close document library')+'</fieldset>'+(scan&&busy?button('content-stop','Stop content search'):'');
  }
- return {render,reset,openContentSearch,openSavedSearch,blocked:()=>Boolean(draft||review||busy),input(event){
+ return {render,reset,openFavorite,openContentSearch,openSavedSearch,blocked:()=>Boolean(draft||review||busy),input(event){
   const field=event.target.dataset?.documentField;if(!field)return false;
   if(!draft&&!reading&&!scan&&!busy&&field==='contentQuery'){contentQuery=event.target.value;return true;}
   if(reading&&!busy&&field==='textQuery'){readQuery=event.target.value;return true;}

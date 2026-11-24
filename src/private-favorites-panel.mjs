@@ -9,7 +9,7 @@ function sameLayout(a,b){
  const first=validateFavoritePages(a),second=validateFavoritePages(b);
  return first.collections.length===second.collections.length&&first.collections.every((v,i)=>v.id===second.collections[i].id&&v.name===second.collections[i].name)&&first.pages.length===second.pages.length&&first.pages.every((v,i)=>v.page===second.pages[i].page&&v.collections.join(',')===second.pages[i].collections.join(','));
 }
-export function createFavoritesPanel({client,pages,activePage,clock=Date.now,onChange,onSaved=()=>{},onOpenNote=null,onOpenTask=null,onOpenProject=null,onOpenEvent=null,onOpenSchool=null,canUse,idFactory=()=>crypto.randomUUID()}){
+export function createFavoritesPanel({client,pages,activePage,clock=Date.now,onChange,onSaved=()=>{},onOpenNote=null,onOpenTask=null,onOpenProject=null,onOpenEvent=null,onOpenSchool=null,onOpenDocument=null,canUse,idFactory=()=>crypto.randomUUID()}){
  let view=null,draft=null,review=null,opened=false,busy=false,locked=false,error='',notice='',newName='',generation=0,timer;
  const fresh=time=>Number.isFinite(time)&&time>clock()&&time<=clock()+300000;
  const title='#private-favorites-title';
@@ -17,6 +17,7 @@ export function createFavoritesPanel({client,pages,activePage,clock=Date.now,onC
  if(onOpenSchool){
   for(const type of ['program','course'])openers[type]=(key,row,expiresAt)=>{reset();onOpenSchool(type,key,row,expiresAt);};
  }
+ if(onOpenDocument)openers.document=(key,row,expiresAt)=>{reset();onOpenDocument(key,row,expiresAt);};
  if(onOpenNote)openers.note=key=>{reset();onOpenNote(key);};
  if(onOpenEvent)openers.event=(key,row,expiresAt)=>{reset();onOpenEvent(key,row,expiresAt);};
  if(onOpenProject)openers.project=(key,row,deadline)=>{reset();onOpenProject(key,row,deadline);};

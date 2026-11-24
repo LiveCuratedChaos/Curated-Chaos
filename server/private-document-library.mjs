@@ -8,11 +8,34 @@ const token=()=>randomBytes(32).toString('base64url');
 export function createDocumentLibrary({storage,now=Date.now,extract=extractDocumentPages}){
  const sessions=new Map();
  function clear(id){clearTimeout(sessions.get(id)?.timer);sessions.delete(id);}
+ function begin(id,owner,expiresAt){
+  clear(id);
+  const v={owner,expiresAt:Math.min(now()+300000,expiresAt),choices:new Map()};
+  sessions.set(id,v);
+  v.timer=setTimeout(()=>{if(sessions.get(id)===v)clear(id);},Math.max(1,v.expiresAt-now()));v.timer.unref?.();
+  return v;
+ }
+ function issue(view,doc){
+  const choice=token();view.choices.set(choice,doc);return {choice,...doc.fields};
+ }
+ function hasChoice(id,choice){
+  const view=sessions.get(id);
+  return Boolean(view&&view.expiresAt>now()&&view.choices.has(choice));
+ }
+ async function selectedDocument(id,actor,choice){
+  const view=active(id,actor),doc=view.choices.get(choice);
+  if(!doc)throw Error('Choose a current document.');
+  const current=await storage.inspect(actor,doc.id);
+  if(stableStringify(current)!==stableStringify(doc)||active(id,actor)!==view||view.choices.get(choice)!==doc)throw Error('Document changed.');
+  return {doc,expiresAt:view.expiresAt};
+ }
+ function openFavorite(id,actor,doc,expiresAt){
+  const view=begin(id,actor.ownerId,expiresAt);
+  return {document:issue(view,doc),expiresAt:view.expiresAt};
+ }
  async function list(id,actor,offset,expiresAt){
   if(!Number.isInteger(offset)||offset<0||offset>100000||offset%25)throw Error('Choose a document page.');
-  clear(id);
-  const v={owner:actor.ownerId,expiresAt:Math.min(now()+300000,expiresAt),choices:new Map()};sessions.set(id,v);
-  v.timer=setTimeout(()=>{if(sessions.get(id)===v)clear(id);},Math.max(1,v.expiresAt-now()));v.timer.unref?.();
+  const v=begin(id,actor.ownerId,expiresAt);
   const {documents,hasMore}=await storage.list(actor,offset);
   if(sessions.get(id)!==v||v.expiresAt<=now())throw Error('Document view expired.');
   return {offset,hasMore,expiresAt:v.expiresAt,documents:documents.map(doc=>{
@@ -166,5 +189,5 @@ export function createDocumentLibrary({storage,now=Date.now,extract=extractDocum
   if(view.search)return{type:'document-library',query:view.search.criteria.text,collection:view.search.criteria.collection};
   throw Error('Run the document search again before naming it.');
  }
- return {list,search,searchContents,checkedSearch,prepare,organize,claim,save,download,readText,selectedText,suggest,reviewSuggestion,clear,dispose(){for(const id of sessions.keys())clear(id);}};
+ return {list,search,searchContents,checkedSearch,hasChoice,selectedDocument,openFavorite,prepare,organize,claim,save,download,readText,selectedText,suggest,reviewSuggestion,clear,dispose(){for(const id of sessions.keys())clear(id);}};
 }

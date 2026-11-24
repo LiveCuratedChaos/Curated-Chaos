@@ -128,7 +128,7 @@ export function mountPrivateBrief(root,{client=createPrivateWorkspaceClient(),cl
    const region=!financePrivacy?.hidden&&root.querySelector?.('#private-transaction-categories');
    if(region)region.innerHTML=categoryPanel.render();
   }}) : null;
- const documentsPanel=allowDocuments&&!recordWorkspace?createDocumentPanel({client,clock,onNameSearch:allowSavedSearches?(offer,filters)=>savedPanel?.startDocumentOffer(offer,filters):null,allowSchoolLinks:allowSchoolRead&&allowSchoolEdit,canOpen:()=>Boolean(user&&!dateBlocked()),onChange:()=>{
+ const documentsPanel=allowDocuments&&!recordWorkspace?createDocumentPanel({client,clock,allowFavorites,onNameSearch:allowSavedSearches?(offer,filters)=>savedPanel?.startDocumentOffer(offer,filters):null,allowSchoolLinks:allowSchoolRead&&allowSchoolEdit,canOpen:()=>Boolean(user&&!dateBlocked()),onChange:()=>{
   const region=root.querySelector?.('#private-document-library');if(region)region.innerHTML=documentsPanel.render();
  }}):null;
  const brokeragePanel=allowBrokerage&&!recordWorkspace&&(!curationWorkspace||canvasPage==='finances')?createBrokeragePanel({client,clock,
@@ -193,7 +193,10 @@ export function mountPrivateBrief(root,{client=createPrivateWorkspaceClient(),cl
   for(const type of ['program','course'])favoriteOpeners[type]=(key,row,expiresAt)=>openSchoolFavorite(type,key,row,expiresAt);
  }
  if(allowFavorites&&canvasActive)favoriteWidgetSource=createFavoriteWidgetSource({client,clock,pages:favoritePages,openers:favoriteOpeners,canOpen:()=>Boolean(user&&!disposed&&!dateBlocked()&&!smartTaskText.trim()&&navigator.onLine!==false),isOnline:()=>Boolean(user&&!disposed&&navigator.onLine!==false),onChange:updateCurationSource});
- if(allowFavorites)favoritesPanel=createFavoritesPanel({client,clock,onOpenNote:favoriteOpeners.note,onOpenTask:favoriteOpeners.task,onOpenEvent:favoriteOpeners.event,onOpenProject:favoriteOpeners.project,onOpenSchool:allowSchoolRead?openSchoolFavorite:null,pages:favoritePages,
+ if(allowFavorites)favoritesPanel=createFavoritesPanel({client,clock,onOpenNote:favoriteOpeners.note,onOpenTask:favoriteOpeners.task,onOpenEvent:favoriteOpeners.event,onOpenProject:favoriteOpeners.project,onOpenSchool:allowSchoolRead?openSchoolFavorite:null,onOpenDocument:documentsPanel?(key,row,expiresAt)=>{
+   render();void documentsPanel.openFavorite(key,row,expiresAt);
+   const region=root.querySelector?.('#private-document-library');region?.setAttribute?.('tabindex','-1');region?.focus?.();
+  }:null,pages:favoritePages,
   activePage:curationWorkspace?canvasPage:taskWorkspace?'tasks':notesWorkspace?'notes':calendarWorkspace?'calendar':'brief',
   canUse:()=>Boolean(user&&!disposed&&!busy&&!draft&&!taskDraft&&!appearanceDraft&&!recordReview&&!review&&!noteReview&&!creationReview&&!appearanceReview&&!setupPanel?.blocked()&&!quickSettings?.blocked()&&!listTemplatePanel?.blocked()&&!otherSavedBlocked()&&!smartTaskText.trim()&&navigator.onLine!==false),
   onChange:focus=>{if(focus)focusTarget=focus;render();},onSaved:()=>favoriteWidgetSource?.changed()});
